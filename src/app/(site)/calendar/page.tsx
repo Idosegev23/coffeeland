@@ -8,7 +8,6 @@ import { Filter, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function CalendarPage() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     ageMin: '',
@@ -17,10 +16,6 @@ export default function CalendarPage() {
     category: 'all',
     availableOnly: true,
   });
-
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-  };
 
   const handleFilterChange = (key: string, value: string | boolean) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -152,14 +147,11 @@ export default function CalendarPage() {
 
         {/* Date Scroller */}
         <div className="mb-8">
-          <DayScroller 
-            selectedDate={selectedDate}
-            onDateSelect={handleDateSelect}
-          />
+          <DayScroller />
         </div>
 
         {/* Events List */}
-        <EventList selectedDate={selectedDate} />
+        <EventList />
 
         {/* Call to Action */}
         <div className="mt-12 text-center">
