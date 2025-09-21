@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
 import { z } from 'zod';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 const dataRequestSchema = z.object({
   requesterEmail: z.string().email(),
   requestType: z.enum(['access', 'rectification', 'erasure', 'restriction', 'portability', 'objection']),

@@ -3,6 +3,9 @@ import { constructWebhookEvent } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabaseClient';
 import Stripe from 'stripe';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(request: NextRequest) {
