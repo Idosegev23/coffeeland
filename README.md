@@ -5,10 +5,10 @@
 ## ✨ תכונות עיקריות
 
 - 🎯 **דף בית דינמי** - באנר חם מתחלף + הירו קרוסלה
-- 📅 **לוח פעילויות** - סדנאות עם הרשמה וסליקה
+- 📅 **לוח פעילויות** - סדנאות עם הרשמה
 - 🎉 **שירותי יום הולדת** - חבילות מותאמות אישית
 - 🖼️ **גלריה אינטראקטיבית** - עם מסנני תגיות
-- 🛒 **מערכת הזמנות** - Stripe Checkout + Webhooks
+- 📞 **טפסי יצירת קשר** - לאירועים ובקשות
 - 📅 **יצוא ICS** - הוספה ליומן אוטומטית
 - 🔒 **תואמות GDPR** - עמודי פרטיות מלאים
 - 📱 **מותאם למובייל** - RTL + נגישות AA
@@ -18,7 +18,6 @@
 - **Frontend**: Next.js 14 (App Router), React 18, TypeScript
 - **עיצוב**: TailwindCSS + MagicUI + Framer Motion
 - **מסד נתונים**: Supabase (Postgres + Auth + Storage + RLS)
-- **תשלומים**: Stripe (PaymentIntent + Webhooks)
 - **אחרים**: TanStack Query, React Hook Form, Zod, Next-SEO
 
 ## 🚀 התקנה והפעלה
@@ -28,7 +27,6 @@
 - Node.js 18+ 
 - npm/yarn
 - חשבון Supabase
-- חשבון Stripe (Test)
 
 ### שלבי התקנה
 
@@ -51,10 +49,6 @@ npm install
 # הוסיפו את המפתח הזה מ-Supabase Dashboard > Settings > API
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
-# הוסיפו את פרטי Stripe מ-Stripe Dashboard
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
 ```
 
 4. **הגדרת מסד הנתונים**
@@ -134,21 +128,11 @@ src/
 
 ### ציבוריים
 - `GET /api/hot-banner` - באנר חם + מוצרים
-- `POST /api/checkout` - יצירת הזמנה
 - `GET /api/ics/[sessionId]` - הורדת ICS
 - `POST /api/events-contact` - טופס אירועים
 - `POST /api/data-requests` - בקשות נתונים
 
-### Webhooks
-- `POST /api/webhooks/stripe` - וובהוק תשלומים
-
 ## 💳 אינטגרציות
-
-### Stripe
-- **Test Mode**: כל התשלומים במצב בדיקה
-- **Checkout Session**: תהליך תשלום מאובטח
-- **Webhooks**: עדכון סטטוס אוטומטי
-- **Multi-item**: מוצרים + סדנאות בעגלה אחת
 
 ### Supabase
 - **Authentication**: ניהול משתמשים
@@ -195,11 +179,6 @@ npx vercel --prod
 ### משתני סביבה בפרודקשן
 וודא שכל המשתנים מ-`.env.example` מוגדרים בפלטפורמת הפריסה.
 
-### Stripe Webhooks
-1. צור webhook endpoint בStripe Dashboard
-2. הוסף את ה-URL: `https://your-domain.com/api/webhooks/stripe`
-3. בחר events: `checkout.session.completed`, `payment_intent.succeeded`
-4. העתק את הwebhook secret ל-`STRIPE_WEBHOOK_SECRET`
 
 ## 🧪 בדיקות
 
@@ -212,12 +191,6 @@ npx vercel --prod
 - [ ] עמודי פרטיות נגישים
 - [ ] מובייל responsive
 
-### בדיקות תשלום (Test)
-```
-כרטיס אשראי: 4242 4242 4242 4242
-תאריך: כל תאריך עתידי
-CVC: כל 3 ספרות
-```
 
 ## 🐛 פתרון בעיות נפוצות
 
@@ -228,11 +201,6 @@ echo $NEXT_PUBLIC_SUPABASE_URL
 echo $NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
 
-### שגיאות Stripe
-```bash
-# בדוק שהמפתחות במצב test
-echo $STRIPE_SECRET_KEY  # צריך להתחיל ב-sk_test_
-```
 
 ### בעיות RTL
 - וודא ש-`html` tag יש `dir="rtl"`
