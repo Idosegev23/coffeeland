@@ -1,27 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base colors */
+  --background: 42 25 15; /* latte */
+  --foreground: 25 15 10; /* coffee-900 */
+  
+  /* Card colors */
+  --card: 42 25 15; /* latte-100 */
+  --card-foreground: 25 15 10; /* coffee-900 */
+  
+  /* Popover colors */
+  --popover: 42 25 15; /* latte */
+  --popover-foreground: 25 15 10; /* coffee-900 */
+  
+  /* Primary colors */
+  --primary: 34 35 28; /* tropical-600 */
+  --primary-foreground: 42 25 15; /* latte */
+  
+  /* Secondary colors */
+  --secondary: 40 37 25; /* tropical-700 */
+  --secondary-foreground: 42 25 15; /* latte */
+  
+  /* Muted colors */
+  --muted: 38 35 25; /* coffee-700 */
+  --muted-foreground: 30 20 15; /* coffee-800 */
+  
+  /* Accent colors */
+  --accent: 34 35 28; /* tropical-600 */
+  --accent-foreground: 42 25 15; /* latte */
+  
+  /* Destructive colors */
+  --destructive: 0 84 60;
+  --destructive-foreground: 0 0 98;
+  
+  /* Border colors */
+  --border: 35 30 22; /* coffee-600 */
+  --input: 35 30 22; /* coffee-600 */
+  --ring: 34 35 28; /* tropical-600 */
+  
+  /* Border radius */
+  --radius: 1rem; /* 16px */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  direction: rtl;
+  scroll-behavior: smooth;
+}
+
+* {
+  border-color: hsl(var(--border));
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: hsl(var(--foreground));
+  background: linear-gradient(135deg, #f3ede4 0%, #e8ded1 100%);
+  font-family: 'Heebo', system-ui, sans-serif;
+  font-feature-settings: 'rlig' 1, 'calt' 1;
+  min-height: 100vh;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* RTL overrides for specific components */
+.rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--accent));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Animation utilities */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-tropical-600 focus:ring-offset-2 focus:ring-offset-latte;
+}
+
+/* Button variants */
+.btn-primary {
+  @apply bg-tropical-600 hover:bg-tropical-700 text-latte font-medium px-6 py-3 rounded-lg transition-all duration-200 focus-ring;
+}
+
+.btn-secondary {
+  @apply bg-latte-100 hover:bg-latte-200 text-coffee-900 font-medium px-6 py-3 rounded-lg border border-coffee-300 transition-all duration-200 focus-ring;
+}
+
+.btn-ghost {
+  @apply hover:bg-latte-100 text-coffee-700 hover:text-coffee-900 font-medium px-4 py-2 rounded-lg transition-all duration-200 focus-ring;
+}
+
+/* Card styles */
+.card {
+  @apply bg-latte-100/80 backdrop-blur-sm border border-coffee-200/50 rounded-xl shadow-soft;
+}
+
+.card-hover {
+  @apply card hover:shadow-lg hover:scale-[1.02] transition-all duration-300;
+}
+
+/* Typography */
+.text-gradient {
+  @apply bg-gradient-to-l from-coffee-900 via-coffee-700 to-tropical-600 bg-clip-text text-transparent;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .container {
+    @apply px-4;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
   }
 }
