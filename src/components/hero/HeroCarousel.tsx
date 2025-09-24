@@ -190,24 +190,6 @@ export function HeroCarousel({ className }: HeroCarouselProps) {
         </>
       )}
 
-      {/* Dots Indicator */}
-      {slides.length > 1 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2 rtl:space-x-reverse">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              className={cn(
-                'w-3 h-3 rounded-full transition-all duration-200',
-                index === currentSlide
-                  ? 'bg-white'
-                  : 'bg-white/50 hover:bg-white/75'
-              )}
-              onClick={() => goToSlide(index)}
-              aria-label={`עבר לשקף ${index + 1}`}
-            />
-          ))}
-        </div>
-      )}
 
       {/* Play/Pause Button */}
       {slides.length > 1 && (
