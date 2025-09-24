@@ -5,6 +5,7 @@ import { HeroCarousel } from '@/components/hero/HeroCarousel';
 import { DayScroller } from '@/components/calendar/DayScroller';
 import { EventList } from '@/components/calendar/EventList';
 import { Button } from '@/components/ui/Button';
+import { StatsSection } from '@/components/stats/StatsSection';
 import { Calendar, Users, Camera, Gift, Coffee, Star, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,41 +27,8 @@ export default function HomePage() {
         <HeroCarousel />
       </section>
 
-      {/* Quick Stats */}
-      <section className="bg-latte-100/50 py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-tropical-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Coffee className="w-8 h-8 text-latte" />
-              </div>
-              <div className="text-2xl font-bold text-coffee-900 mb-1">50+</div>
-              <div className="text-sm text-coffee-600">משקאות וחטיפים</div>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-tropical-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Users className="w-8 h-8 text-latte" />
-              </div>
-              <div className="text-2xl font-bold text-coffee-900 mb-1">15+</div>
-              <div className="text-sm text-coffee-600">סדנאות שבועיות</div>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-tropical-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Gift className="w-8 h-8 text-latte" />
-              </div>
-              <div className="text-2xl font-bold text-coffee-900 mb-1">200+</div>
-              <div className="text-sm text-coffee-600">ימי הולדת מוצלחים</div>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-tropical-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Star className="w-8 h-8 text-latte" />
-              </div>
-              <div className="text-2xl font-bold text-coffee-900 mb-1">4.9</div>
-              <div className="text-sm text-coffee-600">דירוג ממוצע</div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Stats Section */}
+      <StatsSection />
 
       {/* Today's Events */}
       <section className="container mx-auto px-4 py-12">
