@@ -5,7 +5,6 @@ import { HeroCarousel } from '@/components/hero/HeroCarousel';
 import { DayScroller } from '@/components/calendar/DayScroller';
 import { EventList } from '@/components/calendar/EventList';
 import { Button } from '@/components/ui/Button';
-import { StatsSection } from '@/components/stats/StatsSection';
 import { Calendar, Users, Camera, Gift, Coffee, Star, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -27,8 +26,6 @@ export default function HomePage() {
         <HeroCarousel />
       </section>
 
-      {/* Stats Section */}
-      <StatsSection />
 
       {/* Today's Events */}
       <section className="container mx-auto px-4 py-12">
