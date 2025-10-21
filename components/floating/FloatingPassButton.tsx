@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import { Ticket } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { PassDialog } from './PassDialog'
 import { analytics } from '@/lib/analytics'
+import { useAuth } from '@/components/auth/AuthProvider'
 
 export function FloatingPassButton() {
+  const router = useRouter()
+  const { user } = useAuth()
   const [isVisible, setIsVisible] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,9 +28,9 @@ export function FloatingPassButton() {
   }, [])
 
   const handleClick = () => {
-    setDialogOpen(true)
     analytics.floatingButtonClick()
-    analytics.passDialogOpen()
+    // If user is logged in, go to my-account, otherwise to passes page
+    router.push(user ? '/my-account' : '/passes')
   }
 
   return (
@@ -67,8 +69,6 @@ export function FloatingPassButton() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <PassDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </>
   )
 }

@@ -1,8 +1,10 @@
+import Link from 'next/link'
 import { HeroCarousel } from '@/components/hero/HeroCarousel'
 import { NavTiles } from '@/components/navigation/NavTiles'
 import { MagicBento } from '@/components/gallery/MagicBento'
 import { CalendarTabs } from '@/components/calendar/CalendarTabs'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
 
 export default function HomePage() {
   return (
@@ -103,9 +105,14 @@ export default function HomePage() {
           <p className="text-lg text-primary/90 max-w-2xl mx-auto mb-8">
             בקרו יותר, חסכו יותר! כרטיסיות ומנויים במחירים מיוחדים
           </p>
-          <p className="text-sm text-primary/70 mb-4">
-            לחצו על הכפתור הצף בפינה השמאלית התחתונה לצפייה בכרטיסיות
-          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" asChild>
+              <Link href="/passes">רכישת כרטיסיות</Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <Link href="/my-account">איזור אישי</Link>
+            </Button>
+          </div>
         </div>
       </section>
     </>

@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, User, Home, Scan } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/components/auth/AuthProvider'
+import { supabase } from '@/lib/supabase'
 
 const navigation = [
   { name: 'ראשי', href: '/' },
@@ -19,7 +21,23 @@ const navigation = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const pathname = usePathname()
+  const { user, userData } = useAuth()
+
+  // Check if user is admin
+  React.useEffect(() => {
+    if (user) {
+      supabase
+        .from('admins')
+        .select('is_active')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => setIsAdmin(data?.is_active === true))
+    } else {
+      setIsAdmin(false)
+    }
+  }, [user])
 
   return (
     <header className="sticky top-0 z-40 w-full bg-background-light/95 backdrop-blur supports-[backdrop-filter]:bg-background-light/80 border-b-2 border-border shadow-sm">
@@ -64,12 +82,45 @@ export function Header() {
             })}
           </div>
 
-          {/* CTA Button (Desktop) */}
-          <div className="hidden md:block">
-            <Button variant="default" size="sm" asChild>
-              <Link href="/#passes">כרטיסייה</Link>
-            </Button>
-          </div>
+            {/* CTA Buttons (Desktop) */}
+            <div className="hidden md:flex md:gap-2">
+              {pathname !== '/' && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/" className="gap-2">
+                    <Home className="w-4 h-4" />
+                    דף הבית
+                  </Link>
+                </Button>
+              )}
+              
+              {user ? (
+                <>
+                  {isAdmin && (
+                    <Button variant="default" size="sm" asChild>
+                      <Link href="/admin/scan" className="gap-2">
+                        <Scan className="w-4 h-4" />
+                        סרוק QR
+                      </Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={isAdmin ? '/admin' : '/my-account'} className="gap-2">
+                      <User className="w-4 h-4" />
+                      {userData?.full_name || 'איזור אישי'}
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/login">התחבר</Link>
+                  </Button>
+                  <Button variant="default" size="sm" asChild>
+                    <Link href="/passes">כרטיסייה</Link>
+                  </Button>
+                </>
+              )}
+            </div>
 
           {/* Mobile menu button */}
           <button
@@ -87,36 +138,73 @@ export function Header() {
           </button>
         </div>
 
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden pb-4 pt-2 animate-slide-up">
-            <div className="flex flex-col gap-2">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href
-                return (
+          {/* Mobile Navigation */}
+          {mobileMenuOpen && (
+            <div className="md:hidden pb-4 pt-2 animate-slide-up">
+              <div className="flex flex-col gap-2">
+                {pathname !== '/' && (
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      'block px-3 py-2 text-base font-medium rounded-md transition-colors',
-                      isActive
-                        ? 'text-accent bg-accent/10'
-                        : 'text-primary hover:bg-secondary/20 hover:text-accent'
-                    )}
+                    href="/"
+                    className="block px-3 py-2 text-base font-medium rounded-md transition-colors text-primary hover:bg-secondary/20 hover:text-accent flex items-center gap-2"
                     onClick={() => setMobileMenuOpen(false)}
-                    aria-current={isActive ? 'page' : undefined}
                   >
-                    {item.name}
+                    <Home className="w-4 h-4" />
+                    דף הבית
                   </Link>
-                )
-              })}
-              <div className="pt-2">
-                <Button variant="default" size="default" className="w-full" asChild>
-                  <Link href="/#passes" onClick={() => setMobileMenuOpen(false)}>
-                    כרטיסייה
-                  </Link>
-                </Button>
-              </div>
+                )}
+                
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        'block px-3 py-2 text-base font-medium rounded-md transition-colors',
+                        isActive
+                          ? 'text-accent bg-accent/10'
+                          : 'text-primary hover:bg-secondary/20 hover:text-accent'
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      {item.name}
+                    </Link>
+                  )
+                })}
+                <div className="pt-2 space-y-2">
+                  {user ? (
+                    <>
+                      {isAdmin && (
+                        <Button variant="default" size="default" className="w-full gap-2" asChild>
+                          <Link href="/admin/scan" onClick={() => setMobileMenuOpen(false)}>
+                            <Scan className="w-4 h-4" />
+                            סרוק QR
+                          </Link>
+                        </Button>
+                      )}
+                      <Button variant="outline" size="default" className="w-full gap-2" asChild>
+                        <Link href={isAdmin ? '/admin' : '/my-account'} onClick={() => setMobileMenuOpen(false)}>
+                          <User className="w-4 h-4" />
+                          {userData?.full_name || 'איזור אישי'}
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" size="default" className="w-full" asChild>
+                        <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                          התחבר
+                        </Link>
+                      </Button>
+                      <Button variant="default" size="default" className="w-full" asChild>
+                        <Link href="/passes" onClick={() => setMobileMenuOpen(false)}>
+                          כרטיסייה
+                        </Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
             </div>
           </div>
         )}
