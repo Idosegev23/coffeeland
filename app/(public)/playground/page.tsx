@@ -1,0 +1,276 @@
+'use client'
+
+import * as React from 'react'
+import Image from 'next/image'
+import dynamic from 'next/dynamic'
+import { MessageCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { generateWhatsAppLink } from '@/lib/utils'
+
+const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
+
+const features = [
+  {
+    lottie: '/lottie/safty.json',
+    title: 'בטיחות מקסימלית',
+    description: 'משטחי משחק רכים, ציוד מאושר ופיקוח מתמיד',
+  },
+  {
+    lottie: '/lottie/fresh.json',
+    title: 'ציוד חדשני',
+    description: 'צעצועים ומתקנים מתקדמים שמעוררים את הדמיון',
+  },
+  {
+    lottie: '/lottie/people.json',
+    title: 'מתאים לכל הגילאים',
+    description: 'אזורי משחק מותאמים לתינוקות, פעוטות וילדים גדולים',
+  },
+  {
+    lottie: '/lottie/parentseasy.json',
+    title: 'נוח להורים',
+    description: 'פינת ישיבה נעימה עם קפה איכותי וWi-Fi חינם',
+  },
+  {
+    lottie: '/lottie/hours.json',
+    title: 'שעות גמישות',
+    description: 'פתוח 7 ימים בשבוע, ללא צורך בהזמנה מראש',
+  },
+]
+
+const pricing = [
+  { name: 'כניסה בודדת', price: 40, description: 'עד 3 שעות משחק' },
+  { name: '5 כניסות', price: 180, description: 'חיסכון של 20 ש"ח', highlight: false },
+  { name: '10 כניסות', price: 320, description: 'חיסכון של 80 ש"ח', highlight: true },
+]
+
+function LottieIcon({ src }: { src: string }) {
+  const [animationData, setAnimationData] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    fetch(src)
+      .then((res) => res.json())
+      .then((data) => setAnimationData(data))
+      .catch((err) => console.error('Error loading Lottie:', err))
+  }, [src])
+
+  if (!animationData) {
+    return <div className="w-full h-full animate-pulse bg-accent/20 rounded-full" />
+  }
+
+  return (
+    <Lottie
+      animationData={animationData}
+      loop={true}
+      autoplay={true}
+      style={{ width: '100%', height: '100%' }}
+    />
+  )
+}
+
+export default function PlaygroundPage() {
+  const whatsappLink = generateWhatsAppLink(
+    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '972501234567',
+    'שלום, אני מעוניין/ת לקבל מידע נוסף על המשחקייה'
+  )
+
+  return (
+    <>
+      {/* Hero */}
+      <section className="relative h-[300px] sm:h-[400px] bg-secondary overflow-hidden">
+        {/* Decorations */}
+        <div className="absolute inset-0 pointer-events-none opacity-20">
+          <Image src="/BananaLeaf1.svg" alt="" width={300} height={300} className="absolute -top-10 -left-10 rotate-12" style={{ animationDelay: '0s' }} />
+          <Image src="/palmLeaf.svg" alt="" width={250} height={250} className="absolute top-20 -right-10 -rotate-12" style={{ animationDelay: '1s' }} />
+        </div>
+        
+        <Image
+          src="https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=1200&h=400&fit=crop"
+          alt="משחקייה"
+          fill
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
+        <div className="relative h-full container mx-auto px-4 sm:px-6 lg:px-8 flex items-end pb-12">
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-bold text-text-dark mb-3">
+              המשחקייה שלנו
+            </h1>
+            <p className="text-xl text-text-dark/90 max-w-2xl">
+              מקום בטוח ומהנה לילדים, נוח ונעים להורים
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Description */}
+      <section className="relative py-12 sm:py-16 bg-background-light overflow-hidden">
+        {/* Decorations */}
+        <div className="absolute inset-0 pointer-events-none opacity-15">
+          <Image src="/coffebeans.svg" alt="" width={120} height={120} className="absolute top-10 left-10 rotate-45" />
+          <Image src="/coldshake.svg" alt="" width={150} height={150} className="absolute bottom-10 right-10 -rotate-12" />
+        </div>
+        
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-4">
+              מרחב משחק מושלם לכל הגילאים
+            </h2>
+            <p className="text-lg text-text-light/80 leading-relaxed">
+              המשחקייה של CoffeeLand היא מרחב בטוח, נקי ומעורר דמיון לילדים מגיל 0 עד 12.
+              אנחנו מציעים שטח משחק גדול עם מגוון רחב של צעצועים איכותיים, משטחים רכים,
+              ומתקני משחק מעוצבים. בזמן שהילדים נהנים, ההורים יכולים להירגע עם כוס קפה
+              טעימה בפינת הישיבה המעוצבת שלנו.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="relative py-12 sm:py-16 bg-background overflow-hidden">
+        {/* Decorations */}
+        <div className="absolute inset-0 pointer-events-none opacity-10">
+          <Image src="/palmLeaf2.svg" alt="" width={200} height={200} className="absolute -top-10 right-20 rotate-45" />
+          <Image src="/BananaLeaf1.svg" alt="" width={180} height={180} className="absolute bottom-10 -left-10 -rotate-12" />
+          <Image src="/coldshake2.svg" alt="" width={130} height={130} className="absolute top-1/2 right-10 rotate-6" />
+        </div>
+        
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <h2 className="text-3xl font-bold text-primary text-center mb-12">
+            למה להגיע אלינו?
+          </h2>
+          <div className="max-w-4xl mx-auto">
+            {/* Bento Grid - פריסה סימטרית במובייל ודסקטופ */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {/* קארד 1 - שמאל למעלה */}
+              <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2 mx-auto">
+                  <LottieIcon src={features[0].lottie} />
+                </div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[0].title}</h3>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[0].description}</p>
+              </Card>
+
+              {/* קארד 2 - ימין למעלה */}
+              <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2 mx-auto">
+                  <LottieIcon src={features[1].lottie} />
+                </div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[1].title}</h3>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[1].description}</p>
+              </Card>
+
+              {/* קארד 3 - רחב באמצע */}
+              <Card className="col-span-2 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-row items-center gap-3 sm:gap-4 p-3 sm:p-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center flex-shrink-0">
+                  <LottieIcon src={features[2].lottie} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm sm:text-base font-semibold text-text-dark mb-0.5">{features[2].title}</h3>
+                  <p className="text-xs sm:text-sm text-text-dark/80 line-clamp-2">{features[2].description}</p>
+                </div>
+              </Card>
+
+              {/* קארד 4 - שמאל למטה */}
+              <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2 mx-auto">
+                  <LottieIcon src={features[3].lottie} />
+                </div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[3].title}</h3>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[3].description}</p>
+              </Card>
+
+              {/* קארד 5 - ימין למטה */}
+              <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2 mx-auto">
+                  <LottieIcon src={features[4].lottie} />
+                </div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[4].title}</h3>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[4].description}</p>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="relative py-12 sm:py-16 bg-background-light overflow-hidden">
+        {/* Decorations */}
+        <div className="absolute inset-0 pointer-events-none opacity-12">
+          <Image src="/coldshake3.svg" alt="" width={140} height={140} className="absolute top-10 left-10 -rotate-6" />
+          <Image src="/coffebeans.svg" alt="" width={100} height={100} className="absolute bottom-20 right-20 rotate-45" />
+          <Image src="/palmLeaf.svg" alt="" width={160} height={160} className="absolute bottom-10 left-1/3 rotate-12" />
+        </div>
+        
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <h2 className="text-3xl font-bold text-primary text-center mb-4">
+            מחירים
+          </h2>
+          <p className="text-center text-text-light/70 mb-12 max-w-2xl mx-auto">
+            בחרו את האופציה המתאימה לכם. כל כניסה כוללת עד 3 שעות משחק וכוס קפה להורה.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {pricing.map((option) => (
+              <Card
+                key={option.name}
+                className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none ${option.highlight ? 'border-accent border-2' : ''}`}
+              >
+                {option.highlight && (
+                  <div className="bg-accent text-accent-foreground px-3 py-1 text-sm font-semibold text-center rounded-t-lg">
+                    הכי משתלם
+                  </div>
+                )}
+                <CardHeader>
+                  <CardTitle className="text-lg">{option.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-3xl font-bold text-accent">
+                    ₪{option.price}
+                  </div>
+                  <p className="text-sm text-text-light/70">{option.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Button size="lg" asChild>
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="gap-2">
+                <MessageCircle className="w-5 h-5" />
+                רכשו כרטיסייה
+              </a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="relative py-16 bg-accent text-accent-foreground overflow-hidden">
+        {/* Decorations */}
+        <div className="absolute inset-0 pointer-events-none opacity-20">
+          <Image src="/BananaLeaf1.svg" alt="" width={250} height={250} className="absolute -top-10 left-10 rotate-12" />
+          <Image src="/palmLeaf2.svg" alt="" width={220} height={220} className="absolute -bottom-10 right-10 -rotate-45" />
+        </div>
+        
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <h2 className="text-3xl font-bold mb-4">מוכנים להגיע?</h2>
+          <p className="text-lg mb-8 opacity-90">
+            אין צורך בהזמנה מראש - פשוט מגיעים ונהנים!
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button variant="secondary" size="lg" asChild>
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="gap-2">
+                <MessageCircle className="w-5 h-5" />
+                שאלו אותנו
+              </a>
+            </Button>
+            <Button variant="outline" size="lg" asChild className="bg-transparent border-accent-foreground text-accent-foreground hover:bg-accent-foreground hover:text-accent">
+              <a href="/gallery">לגלריית תמונות</a>
+            </Button>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+}
+

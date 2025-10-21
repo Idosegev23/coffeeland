@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 379.62 388.77">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#linear-gradient);
+      }
+
+      .cls-2 {
+        isolation: isolate;
+      }
+
+      .cls-3 {
+        fill: url(#linear-gradient-2);
+      }
+
+      .cls-3, .cls-4, .cls-5 {
+        mix-blend-mode: multiply;
+        opacity: .7;
+      }
+
+      .cls-4 {
+        fill: url(#linear-gradient-3);
+      }
+
+      .cls-5 {
+        fill: url(#linear-gradient-4);
+      }
+
+      .cls-6 {
+        opacity: .8;
+      }
+
+      .cls-7 {
+        clip-path: url(#clippath);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="31.45" y1="201.65" x2="379.62" y2="201.65" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9da06a" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#5f614c"/>
+    </linearGradient>
+    <clipPath id="clippath">
+      <path class="cls-1" d="M200.1,159.06l39.62-16.38C179.53,82.86,107.95,40.05,31.45,14.53l348.17,374.24c-7.39-30.05-17.52-59.62-30.4-88.31-9.7-21.6-28.75-37.79-51.85-44.41l-26.9-7.7,47.67-6.69c-10.3-16.8-21.66-33.18-34.06-49.04-15.84-20.25-40.13-32.43-66.19-33.11l-17.79-.46Z"/>
+    </clipPath>
+    <linearGradient id="linear-gradient-2" x1="0" y1="73.39" x2="260.28" y2="73.39" xlink:href="#linear-gradient"/>
+    <linearGradient id="linear-gradient-3" x1="169.61" y1="181.87" x2="328.04" y2="181.87" xlink:href="#linear-gradient"/>
+    <linearGradient id="linear-gradient-4" x1="250.88" y1="287.88" x2="378.8" y2="287.88" xlink:href="#linear-gradient"/>
+  </defs>
+  <g class="cls-2">
+    <g id="Layer_1" data-name="Layer 1">
+      <g class="cls-6">
+        <path class="cls-1" d="M200.1,159.06l39.62-16.38C179.53,82.86,107.95,40.05,31.45,14.53l348.17,374.24c-7.39-30.05-17.52-59.62-30.4-88.31-9.7-21.6-28.75-37.79-51.85-44.41l-26.9-7.7,47.67-6.69c-10.3-16.8-21.66-33.18-34.06-49.04-15.84-20.25-40.13-32.43-66.19-33.11l-17.79-.46Z"/>
+        <g class="cls-7">
+          <polygon class="cls-3" points="260.28 109.02 143.94 146.78 0 3.05 72.05 0 260.28 109.02"/>
+          <polygon class="cls-4" points="328.04 220.61 226.28 229.68 169.61 171.17 265.28 134.06 328.04 220.61"/>
+          <polygon class="cls-5" points="378.8 332.92 296.75 298.31 250.88 249.46 349.88 242.84 378.8 332.92"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

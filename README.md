@@ -1,223 +1,198 @@
-# CoffeLand - בית קפה משחקייה 
+# CoffeeLand Website
 
-אפליקציית Next.js 14 מתקדמת לבית קפה-משחקייה בסגנון תל-אביבי, מובייל-פרסט ו-RTL.
+A modern, family-friendly website for CoffeeLand - a playground, café, and workshops space.
 
-## ✨ תכונות עיקריות
+## 🎨 Design System
 
-- 🎯 **דף בית דינמי** - באנר חם מתחלף + הירו קרוסלה
-- 📅 **לוח פעילויות** - סדנאות עם הרשמה
-- 🎉 **שירותי יום הולדת** - חבילות מותאמות אישית
-- 🖼️ **גלריה אינטראקטיבית** - עם מסנני תגיות
-- 📞 **טפסי יצירת קשר** - לאירועים ובקשות
-- 📅 **יצוא ICS** - הוספה ליומן אוטומטית
-- 🔒 **תואמות GDPR** - עמודי פרטיות מלאים
-- 📱 **מותאם למובייל** - RTL + נגישות AA
+### Color Palette
+- **Primary (חום כהה):** `#4C2C21` - Main text, dark CTAs, logo
+- **Secondary (קפוצ'ינו):** `#8D5A40` - Secondary backgrounds, highlights  
+- **Background (לאטה):** `#E8DED1` - Main background, light sections
+- **Accent (ירוק טרופי):** `#5F614C` - Action buttons, highlights, icons
+- **Text Light:** `#2A1C15` - High contrast on light backgrounds
+- **Text Dark:** `#F9F7F3` - White-cream on dark backgrounds
 
-## 🛠️ טכנולוגיות
+### Typography
+- **Font:** Heebo (Google Fonts) - Supports Hebrew, Latin, numbers
+- **H1:** 28-34px (mobile) / 40-48px (desktop)
+- **H2:** 22-26px (mobile) / 32-36px (desktop)
+- **Body:** 16-18px
+- **Small:** 14px
 
-- **Frontend**: Next.js 14 (App Router), React 18, TypeScript
-- **עיצוב**: TailwindCSS + MagicUI + Framer Motion
-- **מסד נתונים**: Supabase (Postgres + Auth + Storage + RLS)
-- **אחרים**: TanStack Query, React Hook Form, Zod, Next-SEO
+## 🚀 Getting Started
 
-## 🚀 התקנה והפעלה
+### Prerequisites
+- Node.js 20.x or later
+- npm 10.x or later
 
-### דרישות מוקדמות
+### Installation
 
-- Node.js 18+ 
-- npm/yarn
-- חשבון Supabase
-
-### שלבי התקנה
-
-1. **שכפול הפרויקט**
 ```bash
-git clone <repository-url>
-cd coffeeland
-```
-
-2. **התקנת תלויות**
-```bash
+# Install dependencies
 npm install
-```
 
-3. **הגדרת משתני סביבה**
+# Create environment variables
+cp .env.example .env.local
+# Edit .env.local with your values
 
-קובץ `.env.local` כבר קיים עם הגדרות Supabase! תצטרכו רק להוסיף:
-
-```env
-# הוסיפו את המפתח הזה מ-Supabase Dashboard > Settings > API
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
-
-```
-
-4. **הגדרת מסד הנתונים**
-
-הטבלאות כבר נוצרו באמצעות Supabase MCP. הנתונים כוללים:
-- ✅ 4 מוצרים דמו
-- ✅ באנר חם פעיל
-- ✅ 3 סליידים להירו
-- ✅ 3 סדנאות + מופעים
-- ✅ 2 חבילות יום הולדת
-- ✅ 8 פריטי גלריה
-- ✅ משתמש אדמין
-- ✅ קופוני הנחה
-
-5. **הפעלת השרת**
-```bash
+# Run development server
 npm run dev
 ```
 
-האתר יהיה זמין ב: `http://localhost:3000` (או 3001 אם 3000 תפוס)
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 📁 מבנה הפרויקט
+## 📁 Project Structure
 
 ```
-src/
-├── app/                    # Next.js App Router
-│   ├── (site)/            # דפי האתר הציבוריים
-│   │   ├── page.tsx       # דף הבית
-│   │   ├── calendar/      # לוח פעילויות
-│   │   ├── gallery/       # גלריה
-│   │   ├── privacy/       # מדיניות פרטיות
-│   │   ├── terms/         # תקנון
-│   │   ├── cookies/       # מדיניות קוקיז
-│   │   └── data-requests/ # בקשות נתונים
-│   ├── api/               # API Routes
-│   │   ├── hot-banner/    # מוצרים לבאנר חם
-│   │   ├── checkout/      # יצירת תשלום
-│   │   ├── webhooks/      # וובהוקי Stripe
-│   │   ├── ics/          # יצוא ICS
-│   │   ├── events-contact/ # טופס אירועים
-│   │   └── data-requests/ # טיפול בבקשות נתונים
-│   └── globals.css        # סגנונות גלובליים
-├── components/            # קומפוננטים
-│   ├── banner/           # באנר חם
-│   ├── hero/             # קרוסלת הירו
-│   ├── calendar/         # רכיבי לוח
-│   ├── forms/            # טפסים
-│   ├── layout/           # Header/Footer
-│   └── ui/               # רכיבי UI בסיסיים
-├── lib/                  # עזרים ותצורות
-│   ├── supabaseClient.ts # חיבור לSupabase
-│   ├── stripe.ts         # חיבור לStripe
-│   ├── ics.ts           # יצירת קבצי ICS
-│   └── utils.ts         # פונקציות עזר
-└── styles/
-    └── theme.ts          # מערכת צבעים
+coffeeland/
+├── memory-bank/              # Project documentation
+├── app/                      # Next.js App Router
+│   ├── (public)/            # Public-facing pages
+│   ├── api/                 # API routes
+│   ├── layout.tsx           # Root layout
+│   └── globals.css          # Global styles
+├── components/              # React components
+│   ├── ui/                 # shadcn base components
+│   ├── layout/             # Header, Footer
+│   ├── hero/               # HeroCarousel
+│   ├── navigation/         # NavTiles
+│   ├── gallery/            # Gallery, Lightbox
+│   ├── calendar/           # Calendar components
+│   ├── floating/           # FloatingPassButton
+│   ├── dialogs/            # ExitIntentDialog
+│   └── forms/              # ContactMiniForm
+├── lib/                    # Utility functions
+├── types/                  # TypeScript types
+└── public/                 # Static assets
 ```
 
-## 🎨 עיצוב ומיתוג
+## 🛠️ Available Scripts
 
-### פלטת צבעים
-- **Base**: Latte (`#e8ded1`) - רקע חם ונעים
-- **Text**: Coffee (`#4c2c21`) - טקסט כהה וקריא
-- **Accent**: Tropical (`#5f614c`) - הדגשות ירוקות
-
-### טיפוגרפיה
-- **Heebo** - גופן עברי נקי ומודרני
-- משקלים: 300, 400, 500, 600, 700
-
-### עקרונות עיצוב
-- 📱 **Mobile-First** - עיצוב מתחיל מהמובייל
-- ↩️ **RTL Support** - תמיכה מלאה בעברית
-- ♿ **נגישות AA** - ניגודיות, alt, aria
-- 🎯 **UX מותאם** - חוויית משתמש אינטואיטיבית
-
-## 🔧 API Endpoints
-
-### ציבוריים
-- `GET /api/hot-banner` - באנר חם + מוצרים
-- `GET /api/ics/[sessionId]` - הורדת ICS
-- `POST /api/events-contact` - טופס אירועים
-- `POST /api/data-requests` - בקשות נתונים
-
-## 💳 אינטגרציות
-
-### Supabase
-- **Authentication**: ניהול משתמשים
-- **Database**: PostgreSQL עם RLS
-- **Storage**: תמונות ומדיה
-- **Real-time**: עדכונים חיים
-
-## 📱 תכונות מובייל
-
-- **PWA Ready** - ניתן להתקנה כאפליקציה
-- **Touch Optimized** - ממשק מותאם למגע
-- **Fast Loading** - אופטימיזציה למהירות
-- **Offline Support** - תמיכה בסיסית במצב לא מקוון
-
-## 🔒 אבטחה ופרטיות
-
-### מדיניות פרטיות
-- ✅ תואם לתיקון 13 לחוק הגנת הפרטיות
-- ✅ זכויות נושא מידע מלאות
-- ✅ ניהול הסכמות
-- ✅ טופס בקשות נתונים
-
-### אבטחה טכנית
-- 🔐 **RLS** - Row Level Security בSupabase
-- 🛡️ **Input Validation** - Zod schemas
-- 🔒 **HTTPS** - הצפנה בתקשורת
-- 🚫 **XSS Protection** - הגנה מפני הזרקות
-
-## 🚀 פריסה (Deployment)
-
-### Vercel (מומלץ)
 ```bash
-# התחבר לVercel
-npx vercel login
-
-# פרוס לראשונה
-npx vercel
-
-# הגדר משתני סביבה בVercel Dashboard
-# פרוס לפרודקשן
-npx vercel --prod
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Run ESLint
 ```
 
-### משתני סביבה בפרודקשן
-וודא שכל המשתנים מ-`.env.example` מוגדרים בפלטפורמת הפריסה.
+## 🎯 Key Features
 
+- **Hero Carousel:** 3 rotating slides for playground, events, workshops
+- **5 Navigation Tiles:** Quick access to main sections
+- **Calendar System:** Availability view and recurring classes schedule
+- **Gallery:** Photo showcase with lightbox viewing
+- **Floating Pass Button:** Always-accessible CTA for passes/memberships
+- **Exit Intent Popup:** Last-chance engagement before user leaves
+- **Contact Forms:** Quick inquiry with WhatsApp integration
+- **Mobile-First:** Optimized for mobile devices
 
-## 🧪 בדיקות
+## 📱 Responsive Breakpoints
 
-### בדיקות ידניות
-- [ ] באנר חם מציג מוצרים
-- [ ] הירו קרוסלה עובדת
-- [ ] הרשמה לסדנה + תשלום
-- [ ] הורדת ICS עובדת
-- [ ] טופס אירועים שולח לוואטסאפ
-- [ ] עמודי פרטיות נגישים
-- [ ] מובייל responsive
+- **sm:** 640px (large phones)
+- **md:** 768px (tablets)
+- **lg:** 1024px (small desktops)
+- **xl:** 1280px (large desktops)
 
+## ♿ Accessibility
 
-## 🐛 פתרון בעיות נפוצות
+Built to WCAG 2.1 Level AA standards:
+- Semantic HTML
+- ARIA labels and roles
+- Keyboard navigation
+- Screen reader support
+- Color contrast ≥ 4.5:1
+- Focus indicators
+- Skip to content link
 
-### שגיאות חיבור לSupabase
+## 🔧 Technology Stack
+
+- **Framework:** Next.js 14+ (App Router)
+- **Language:** TypeScript (strict mode)
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Animation:** Framer Motion
+- **Forms:** React Hook Form + Zod
+- **Icons:** Lucide React
+
+## 📊 Performance Targets
+
+- **FCP (First Contentful Paint):** < 1.5s
+- **LCP (Largest Contentful Paint):** < 2.5s
+- **TTI (Time to Interactive):** < 3.5s
+- **CLS (Cumulative Layout Shift):** < 0.1
+- **Bundle Size:** < 200KB (initial, gzipped)
+
+## 🔮 Future Enhancements
+
+### Phase 2
+- Real Google Calendar API integration
+- Online booking system
+- Payment processing for passes
+- Email confirmations
+
+### Phase 3
+- User accounts
+- Admin dashboard
+- Analytics dashboard
+- Customer reviews
+
+## 📝 Content Management
+
+### Replacing Placeholder Content
+
+**Images:**
+- Hero images: `public/images/hero/`
+- Gallery images: `public/images/gallery/`
+
+**Text Content:**
+- Homepage: `app/(public)/page.tsx`
+- Other pages: `app/(public)/[page]/page.tsx`
+
+**Calendar Events:**
+- Mock data: `lib/calendar-mock-data.ts`
+- API routes: `app/api/calendar/*/route.ts`
+
+### Connecting Google Calendar
+
+See `memory-bank/techContext.md` for detailed instructions on connecting your Google Calendar to replace mock data.
+
+## 🌐 Deployment
+
+### Recommended: Vercel
+
 ```bash
-# בדוק שהמשתנים נכונים
-echo $NEXT_PUBLIC_SUPABASE_URL
-echo $NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
 ```
 
+Set environment variables in Vercel dashboard.
 
-### בעיות RTL
-- וודא ש-`html` tag יש `dir="rtl"`
-- בדוק שהגופן Heebo נטען
-- TailwindCSS עם `rtl:` modifiers
+### Alternative Platforms
+- Netlify
+- AWS Amplify
+- Self-hosted (Node.js server)
 
-## 📞 תמיכה
+## 📚 Documentation
 
-לשאלות ובעיות:
-- 📧 **Email**: info@coffeeland.co.il
-- 📱 **WhatsApp**: +972-50-123-4567
-- 🏠 **כתובת**: בן גוריון 7, אשקלון
+Comprehensive documentation available in `memory-bank/`:
+- `projectbrief.md` - Project overview and objectives
+- `productContext.md` - User experience and product vision
+- `systemPatterns.md` - Architecture and design patterns
+- `techContext.md` - Technology stack and setup
+- `activeContext.md` - Current focus and decisions
+- `progress.md` - Development progress tracker
 
-## 📄 רישיון
+## 📄 License
 
-פרויקט זה מיועד לשימוש של CoffeLand בלבד.
+Private - All rights reserved
+
+## 🤝 Contributing
+
+This is a private project. For questions or support, contact the project owner.
 
 ---
 
-**נבנה עם ❤️ בישראל**
+**Built with ❤️ for families**
+
