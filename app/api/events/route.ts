@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         registrations(
           id,
           status,
-          created_at,
+          registered_at,
           user:users(full_name, phone)
         )
       `)

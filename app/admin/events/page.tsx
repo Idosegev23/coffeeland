@@ -39,7 +39,7 @@ interface Event {
       phone: string;
     };
     status: string;
-    created_at: string;
+    registered_at: string;
   }>;
 }
 
@@ -511,7 +511,7 @@ export default function AdminEventsPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600">
-                              {new Date(registration.created_at).toLocaleDateString('he-IL', {
+                              {new Date(registration.registered_at).toLocaleDateString('he-IL', {
                                 day: '2-digit',
                                 month: '2-digit',
                                 hour: '2-digit',

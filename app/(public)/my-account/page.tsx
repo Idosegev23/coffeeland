@@ -79,7 +79,7 @@ export default function MyAccountPage() {
         .select(`
           id,
           status,
-          created_at,
+          registered_at,
           event:events(
             id,
             title,
@@ -91,7 +91,7 @@ export default function MyAccountPage() {
           )
         `)
         .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false })
+        .order('registered_at', { ascending: false })
 
       setRegistrations(registrationsData || [])
 
