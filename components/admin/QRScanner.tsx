@@ -13,13 +13,31 @@ export function QRScanner({ onScan }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [manualMode, setManualMode] = useState(false)
   const [manualCode, setManualCode] = useState('')
+  const [error, setError] = useState('')
   const scannerRef = useRef<Html5Qrcode | null>(null)
 
   const startScanning = async () => {
+    setError('')
+    console.log('🎥 Attempting to start QR scanner...')
+    
     try {
+      // Check if browser supports getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('הדפדפן שלך לא תומך בגישה למצלמה')
+      }
+
+      // Request camera permission first
+      console.log('📹 Requesting camera permission...')
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      console.log('✅ Camera permission granted')
+      
+      // Stop the test stream
+      stream.getTracks().forEach(track => track.stop())
+
       const scanner = new Html5Qrcode('qr-reader')
       scannerRef.current = scanner
 
+      console.log('🔍 Starting HTML5 QR Code scanner...')
       await scanner.start(
         { facingMode: 'environment' },
         {
@@ -27,18 +45,27 @@ export function QRScanner({ onScan }: QRScannerProps) {
           qrbox: { width: 250, height: 250 },
         },
         (decodedText) => {
+          console.log('✅ QR Code scanned:', decodedText)
           onScan(decodedText)
           stopScanning()
         },
         (errorMessage) => {
-          // Ignore scan errors
+          // Ignore scan errors (happens when no QR is visible)
         }
       )
 
       setIsScanning(true)
-    } catch (err) {
-      console.error('Error starting scanner:', err)
-      alert('לא ניתן לגשת למצלמה. השתמש בהזנה ידנית.')
+      console.log('✅ Scanner started successfully')
+    } catch (err: any) {
+      console.error('❌ Error starting scanner:', err)
+      const errorMsg = err.name === 'NotAllowedError' 
+        ? 'נדרשת הרשאת גישה למצלמה. אנא אפשר גישה והתחל שוב.'
+        : err.name === 'NotFoundError'
+        ? 'לא נמצאה מצלמה במכשיר.'
+        : err.message || 'שגיאה בהפעלת המצלמה'
+      
+      setError(errorMsg)
+      alert(errorMsg + '\n\nהשתמש בהזנה ידנית במקום.')
       setManualMode(true)
     }
   }
@@ -110,6 +137,13 @@ export function QRScanner({ onScan }: QRScannerProps) {
         id="qr-reader"
         className={`w-full ${isScanning ? 'block' : 'hidden'} rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none overflow-hidden`}
       />
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex gap-2">
