@@ -49,6 +49,14 @@ export async function GET(
   }
 }
 
+// PUT - עדכון אירוע (alias ל-PATCH)
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  return PATCH(request, { params });
+}
+
 // PATCH - עדכון אירוע
 export async function PATCH(
   request: Request,
@@ -76,13 +84,28 @@ export async function PATCH(
 
     const body = await request.json();
 
-    // עדכון ב-Supabase
+    // עדכון ב-Supabase - רק שדות מותרים
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    // רק שדות שנשלחו ומותרים לעדכון
+    const allowedFields = [
+      'title', 'description', 'type', 'start_at', 'end_at',
+      'is_recurring', 'recurrence_pattern', 'recurrence_days', 'recurrence_end_date',
+      'instructor_id', 'room_id', 'capacity', 'min_age', 'max_age',
+      'price', 'requires_registration', 'status'
+    ];
+
+    allowedFields.forEach(field => {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field];
+      }
+    });
+
     const { data: event, error } = await supabase
       .from('events')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', params.id)
       .select()
       .single();

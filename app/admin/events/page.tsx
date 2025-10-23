@@ -113,14 +113,23 @@ export default function AdminEventsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          description: formData.description,
+          type: formData.type,
+          start_at: formData.start_at,
+          end_at: formData.end_at,
+          is_recurring: formData.is_recurring,
+          recurrence_pattern: formData.recurrence_pattern || null,
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           requires_registration: true
         })
       });
 
-      if (!res.ok) throw new Error('Failed to update event');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to update event');
+      }
 
       const data = await res.json();
       setEvents(events.map(e => e.id === editingEvent.id ? data.event : e));
@@ -129,6 +138,7 @@ export default function AdminEventsPage() {
       resetForm();
       alert('✅ אירוע עודכן בהצלחה וסונכרן ליומן Google!');
     } catch (error: any) {
+      console.error('Update error:', error);
       alert('❌ שגיאה: ' + error.message);
     }
   };
