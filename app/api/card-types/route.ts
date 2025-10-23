@@ -49,21 +49,41 @@ export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     
-    const { data: { user } } = await supabase.auth.getUser();
+    console.log('🔍 POST /api/card-types - checking auth...');
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    console.log('👤 User check:', {
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      error: userError?.message
+    });
+    
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('❌ No user found - returning 401');
+      return NextResponse.json({ error: 'Unauthorized - No user session' }, { status: 401 });
     }
 
-    const { data: admin } = await supabase
+    const { data: admin, error: adminError } = await supabase
       .from('admins')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .single();
 
+    console.log('🔐 Admin check:', {
+      hasAdmin: !!admin,
+      adminId: admin?.id,
+      error: adminError?.message
+    });
+
     if (!admin) {
+      console.log('❌ User is not an admin - returning 403');
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
+    
+    console.log('✅ Auth successful - proceeding with insert');
 
     const body = await request.json();
 
