@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+
+// Service Role client for admin operations (bypasses RLS)
+const getServiceClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+};
 
 export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
+    const serviceClient = getServiceClient()
     const { loyaltyCardId } = await request.json()
 
     if (!loyaltyCardId) {
@@ -56,17 +72,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'לא נמצאו מספיק חותמות' }, { status: 400 })
     }
 
-    // Mark stamps as redeemed
+    // Mark stamps as redeemed (use service client)
     const stampIds = stamps.map(s => s.id)
-    const { error: redeemError } = await supabase
+    const { error: redeemError } = await serviceClient
       .from('loyalty_stamps')
       .update({ is_redeemed: true })
       .in('id', stampIds)
 
     if (redeemError) throw redeemError
 
-    // Update loyalty card - reset stamps to 0 and increment redeemed count
-    const { error: updateError } = await supabase
+    // Update loyalty card - reset stamps to 0 and increment redeemed count (use service client)
+    const { error: updateError } = await serviceClient
       .from('loyalty_cards')
       .update({
         total_stamps: 0,

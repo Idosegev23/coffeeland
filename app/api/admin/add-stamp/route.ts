@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+
+// Service Role client for admin operations (bypasses RLS)
+const getServiceClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+};
 
 export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
+    const serviceClient = getServiceClient()
     const { userId } = await request.json()
 
     if (!userId) {
@@ -50,8 +66,8 @@ export async function POST(request: Request) {
       loyaltyCard = newCard
     }
 
-    // Add stamp
-    const { error: stampError } = await supabase
+    // Add stamp (use service client)
+    const { error: stampError } = await serviceClient
       .from('loyalty_stamps')
       .insert({
         loyalty_card_id: loyaltyCard.id,
@@ -60,9 +76,9 @@ export async function POST(request: Request) {
 
     if (stampError) throw stampError
 
-    // Update total stamps
+    // Update total stamps (use service client)
     const newTotal = loyaltyCard.total_stamps + 1
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceClient
       .from('loyalty_cards')
       .update({ total_stamps: newTotal })
       .eq('id', loyaltyCard.id)
