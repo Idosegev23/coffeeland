@@ -6,6 +6,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
+
+// Force dynamic rendering - no caching
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { QRCodeDisplay } from '@/components/account/QRCodeDisplay'
