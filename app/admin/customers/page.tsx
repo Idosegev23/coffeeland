@@ -42,9 +42,9 @@ interface Customer {
   }>;
   passes?: Array<{
     id: string;
-    card_type: {
+    card_type: Array<{
       name: string;
-    };
+    }>;
     entries_used: number;
     entries_remaining: number;
     status: string;
@@ -83,8 +83,16 @@ export default function CustomersPage() {
       const { data, error } = await supabase
         .from('users')
         .select(`
-          *,
-          loyalty_card:loyalty_cards(*),
+          id,
+          full_name,
+          phone,
+          email,
+          qr_code,
+          created_at,
+          loyalty_card:loyalty_cards(
+            total_stamps,
+            redeemed_coffees
+          ),
           passes:passes(
             id,
             entries_used,
@@ -443,7 +451,7 @@ export default function CustomersPage() {
                         >
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="font-medium">{pass.card_type.name}</p>
+                              <p className="font-medium">{pass.card_type?.[0]?.name || 'לא ידוע'}</p>
                               <p className="text-sm text-gray-600">
                                 נוצלו: {pass.entries_used} | נותרו: {pass.entries_remaining}
                               </p>
