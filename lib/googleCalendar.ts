@@ -44,11 +44,20 @@ export interface CalendarEventInput {
  * @returns Google Event ID
  */
 export async function upsertGoogleEvent(evt: CalendarEventInput): Promise<string> {
+  console.log('🔄 Starting Google Calendar sync...', {
+    title: evt.title,
+    hasRefreshToken: !!process.env.GOOGLE_REFRESH_TOKEN,
+    hasClientId: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    hasClientSecret: !!process.env.NEXT_PUBLIC_GOOGLE_SECRET_KEY,
+    hasCalendarId: !!process.env.GOOGLE_CALENDAR_ID
+  });
+
   const cal = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
   const timeZone = process.env.GOOGLE_TIMEZONE || 'Asia/Jerusalem';
 
   if (!calendarId) {
+    console.error('❌ GOOGLE_CALENDAR_ID missing!');
     throw new Error('GOOGLE_CALENDAR_ID לא מוגדר ב-.env.local');
   }
 
@@ -97,7 +106,12 @@ export async function upsertGoogleEvent(evt: CalendarEventInput): Promise<string
       return res.data.id!;
     }
   } catch (error: any) {
-    console.error('❌ שגיאה בסנכרון ליומן Google:', error.message);
+    console.error('❌ שגיאה בסנכרון ליומן Google:', {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      details: error.response?.data || error.errors
+    });
     throw new Error(`Google Calendar sync failed: ${error.message}`);
   }
 }

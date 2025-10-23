@@ -105,6 +105,34 @@ export default function AdminEventsPage() {
     }
   };
 
+  const handleUpdate = async () => {
+    if (!editingEvent) return;
+
+    try {
+      const res = await fetch(`/api/events/${editingEvent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          capacity: formData.capacity ? parseInt(formData.capacity) : null,
+          price: formData.price ? parseFloat(formData.price) : null,
+          requires_registration: true
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to update event');
+
+      const data = await res.json();
+      setEvents(events.map(e => e.id === editingEvent.id ? data.event : e));
+      setShowCreateDialog(false);
+      setEditingEvent(null);
+      resetForm();
+      alert('✅ אירוע עודכן בהצלחה וסונכרן ליומן Google!');
+    } catch (error: any) {
+      alert('❌ שגיאה: ' + error.message);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('האם למחוק את האירוע? (יימחק גם מיומן Google)')) return;
 
@@ -292,7 +320,21 @@ export default function AdminEventsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {/* TODO: edit dialog */}}
+                      onClick={() => {
+                        setEditingEvent(event);
+                        setFormData({
+                          title: event.title,
+                          description: event.description || '',
+                          type: event.type,
+                          start_at: event.start_at.slice(0, 16),
+                          end_at: event.end_at.slice(0, 16),
+                          is_recurring: event.is_recurring,
+                          recurrence_pattern: event.recurrence_pattern || '',
+                          capacity: event.capacity?.toString() || '',
+                          price: event.price?.toString() || '',
+                        });
+                        setShowCreateDialog(true);
+                      }}
                     >
                       <Edit size={16} />
                     </Button>
@@ -311,11 +353,17 @@ export default function AdminEventsPage() {
           )}
         </div>
 
-        {/* דיאלוג יצירה */}
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        {/* דיאלוג יצירה/עריכה */}
+        <Dialog open={showCreateDialog} onOpenChange={(open) => {
+          setShowCreateDialog(open);
+          if (!open) {
+            setEditingEvent(null);
+            resetForm();
+          }
+        }}>
           <DialogContent className="max-w-2xl" dir="rtl">
             <DialogHeader>
-              <DialogTitle>יצירת אירוע חדש</DialogTitle>
+              <DialogTitle>{editingEvent ? 'עריכת אירוע' : 'יצירת אירוע חדש'}</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -427,18 +475,28 @@ export default function AdminEventsPage() {
                 variant="outline"
                 onClick={() => {
                   setShowCreateDialog(false);
+                  setEditingEvent(null);
                   resetForm();
                 }}
               >
                 ביטול
               </Button>
               <Button
-                onClick={handleCreate}
+                onClick={editingEvent ? handleUpdate : handleCreate}
                 disabled={!formData.title || !formData.start_at || !formData.end_at}
                 className="bg-accent hover:bg-accent/90"
               >
-                <Plus className="ml-2" size={16} />
-                צור אירוע
+                {editingEvent ? (
+                  <>
+                    <Edit className="ml-2" size={16} />
+                    עדכן אירוע
+                  </>
+                ) : (
+                  <>
+                    <Plus className="ml-2" size={16} />
+                    צור אירוע
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
