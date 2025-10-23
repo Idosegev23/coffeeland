@@ -58,8 +58,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Temporarily disable to debug login issues
-  matcher: [],
-  // matcher: ['/admin/:path*', '/my-account/:path*'],
+  matcher: ['/admin/:path*', '/my-account/:path*'],
 }
 
