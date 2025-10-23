@@ -52,13 +52,13 @@ export default function LoginPage() {
       const targetPath = adminData?.is_active ? '/admin' : '/my-account'
       console.log('🔀 Redirecting to:', targetPath)
       
-      // Wait for session to propagate
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Wait longer for cookies to be set
+      console.log('⏳ Waiting for session to propagate...')
+      await new Promise(resolve => setTimeout(resolve, 1500))
       
-      // Refresh router to pick up new session, then navigate
-      router.refresh()
-      await new Promise(resolve => setTimeout(resolve, 100))
-      router.push(targetPath)
+      // Force full page reload to ensure cookies are sent
+      console.log('🔄 Reloading to:', targetPath)
+      window.location.href = targetPath
     } catch (err: any) {
       console.error('❌ Login error:', err)
       setError(err.message || 'שגיאה בהתחברות. נסו שוב.')
