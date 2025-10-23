@@ -48,8 +48,8 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
         const height = window.innerHeight * 0.8
         setDimensions({ width: Math.floor(width), height: Math.floor(height) })
       } else {
-        // Desktop: MASSIVE - each page is 800px wide = 1600px book!
-        setDimensions({ width: 800, height: 1130 })
+        // Desktop: each page is 600px wide = 1200px book
+        setDimensions({ width: 600, height: 850 })
       }
     }
 
