@@ -89,7 +89,7 @@ export default function PlaygroundPage() {
       const { data, error } = await supabase
         .from('card_types')
         .select('*')
-        .eq('type', 'playroom')
+        .eq('type', 'playground')
         .eq('is_active', true)
         .order('entries_count', { ascending: true })
 
