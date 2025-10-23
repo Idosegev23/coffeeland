@@ -84,7 +84,7 @@ export function LoyaltyCard({ totalStamps, redeemedCoffees }: LoyaltyCardProps) 
         <div className="flex items-center justify-between pt-3 border-t border-text-dark/20">
           <div className="text-center flex-1">
             <div className="text-2xl font-bold text-accent">{totalStamps}</div>
-            <div className="text-xs text-text-dark/70">סה"כ חותמות</div>
+            <div className="text-xs text-text-dark/70">סה&quot;כ חותמות</div>
           </div>
           <div className="w-px h-10 bg-text-dark/20" />
           <div className="text-center flex-1">
