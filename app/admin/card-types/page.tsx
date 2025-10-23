@@ -169,7 +169,7 @@ export default function CardTypesPage() {
     setFormData({
       name: '',
       description: '',
-      type: 'playroom',
+      type: 'playground',
       entries_count: '',
       price: '',
       sale_price: '',
