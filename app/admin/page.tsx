@@ -52,13 +52,25 @@ export default function AdminDashboardPage() {
 
   const loadAdminData = async () => {
     try {
-      const currentUser = await getCurrentUser()
-      if (!currentUser) {
+      // Check auth directly with supabase client
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      console.log('Admin page - auth check:', { user: user?.id, error })
+      
+      if (!user || error) {
+        console.log('No user found, redirecting to login')
         router.push('/login')
         return
       }
 
-      setUser(currentUser)
+      // Get user data from users table
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      setUser(userData || { id: user.id, email: user.email })
 
       // Load stats
       const { count: usersCount } = await supabase
