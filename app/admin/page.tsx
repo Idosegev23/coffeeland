@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { supabase, getCurrentUser } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { LogOut, Scan, Users, Ticket, Coffee, Home, Calendar, ShoppingCart, CreditCard, List } from 'lucide-react'
@@ -36,6 +37,7 @@ function LottieIcon({ src }: { src: string }) {
 
 export default function AdminDashboardPage() {
   const router = useRouter()
+  const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [stats, setStats] = useState({

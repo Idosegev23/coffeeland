@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { supabase, getCurrentUser } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -16,6 +17,7 @@ import { LogOut, Plus, Ticket, Home } from 'lucide-react'
 
 export default function MyAccountPage() {
   const router = useRouter()
+  const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [activePasses, setActivePasses] = useState<any[]>([])

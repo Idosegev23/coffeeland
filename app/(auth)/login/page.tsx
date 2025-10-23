@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { supabase } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 export default function LoginPage() {
   const router = useRouter()
+  const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   

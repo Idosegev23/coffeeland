@@ -9,7 +9,8 @@ import { Ticket, Calendar, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { supabase, getCurrentUser } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { getCurrentUser } from '@/lib/supabase'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
