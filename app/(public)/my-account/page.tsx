@@ -12,7 +12,7 @@ import { QRCodeDisplay } from '@/components/account/QRCodeDisplay'
 import { PassCard } from '@/components/account/PassCard'
 import { LoyaltyCard } from '@/components/account/LoyaltyCard'
 import { UsageHistory } from '@/components/account/UsageHistory'
-import { LogOut, Plus, Ticket, Home } from 'lucide-react'
+import { LogOut, Plus, Ticket, Home, Calendar, Clock } from 'lucide-react'
 
 export default function MyAccountPage() {
   const router = useRouter()
@@ -23,6 +23,7 @@ export default function MyAccountPage() {
   const [expiredPasses, setExpiredPasses] = useState<any[]>([])
   const [loyaltyCard, setLoyaltyCard] = useState<any>(null)
   const [usages, setUsages] = useState<any[]>([])
+  const [registrations, setRegistrations] = useState<any[]>([])
 
   useEffect(() => {
     loadData()
@@ -71,6 +72,28 @@ export default function MyAccountPage() {
         .maybeSingle()
 
       setLoyaltyCard(loyaltyData)
+
+      // Load registrations
+      const { data: registrationsData } = await supabase
+        .from('registrations')
+        .select(`
+          id,
+          status,
+          created_at,
+          event:events(
+            id,
+            title,
+            description,
+            type,
+            start_at,
+            end_at,
+            price
+          )
+        `)
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false })
+
+      setRegistrations(registrationsData || [])
 
       setLoading(false)
     } catch (err) {
@@ -161,6 +184,103 @@ export default function MyAccountPage() {
                 purchaseDate={pass.purchase_date}
               />
             ))}
+          </div>
+        )}
+
+        <Separator className="my-8" />
+
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-primary">הרשמות שלי</h2>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/workshops" className="gap-2">
+              <Plus className="w-4 h-4" />
+              הירשם לחוג/סדנה
+            </Link>
+          </Button>
+        </div>
+
+        {registrations.length === 0 ? (
+          <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-8 text-center">
+            <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+            <p className="text-text-light/70 mb-4">אין הרשמות פעילות</p>
+            <Button asChild>
+              <Link href="/workshops">הירשם לחוג או סדנה</Link>
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid gap-4 mb-8">
+            {registrations.map((registration) => {
+              const event = Array.isArray(registration.event) ? registration.event[0] : registration.event
+              if (!event) return null
+              
+              const isPast = new Date(event.end_at) < new Date()
+              const statusColor = 
+                registration.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                registration.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                'bg-yellow-100 text-yellow-700'
+              
+              const statusText = 
+                registration.status === 'confirmed' ? 'מאושר' :
+                registration.status === 'cancelled' ? 'בוטל' :
+                'ממתין'
+
+              return (
+                <Card key={registration.id} className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6 ${isPast ? 'opacity-60' : ''}`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-xl font-bold text-primary">{event.title}</h3>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          event.type === 'class' ? 'bg-blue-100 text-blue-700' :
+                          event.type === 'workshop' ? 'bg-purple-100 text-purple-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {event.type === 'class' ? 'חוג' : event.type === 'workshop' ? 'סדנה' : 'אירוע'}
+                        </span>
+                      </div>
+                      {event.description && (
+                        <p className="text-sm text-gray-600 mb-3">{event.description}</p>
+                      )}
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+                      {statusText}
+                    </span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-3 gap-4 text-sm">
+                    <div className="flex items-center text-gray-700">
+                      <Calendar size={16} className="ml-2 text-accent" />
+                      {new Date(event.start_at).toLocaleDateString('he-IL', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long'
+                      })}
+                    </div>
+
+                    <div className="flex items-center text-gray-700">
+                      <Clock size={16} className="ml-2 text-accent" />
+                      {new Date(event.start_at).toLocaleTimeString('he-IL', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+
+                    {event.price && (
+                      <div className="flex items-center text-gray-700">
+                        <Ticket size={16} className="ml-2 text-accent" />
+                        ₪{event.price}
+                      </div>
+                    )}
+                  </div>
+
+                  {isPast && (
+                    <div className="mt-4 text-xs text-gray-500 text-center">
+                      האירוע הסתיים
+                    </div>
+                  )}
+                </Card>
+              )
+            })}
           </div>
         )}
 
