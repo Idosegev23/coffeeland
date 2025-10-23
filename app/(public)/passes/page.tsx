@@ -132,8 +132,9 @@ export default function PassesPage() {
         .insert({
           user_id: user.id,
           card_type_id: pass.id,
-          entries_used: 0,
-          entries_remaining: pass.totalEntries,
+          type: pass.type,
+          total_entries: pass.totalEntries,
+          remaining_entries: pass.totalEntries,
           expiry_date: expiryDate.toISOString(),
           price_paid: pass.price,
           status: 'active',
