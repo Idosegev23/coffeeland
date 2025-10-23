@@ -65,13 +65,11 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
       const data = await response.json()
       setSuccess(passId)
       
-      // Refresh after 1 second
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      // Show success message and force reload
+      alert('✅ כניסה נוצלה בהצלחה!')
+      window.location.href = window.location.href // Force full reload
     } catch (err: any) {
       alert(err.message)
-    } finally {
       setLoading(null)
     }
   }
@@ -94,13 +92,11 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
 
       setSuccess('stamp')
       
-      // Refresh after 1 second
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      // Show success message and force reload
+      alert('✅ חותמת נוספה בהצלחה!')
+      window.location.href = window.location.href // Force full reload
     } catch (err: any) {
       alert(err.message)
-    } finally {
       setLoading(null)
     }
   }
@@ -125,13 +121,11 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
 
       setSuccess('redeem')
       
-      // Refresh after 1 second
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      // Show success message and force reload
+      alert('🎉 קפה חינם מומש בהצלחה!')
+      window.location.href = window.location.href // Force full reload
     } catch (err: any) {
       alert(err.message)
-    } finally {
       setLoading(null)
     }
   }
