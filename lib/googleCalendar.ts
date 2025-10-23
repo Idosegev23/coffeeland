@@ -21,6 +21,9 @@ function getCalendarClient() {
   return google.calendar({ version: 'v3', auth: oauth2 });
 }
 
+// Alias for external use
+export const calendarClient = getCalendarClient;
+
 /**
  * טיפוס לאירוע שנשלח מ-Supabase
  */
