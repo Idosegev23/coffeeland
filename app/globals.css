@@ -127,3 +127,21 @@
   }
 }
 
+/* QR Scanner Styles */
+#qr-reader {
+  position: relative;
+}
+
+#qr-reader video {
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  object-fit: cover;
+}
+
+#qr-reader canvas {
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
+}
+
