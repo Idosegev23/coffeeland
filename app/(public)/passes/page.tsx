@@ -61,6 +61,7 @@ function LottieIcon({ src }: { src: string }) {
 
 export default function PassesPage() {
   const router = useRouter()
+  const supabase = createClientComponentClient()
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [passOptions, setPassOptions] = useState<PassOption[]>([])
