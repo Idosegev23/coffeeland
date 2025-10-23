@@ -1,6 +1,21 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+
+// Service Role client for admin operations (bypasses RLS)
+const getServiceClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+};
 
 export async function POST(request: Request) {
   try {
@@ -50,18 +65,35 @@ export async function POST(request: Request) {
     const newRemaining = pass.remaining_entries - 1
     const newStatus = newRemaining === 0 ? 'depleted' : 'active'
 
-    const { error: updateError } = await supabase
+    console.log('🔄 Updating pass:', {
+      passId,
+      oldRemaining: pass.remaining_entries,
+      newRemaining,
+      newStatus
+    })
+
+    // Use service role client for update (bypasses RLS)
+    const serviceClient = getServiceClient()
+    
+    const { data: updatedPass, error: updateError } = await serviceClient
       .from('passes')
       .update({
         remaining_entries: newRemaining,
         status: newStatus,
       })
       .eq('id', passId)
+      .select()
+      .single()
 
-    if (updateError) throw updateError
+    if (updateError) {
+      console.error('❌ Update error:', updateError)
+      throw updateError
+    }
 
-    // Create usage record
-    const { error: usageError } = await supabase
+    console.log('✅ Pass updated:', updatedPass)
+
+    // Create usage record (also with service client)
+    const { error: usageError } = await serviceClient
       .from('pass_usages')
       .insert({
         pass_id: passId,
