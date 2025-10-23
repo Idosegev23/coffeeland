@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Dynamically import HTMLFlipBook to avoid SSR issues
 const HTMLFlipBook = dynamic(() => import('react-pageflip'), {
@@ -38,11 +39,14 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
   const [loading, setLoading] = useState(true)
   const [pdfPages, setPdfPages] = useState<string[]>([])
   const [dimensions, setDimensions] = useState({ width: 550, height: 733 })
+  const [currentPage, setCurrentPage] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
     const updateDimensions = () => {
-      const isMobile = window.innerWidth < 768
-      if (isMobile) {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile) {
         // Mobile: full width
         const width = window.innerWidth - 20
         const height = window.innerHeight * 0.8
@@ -106,6 +110,36 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
     loadPDF()
   }, [pdfUrl])
 
+  const nextPage = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (bookRef.current) {
+      const flip = (bookRef.current as any).pageFlip
+      if (flip && typeof flip === 'function') {
+        const flipObj = flip()
+        if (flipObj && typeof flipObj.flipNext === 'function') {
+          flipObj.flipNext()
+        }
+      }
+    }
+  }
+
+  const prevPage = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (bookRef.current) {
+      const flip = (bookRef.current as any).pageFlip
+      if (flip && typeof flip === 'function') {
+        const flipObj = flip()
+        if (flipObj && typeof flipObj.flipPrev === 'function') {
+          flipObj.flipPrev()
+        }
+      }
+    }
+  }
+
+  const onFlip = (e: any) => {
+    setCurrentPage(e.data)
+  }
+
   return (
     <div className="flex flex-col items-center gap-6">
       {loading && (
@@ -119,6 +153,48 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
 
       {!loading && pdfPages.length > 0 && (
         <div className="relative" style={{ transform: 'scaleX(-1)' }}>
+          {/* Navigation Arrows - Mobile Only */}
+          {isMobile && (
+            <>
+              <button
+                onClick={nextPage}
+                onTouchEnd={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  nextPage(e as any)
+                }}
+                disabled={currentPage >= pdfPages.length - 1}
+                className="absolute right-2 top-1/2 z-[100] bg-background-light/90 hover:bg-background-light p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                style={{
+                  transform: 'scaleX(-1) translateY(-50%)',
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation'
+                }}
+                aria-label="עמוד הבא"
+              >
+                <ChevronRight className="w-6 h-6 text-primary" style={{ pointerEvents: 'none' }} />
+              </button>
+              <button
+                onClick={prevPage}
+                onTouchEnd={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  prevPage(e as any)
+                }}
+                disabled={currentPage === 0}
+                className="absolute left-2 top-1/2 z-[100] bg-background-light/90 hover:bg-background-light p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                style={{
+                  transform: 'scaleX(-1) translateY(-50%)',
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation'
+                }}
+                aria-label="עמוד קודם"
+              >
+                <ChevronLeft className="w-6 h-6 text-primary" style={{ pointerEvents: 'none' }} />
+              </button>
+            </>
+          )}
+
           <HTMLFlipBook
             ref={bookRef}
             width={dimensions.width}
@@ -131,6 +207,7 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
             maxShadowOpacity={0.2}
             showCover={true}
             mobileScrollSupport={true}
+            onFlip={onFlip}
             className=""
             style={{}}
             startPage={0}
