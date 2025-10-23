@@ -69,7 +69,8 @@ export default function MyAccountPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    router.push('/')
+    // Force a full page refresh to clear all state
+    window.location.href = '/'
   }
 
   if (loading) {

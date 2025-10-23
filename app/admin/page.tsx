@@ -92,7 +92,8 @@ export default function AdminDashboardPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    // Force a full page refresh to clear all state
+    window.location.href = '/'
   }
 
   if (loading) {
