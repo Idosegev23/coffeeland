@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic'
 import { supabase, getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { LogOut, Scan, Users, Ticket, Coffee, Home } from 'lucide-react'
+import { LogOut, Scan, Users, Ticket, Coffee, Home, Calendar, ShoppingCart, CreditCard, List } from 'lucide-react'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -204,7 +204,8 @@ export default function AdminDashboardPage() {
         {/* Quick Actions */}
         <section>
           <h2 className="text-2xl font-semibold text-primary mb-4">פעולות מהירות</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* סריקת QR */}
             <Button
               variant="outline"
               size="lg"
@@ -212,7 +213,7 @@ export default function AdminDashboardPage() {
               asChild
             >
               <Link href="/admin/scan" className="gap-4">
-                <Scan className="w-8 h-8" />
+                <Scan className="w-8 h-8 text-accent" />
                 <div className="text-right">
                   <div className="font-semibold">סריקת QR</div>
                   <div className="text-xs opacity-70">נצל כרטיסייה או הוסף חותמת</div>
@@ -220,16 +221,77 @@ export default function AdminDashboardPage() {
               </Link>
             </Button>
 
+            {/* ניהול חוגים וסדנאות */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start"
+              asChild
+            >
+              <Link href="/admin/events" className="gap-4">
+                <Calendar className="w-8 h-8 text-blue-600" />
+                <div className="text-right">
+                  <div className="font-semibold">חוגים וסדנאות</div>
+                  <div className="text-xs opacity-70">ניהול אירועים + Google Calendar</div>
+                </div>
+              </Link>
+            </Button>
+
+            {/* POS - קופה */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start"
+              asChild
+            >
+              <Link href="/admin/pos" className="gap-4">
+                <ShoppingCart className="w-8 h-8 text-green-600" />
+                <div className="text-right">
+                  <div className="font-semibold">קופה (POS)</div>
+                  <div className="text-xs opacity-70">מכירת כרטיסיות בקופה</div>
+                </div>
+              </Link>
+            </Button>
+
+            {/* ניהול סוגי כרטיסיות */}
             <Button
               variant="outline"
               size="lg"
               className="h-auto py-6 justify-start opacity-50 cursor-not-allowed"
               disabled
             >
-              <Users className="w-8 h-8" />
+              <Ticket className="w-8 h-8 text-purple-600" />
               <div className="text-right">
-                <div className="font-semibold">ניהול משתמשים</div>
-                <div className="text-xs opacity-70">בקרוב...</div>
+                <div className="font-semibold">סוגי כרטיסיות</div>
+                <div className="text-xs opacity-70">בקרוב - ניהול סוגי כרטיסיות</div>
+              </div>
+            </Button>
+
+            {/* ניהול לקוחות */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start opacity-50 cursor-not-allowed"
+              disabled
+            >
+              <Users className="w-8 h-8 text-orange-600" />
+              <div className="text-right">
+                <div className="font-semibold">ניהול לקוחות</div>
+                <div className="text-xs opacity-70">בקרוב - רשימת לקוחות וילדים</div>
+              </div>
+            </Button>
+
+            {/* דוחות */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start opacity-50 cursor-not-allowed"
+              disabled
+            >
+              <List className="w-8 h-8 text-red-600" />
+              <div className="text-right">
+                <div className="font-semibold">דוחות</div>
+                <div className="text-xs opacity-70">בקרוב - דוחות הכנסות ופעילות</div>
               </div>
             </Button>
           </div>
