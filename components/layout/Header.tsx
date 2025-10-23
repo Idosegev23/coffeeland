@@ -8,7 +8,7 @@ import { Menu, X, User, Home, Scan } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { supabase } from '@/lib/supabase'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const navigation = [
   { name: 'ראשי', href: '/' },
@@ -20,6 +20,7 @@ const navigation = [
 ]
 
 export function Header() {
+  const supabase = createClientComponentClient()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const pathname = usePathname()
@@ -37,6 +38,7 @@ export function Header() {
     } else {
       setIsAdmin(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   return (
