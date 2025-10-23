@@ -154,38 +154,38 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', duration: 0.5 }}
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[95%] max-w-2xl max-h-[90vh] overflow-y-auto"
+          className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:inset-x-auto z-50 w-auto sm:w-[95%] sm:max-w-2xl max-h-[85vh] overflow-y-auto"
         >
-          <div className="bg-background-light rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-2xl p-6 sm:p-8 relative">
+          <div className="bg-background-light rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-2xl p-4 sm:p-6 md:p-8 relative">
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-4 left-4 text-text-light/50 hover:text-text-light transition-colors"
+              className="absolute top-3 left-3 sm:top-4 sm:left-4 text-text-light/50 hover:text-text-light transition-colors z-10"
               aria-label="סגור"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6 sm:w-5 sm:h-5" />
             </button>
 
             {/* User Info */}
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl font-bold text-accent">
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                <span className="text-xl sm:text-2xl font-bold text-accent">
                   {userData.user.full_name.charAt(0)}
                 </span>
               </div>
-              <h2 className="text-2xl font-bold text-primary mb-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-primary mb-1">
                 {userData.user.full_name}
               </h2>
-              <p className="text-sm text-text-light/70">{userData.user.email}</p>
+              <p className="text-xs sm:text-sm text-text-light/70">{userData.user.email}</p>
               <p className="text-xs text-text-light/50 font-mono mt-1">
                 ID: {userData.user.qr_code}
               </p>
             </div>
 
             {/* Active Passes */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-primary mb-3 flex items-center gap-2">
-                <Ticket className="w-5 h-5" />
+            <div className="mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-primary mb-2 sm:mb-3 flex items-center gap-2">
+                <Ticket className="w-4 h-4 sm:w-5 sm:h-5" />
                 כרטיסיות פעילות ({userData.passes.length})
               </h3>
 
@@ -194,18 +194,18 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
                   <p className="text-text-light/70">אין כרטיסיות פעילות</p>
                 </Card>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {userData.passes.map((pass) => (
                     <Card
                       key={pass.id}
-                      className="rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-4 bg-background"
+                      className="rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-3 sm:p-4 bg-background"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge>{typeLabels[pass.type] || pass.type}</Badge>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:justify-between">
+                        <div className="flex-1 w-full">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <Badge className="text-xs">{typeLabels[pass.type] || pass.type}</Badge>
                             {pass.remaining_entries <= 2 && (
-                              <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-300">
+                              <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">
                                 כמעט נגמר
                               </Badge>
                             )}
@@ -224,7 +224,7 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
                           onClick={() => handleUsePass(pass.id)}
                           disabled={loading === pass.id || success === pass.id}
                           size="sm"
-                          className="gap-2"
+                          className="gap-2 w-full sm:w-auto"
                         >
                           {success === pass.id ? (
                             <>
@@ -249,21 +249,21 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
               
               return (
               <div>
-                <h3 className="text-lg font-semibold text-primary mb-3 flex items-center gap-2">
-                  <Coffee className="w-5 h-5" />
+                <h3 className="text-base sm:text-lg font-semibold text-primary mb-2 sm:mb-3 flex items-center gap-2">
+                  <Coffee className="w-4 h-4 sm:w-5 sm:h-5" />
                   כרטיסיית נאמנות
                 </h3>
 
-                <Card className="rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-4 bg-background">
+                <Card className="rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-3 sm:p-4 bg-background">
                   {/* Stamps Display */}
-                  <div className="flex items-center justify-center gap-1 mb-4">
+                  <div className="flex items-center justify-center gap-0.5 sm:gap-1 mb-3 sm:mb-4">
                     {Array.from({ length: 10 }).map((_, index) => {
                       const hasStamp = index < currentStamps
                       return (
                         <div
                           key={index}
                           className={`
-                            w-8 h-8 rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-none
+                            w-6 h-6 sm:w-8 sm:h-8 rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-none
                             flex items-center justify-center
                             ${hasStamp ? 'bg-accent' : 'bg-background-light border border-border'}
                           `}
@@ -290,12 +290,12 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button
                       onClick={handleAddStamp}
                       disabled={loading === 'stamp' || success === 'stamp' || currentStamps === 10}
                       variant="outline"
-                      className="flex-1 gap-2"
+                      className="flex-1 gap-2 text-sm"
                     >
                       {success === 'stamp' ? (
                         <>
@@ -314,7 +314,7 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
                       <Button
                         onClick={handleRedeemCoffee}
                         disabled={loading === 'redeem' || success === 'redeem'}
-                        className="flex-1 gap-2"
+                        className="flex-1 gap-2 text-sm"
                       >
                         {success === 'redeem' ? (
                           <>
