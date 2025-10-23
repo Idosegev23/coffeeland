@@ -47,7 +47,6 @@ export default function AdminEventsPage() {
     is_recurring: false,
     recurrence_pattern: '',
     capacity: '',
-    price: '',
   });
 
   const supabase = createClientComponentClient();
@@ -76,7 +75,8 @@ export default function AdminEventsPage() {
         body: JSON.stringify({
           ...formData,
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
-          price: formData.price ? parseFloat(formData.price) : null
+          price: null, // אין מחיר - רק נעילת חלון
+          requires_registration: true
         })
       });
 
@@ -118,8 +118,7 @@ export default function AdminEventsPage() {
       end_at: '',
       is_recurring: false,
       recurrence_pattern: '',
-      capacity: '',
-      price: ''
+      capacity: ''
     });
   };
 
@@ -232,12 +231,10 @@ export default function AdminEventsPage() {
                           </p>
                         </div>
                       )}
-                      {event.price && (
-                        <div>
-                          <span className="text-gray-500">מחיר:</span>
-                          <p className="font-medium text-accent">₪{event.price}</p>
-                        </div>
-                      )}
+                      <div>
+                        <span className="text-gray-500">רישום:</span>
+                        <p className="font-medium text-blue-600">טלפונית בלבד</p>
+                      </div>
                     </div>
                   </div>
 
@@ -349,28 +346,18 @@ export default function AdminEventsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">קיבולת</label>
-                  <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={e => setFormData({ ...formData, capacity: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="מספר מקומות"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">מחיר (₪)</label>
-                  <input
-                    type="number"
-                    value={formData.price}
-                    onChange={e => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="0"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">קיבולת (אופציונלי)</label>
+                <input
+                  type="number"
+                  value={formData.capacity}
+                  onChange={e => setFormData({ ...formData, capacity: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-md"
+                  placeholder="מספר מקומות מקסימלי (השאר ריק ללא הגבלה)"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 האירוע ייצור נעילה ביומן Google - רישום נעשה טלפונית
+                </p>
               </div>
             </div>
 

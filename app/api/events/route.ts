@@ -64,20 +64,25 @@ export async function POST(request: Request) {
     const supabase = createRouteHandlerClient({ cookies });
     
     // בדיקת הרשאות אדמין
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    console.log('POST /api/events - User:', user?.id, userError);
+    
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized - Please login', details: userError?.message }, { status: 401 });
     }
 
-    const { data: admin } = await supabase
+    const { data: admin, error: adminError } = await supabase
       .from('admins')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .single();
 
+    console.log('Admin check:', admin, adminError);
+
     if (!admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      return NextResponse.json({ error: 'Admin access required', details: adminError?.message }, { status: 403 });
     }
 
     const body = await request.json();
