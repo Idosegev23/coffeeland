@@ -289,7 +289,7 @@ export default function CustomersPage() {
               <div className="text-center py-12 text-gray-500">
                 <Users size={48} className="mx-auto mb-4 opacity-50" />
                 {searchQuery ? (
-                  <p>לא נמצאו לקוחות התואמים לחיפוש "{searchQuery}"</p>
+                  <p>לא נמצאו לקוחות התואמים לחיפוש &quot;{searchQuery}&quot;</p>
                 ) : (
                   <p>אין עדיין לקוחות במערכת</p>
                 )}

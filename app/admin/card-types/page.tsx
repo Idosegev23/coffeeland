@@ -291,7 +291,7 @@ export default function CardTypesPage() {
             <div className="col-span-full text-center py-12 text-gray-500">
               <CreditCard size={48} className="mx-auto mb-4 opacity-50" />
               <p>אין עדיין סוגי כרטיסיות</p>
-              <p className="text-sm">לחץ על "כרטיסייה חדשה" כדי ליצור</p>
+              <p className="text-sm">לחץ על &quot;כרטיסייה חדשה&quot; כדי ליצור</p>
             </div>
           )}
         </div>
