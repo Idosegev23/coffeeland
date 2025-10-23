@@ -37,7 +37,7 @@ export default function CardTypesPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    type: 'playroom',
+    type: 'playground',
     entries_count: '',
     price: '',
     sale_price: '',
@@ -179,10 +179,10 @@ export default function CardTypesPage() {
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      playroom: 'חדר משחקים',
-      class: 'חוגים',
+      playground: 'חדר משחקים',
       workshop: 'סדנאות',
-      combo: 'משולב'
+      event: 'אירועים',
+      family: 'משפחתי'
     };
     return labels[type] || type;
   };
@@ -350,10 +350,10 @@ export default function CardTypesPage() {
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
                   className="w-full px-3 py-2 border rounded-md"
                 >
-                  <option value="playroom">חדר משחקים</option>
-                  <option value="class">חוגים</option>
+                  <option value="playground">חדר משחקים</option>
                   <option value="workshop">סדנאות</option>
-                  <option value="combo">משולב</option>
+                  <option value="event">אירועים</option>
+                  <option value="family">משפחתי</option>
                 </select>
               </div>
 
