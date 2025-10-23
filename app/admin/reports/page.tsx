@@ -31,9 +31,9 @@ interface ReportData {
     id: string;
     amount: number;
     created_at: string;
-    user: {
+    user: Array<{
       full_name: string;
-    };
+    }>;
     payment_method: string;
   }>;
   popularCards: Array<{
@@ -328,7 +328,7 @@ export default function ReportsPage() {
                 data.recentSales.map((sale) => (
                   <div key={sale.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium">{sale.user?.full_name || 'לא ידוע'}</p>
+                      <p className="font-medium">{sale.user?.[0]?.full_name || 'לא ידוע'}</p>
                       <p className="text-sm text-gray-500">{formatDate(sale.created_at)}</p>
                     </div>
                     <div className="text-left">
