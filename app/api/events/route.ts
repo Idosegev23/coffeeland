@@ -27,7 +27,12 @@ export async function GET(request: Request) {
         *,
         instructor:instructors(id, name),
         room:rooms(id, name, capacity),
-        registrations(count)
+        registrations(
+          id,
+          status,
+          created_at,
+          user:users(full_name, phone)
+        )
       `)
       .eq('status', status)
       .order('start_at', { ascending: true });

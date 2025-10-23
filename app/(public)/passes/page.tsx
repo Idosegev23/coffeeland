@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -13,56 +13,28 @@ import { supabase, getCurrentUser } from '@/lib/supabase'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
+interface CardType {
+  id: string
+  name: string
+  description: string
+  type: string
+  entries_count: number
+  price: number
+  sale_price?: number
+  is_active: boolean
+}
+
 interface PassOption {
   id: string
-  type: 'playground' | 'workshop' | 'event'
+  type: string
   name: string
   totalEntries: number
   price: number
+  salePrice?: number
   description: string
   popular?: boolean
   lottie: string
 }
-
-const passOptions: PassOption[] = [
-  {
-    id: 'playground-5',
-    type: 'playground',
-    name: '5 כניסות למשחקייה',
-    totalEntries: 5,
-    price: 180,
-    description: 'חיסכון של 20 ש"ח • בתוקף 3 חודשים',
-    lottie: '/lottie/play.json',
-  },
-  {
-    id: 'playground-10',
-    type: 'playground',
-    name: '10 כניסות למשחקייה',
-    totalEntries: 10,
-    price: 320,
-    description: 'חיסכון של 80 ש"ח • בתוקף 6 חודשים',
-    popular: true,
-    lottie: '/lottie/play.json',
-  },
-  {
-    id: 'workshop-4',
-    type: 'workshop',
-    name: '4 סדנאות',
-    totalEntries: 4,
-    price: 280,
-    description: 'כל סדנה במחיר מוזל • בתוקף 2 חודשים',
-    lottie: '/lottie/workshops.json',
-  },
-  {
-    id: 'workshop-8',
-    type: 'workshop',
-    name: '8 סדנאות',
-    totalEntries: 8,
-    price: 500,
-    description: 'חיסכון של 60 ש"ח • בתוקף 4 חודשים',
-    lottie: '/lottie/workshops.json',
-  },
-]
 
 function LottieIcon({ src }: { src: string }) {
   const [animationData, setAnimationData] = useState<any>(null)
@@ -90,6 +62,46 @@ export default function PassesPage() {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [passOptions, setPassOptions] = useState<PassOption[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+
+  useEffect(() => {
+    loadCardTypes()
+  }, [])
+
+  const loadCardTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('card_types')
+        .select('*')
+        .eq('is_active', true)
+        .order('price', { ascending: true })
+
+      if (error) throw error
+
+      // המרה לפורמט PassOption
+      const formatted: PassOption[] = (data || []).map((card: CardType, index: number) => ({
+        id: card.id,
+        type: card.type,
+        name: card.name,
+        totalEntries: card.entries_count,
+        price: card.sale_price || card.price,
+        salePrice: card.sale_price,
+        description: card.description || '',
+        popular: index === 0, // הראשון הכי פופולרי
+        lottie: card.type === 'playroom' ? '/lottie/play.json' : 
+                card.type === 'class' ? '/lottie/workshops.json' :
+                card.type === 'workshop' ? '/lottie/workshops.json' :
+                '/lottie/play.json'
+      }))
+
+      setPassOptions(formatted)
+    } catch (err) {
+      console.error('Error loading card types:', err)
+    } finally {
+      setLoadingData(false)
+    }
+  }
 
   const handlePurchase = async (pass: PassOption) => {
     setError('')
@@ -115,9 +127,9 @@ export default function PassesPage() {
         .from('passes')
         .insert({
           user_id: user.id,
-          type: pass.type,
-          total_entries: pass.totalEntries,
-          remaining_entries: pass.totalEntries,
+          card_type_id: pass.id,
+          entries_used: 0,
+          entries_remaining: pass.totalEntries,
           expiry_date: expiryDate.toISOString(),
           price_paid: pass.price,
           status: 'active',
@@ -135,6 +147,17 @@ export default function PassesPage() {
     } finally {
       setLoading(null)
     }
+  }
+
+  if (loadingData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-text-light/70">טוען כרטיסיות...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -176,8 +199,18 @@ export default function PassesPage() {
             </div>
           )}
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-6xl mx-auto">
-            {passOptions.map((pass) => (
+          {passOptions.length === 0 ? (
+            <div className="text-center py-12">
+              <Ticket className="w-16 h-16 text-text-light/30 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-primary mb-2">אין כרטיסיות זמינות כרגע</h3>
+              <p className="text-text-light/70 mb-6">בקרוב יפורסמו כרטיסיות חדשות</p>
+              <Link href="/">
+                <Button>חזרה לדף הבית</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-6xl mx-auto">
+              {passOptions.map((pass) => (
               <Card
                 key={pass.id}
                 className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] relative ${
@@ -222,8 +255,9 @@ export default function PassesPage() {
                   </Button>
                 </div>
               </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Info */}
           <div className="max-w-2xl mx-auto mt-12 text-center">

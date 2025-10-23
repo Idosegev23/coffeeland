@@ -257,42 +257,48 @@ export default function AdminDashboardPage() {
             <Button
               variant="outline"
               size="lg"
-              className="h-auto py-6 justify-start opacity-50 cursor-not-allowed"
-              disabled
+              className="h-auto py-6 justify-start"
+              asChild
             >
-              <Ticket className="w-8 h-8 text-purple-600" />
-              <div className="text-right">
-                <div className="font-semibold">סוגי כרטיסיות</div>
-                <div className="text-xs opacity-70">בקרוב - ניהול סוגי כרטיסיות</div>
-              </div>
+              <Link href="/admin/card-types" className="gap-4">
+                <Ticket className="w-8 h-8 text-purple-600" />
+                <div className="text-right">
+                  <div className="font-semibold">סוגי כרטיסיות</div>
+                  <div className="text-xs opacity-70">צור ונהל סוגי כרטיסיות</div>
+                </div>
+              </Link>
             </Button>
 
             {/* ניהול לקוחות */}
             <Button
               variant="outline"
               size="lg"
-              className="h-auto py-6 justify-start opacity-50 cursor-not-allowed"
-              disabled
+              className="h-auto py-6 justify-start"
+              asChild
             >
-              <Users className="w-8 h-8 text-orange-600" />
-              <div className="text-right">
-                <div className="font-semibold">ניהול לקוחות</div>
-                <div className="text-xs opacity-70">בקרוב - רשימת לקוחות וילדים</div>
-              </div>
+              <Link href="/admin/customers" className="gap-4">
+                <Users className="w-8 h-8 text-orange-600" />
+                <div className="text-right">
+                  <div className="font-semibold">ניהול לקוחות</div>
+                  <div className="text-xs opacity-70">רשימת לקוחות וכרטיסיות</div>
+                </div>
+              </Link>
             </Button>
 
             {/* דוחות */}
             <Button
               variant="outline"
               size="lg"
-              className="h-auto py-6 justify-start opacity-50 cursor-not-allowed"
-              disabled
+              className="h-auto py-6 justify-start"
+              asChild
             >
-              <List className="w-8 h-8 text-red-600" />
-              <div className="text-right">
-                <div className="font-semibold">דוחות</div>
-                <div className="text-xs opacity-70">בקרוב - דוחות הכנסות ופעילות</div>
-              </div>
+              <Link href="/admin/reports" className="gap-4">
+                <List className="w-8 h-8 text-red-600" />
+                <div className="text-right">
+                  <div className="font-semibold">דוחות ואנליטיקס</div>
+                  <div className="text-xs opacity-70">מעקב הכנסות ופעילות</div>
+                </div>
+              </Link>
             </Button>
           </div>
         </section>

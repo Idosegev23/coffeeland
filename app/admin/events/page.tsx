@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { Calendar, Plus, Edit, Trash2, Users, ArrowRight } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Users, ArrowRight, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 
 interface Event {
@@ -32,6 +32,15 @@ interface Event {
   price?: number;
   status: string;
   synced_to_google: boolean;
+  registrations?: Array<{
+    id: string;
+    user: {
+      full_name: string;
+      phone: string;
+    };
+    status: string;
+    created_at: string;
+  }>;
 }
 
 export default function AdminEventsPage() {
@@ -39,6 +48,8 @@ export default function AdminEventsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [showRegistrationsDialog, setShowRegistrationsDialog] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -244,10 +255,32 @@ export default function AdminEventsPage() {
                         <span className="text-gray-500">רישום:</span>
                         <p className="font-medium text-blue-600">טלפונית בלבד</p>
                       </div>
+                      {event.registrations && event.registrations.length > 0 && (
+                        <div>
+                          <span className="text-gray-500">נרשמו:</span>
+                          <p className="font-medium text-green-600">
+                            {event.registrations.length}
+                            {event.capacity && ` מתוך ${event.capacity}`}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex gap-2 mr-4">
+                    {event.registrations && event.registrations.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setShowRegistrationsDialog(true);
+                        }}
+                      >
+                        <UserCheck size={16} className="ml-1" />
+                        נרשמים ({event.registrations.length})
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -387,6 +420,102 @@ export default function AdminEventsPage() {
               >
                 <Plus className="ml-2" size={16} />
                 צור אירוע
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog - רשימת נרשמים */}
+        <Dialog open={showRegistrationsDialog} onOpenChange={setShowRegistrationsDialog}>
+          <DialogContent className="max-w-2xl" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>
+                רשימת נרשמים - {selectedEvent?.title}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="py-4">
+              {selectedEvent?.registrations && selectedEvent.registrations.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-gray-600">סך נרשמים</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {selectedEvent.registrations.length}
+                        </p>
+                      </div>
+                      {selectedEvent.capacity && (
+                        <div className="text-left">
+                          <p className="text-sm text-gray-600">מקומות פנויים</p>
+                          <p className="text-2xl font-bold text-green-600">
+                            {selectedEvent.capacity - selectedEvent.registrations.length}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">#</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">שם</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">טלפון</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">סטטוס</th>
+                          <th className="px-4 py-3 text-right text-sm font-semibold">תאריך רישום</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {selectedEvent.registrations.map((registration, index) => (
+                          <tr key={registration.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-gray-600">{index + 1}</td>
+                            <td className="px-4 py-3 font-medium">
+                              {registration.user?.full_name || 'לא ידוע'}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {registration.user?.phone || '-'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-block px-2 py-1 rounded text-xs ${
+                                registration.status === 'confirmed'
+                                  ? 'bg-green-100 text-green-800'
+                                  : registration.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {registration.status === 'confirmed' ? 'מאושר' : 
+                                 registration.status === 'pending' ? 'ממתין' : 
+                                 registration.status === 'cancelled' ? 'בוטל' : 
+                                 registration.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600">
+                              {new Date(registration.created_at).toLocaleDateString('he-IL', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Users size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>אין נרשמים לאירוע זה</p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button onClick={() => setShowRegistrationsDialog(false)}>
+                סגור
               </Button>
             </DialogFooter>
           </DialogContent>
