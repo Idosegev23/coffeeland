@@ -69,9 +69,10 @@ export default function CardTypesPage() {
 
   const handleCreate = async () => {
     try {
-      const { data, error } = await supabase
-        .from('card_types')
-        .insert({
+      const res = await fetch('/api/card-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: formData.name,
           description: formData.description,
           type: formData.type,
@@ -80,10 +81,12 @@ export default function CardTypesPage() {
           sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
           is_active: formData.is_active
         })
-        .select()
-        .single();
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'שגיאה ביצירת כרטיסייה');
+      }
 
       alert('✅ סוג כרטיסייה נוצר בהצלחה!');
       setShowCreateDialog(false);
@@ -99,9 +102,10 @@ export default function CardTypesPage() {
     if (!editingCard) return;
 
     try {
-      const { error } = await supabase
-        .from('card_types')
-        .update({
+      const res = await fetch(`/api/card-types/${editingCard.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: formData.name,
           description: formData.description,
           type: formData.type,
@@ -110,9 +114,12 @@ export default function CardTypesPage() {
           sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
           is_active: formData.is_active
         })
-        .eq('id', editingCard.id);
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'שגיאה בעדכון כרטיסייה');
+      }
 
       alert('✅ סוג כרטיסייה עודכן!');
       setEditingCard(null);
@@ -128,12 +135,14 @@ export default function CardTypesPage() {
     if (!confirm('האם למחוק סוג כרטיסייה זה?')) return;
 
     try {
-      const { error } = await supabase
-        .from('card_types')
-        .delete()
-        .eq('id', id);
+      const res = await fetch(`/api/card-types/${id}`, {
+        method: 'DELETE'
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'שגיאה במחיקת כרטיסייה');
+      }
 
       alert('✅ סוג כרטיסייה נמחק');
       loadCardTypes();

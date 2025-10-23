@@ -106,51 +106,33 @@ export default function POSPage() {
     try {
       const finalPrice = selectedCard.sale_price || selectedCard.price;
 
-      // יצירת כרטיסייה
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + 3); // תוקף 3 חודשים
-
-      const { data: pass, error: passError } = await supabase
-        .from('passes')
-        .insert({
-          user_id: customer.id,
-          type: selectedCard.type,
-          total_entries: selectedCard.entries_count,
-          remaining_entries: selectedCard.entries_count,
-          expiry_date: expiryDate.toISOString(),
-          status: 'active',
-          price_paid: finalPrice
-        })
-        .select()
-        .single();
-
-      if (passError) throw passError;
-
-      // יצירת תשלום POS
-      const paymentType = `pos_${paymentMethod}`;
-      const paymentRes = await fetch('/api/payments/create', {
+      // ביצוע מכירה דרך API
+      const res = await fetch('/api/admin/pos-sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: finalPrice,
-          payment_type: paymentType,
-          payment_method: `POS - ${paymentMethod}`,
-          item_type: 'pass',
-          item_id: pass.id,
-          user_id: customer.id,
-          notes: `מכירת כרטיסייה ${selectedCard.name}`
+          customer_id: customer.id,
+          card_type_id: selectedCard.id,
+          total_entries: selectedCard.entries_count,
+          price_paid: finalPrice,
+          payment_method: paymentMethod,
+          card_type_name: selectedCard.name
         })
       });
 
-      if (!paymentRes.ok) throw new Error('Payment failed');
-      const paymentData = await paymentRes.json();
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to complete sale');
+      }
+
+      const data = await res.json();
 
       // הצגת קבלה
       setReceiptData({
         customer,
         card: selectedCard,
-        pass,
-        payment: paymentData.payment,
+        pass: data.pass,
+        payment: data.payment,
         finalPrice
       });
       setShowReceipt(true);
@@ -160,7 +142,10 @@ export default function POSPage() {
       setCustomer(null);
       setPhoneSearch('');
       setPaymentMethod('cash');
+
+      alert('✅ מכירה הושלמה בהצלחה!');
     } catch (error: any) {
+      console.error('POS sale error:', error);
       alert('❌ שגיאה: ' + error.message);
     } finally {
       setLoading(false);
