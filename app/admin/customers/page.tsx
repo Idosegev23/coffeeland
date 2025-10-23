@@ -24,7 +24,8 @@ import {
   CreditCard,
   ArrowRight,
   Calendar,
-  Coffee
+  Coffee,
+  Plus
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -35,10 +36,10 @@ interface Customer {
   email: string;
   qr_code: string;
   created_at: string;
-  loyalty_card?: {
+  loyalty_card?: Array<{
     total_stamps: number;
     redeemed_coffees: number;
-  };
+  }>;
   passes?: Array<{
     id: string;
     card_type: {
@@ -57,6 +58,15 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    password: '',
+    is_admin: false
+  });
 
   const supabase = createClientComponentClient();
 
@@ -125,6 +135,48 @@ export default function CustomersPage() {
     });
   };
 
+  const handleCreateUser = async () => {
+    if (!createForm.full_name || !createForm.email || !createForm.phone || !createForm.password) {
+      alert('נא למלא את כל השדות');
+      return;
+    }
+
+    setCreatingUser(true);
+
+    try {
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createForm)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'שגיאה ביצירת משתמש');
+      }
+
+      const data = await response.json();
+      
+      alert(`✅ משתמש נוצר בהצלחה!\nאימייל: ${createForm.email}\nסיסמה: ${createForm.password}\nQR: ${data.user.qr_code}`);
+      
+      setShowCreateDialog(false);
+      setCreateForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        password: '',
+        is_admin: false
+      });
+      
+      loadCustomers();
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      alert('❌ שגיאה: ' + error.message);
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -148,12 +200,21 @@ export default function CustomersPage() {
         </Link>
 
         {/* כותרת */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">
-            <Users className="inline-block mr-2 mb-1" />
-            ניהול לקוחות
-          </h1>
-          <p className="text-gray-600">צפייה וניהול של כל הלקוחות במערכת</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-primary mb-2">
+              <Users className="inline-block mr-2 mb-1" />
+              ניהול לקוחות
+            </h1>
+            <p className="text-gray-600">צפייה וניהול של כל הלקוחות במערכת</p>
+          </div>
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            className="bg-accent hover:bg-accent/90 flex items-center gap-2"
+          >
+            <Plus size={20} />
+            משתמש חדש
+          </Button>
         </div>
 
         {/* סטטיסטיקות מהירות */}
@@ -410,6 +471,103 @@ export default function CustomersPage() {
             <DialogFooter>
               <Button onClick={() => setShowDetailsDialog(false)}>
                 סגור
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog - יצירת משתמש חדש */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>יצירת משתמש חדש</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">שם מלא *</label>
+                <input
+                  type="text"
+                  value={createForm.full_name}
+                  onChange={e => setCreateForm({ ...createForm, full_name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-md"
+                  placeholder="שם מלא"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">אימייל *</label>
+                <input
+                  type="email"
+                  value={createForm.email}
+                  onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-md"
+                  placeholder="example@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">טלפון *</label>
+                <input
+                  type="tel"
+                  value={createForm.phone}
+                  onChange={e => setCreateForm({ ...createForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-md"
+                  placeholder="050-1234567"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">סיסמה *</label>
+                <input
+                  type="text"
+                  value={createForm.password}
+                  onChange={e => setCreateForm({ ...createForm, password: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-md"
+                  placeholder="סיסמה ראשונית"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  המשתמש יוכל לשנות את הסיסמה לאחר ההתחברות
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="is_admin"
+                  checked={createForm.is_admin}
+                  onChange={e => setCreateForm({ ...createForm, is_admin: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="is_admin" className="text-sm font-medium cursor-pointer">
+                  הגדר כמנהל (יוכל לגשת לפאנל הניהול)
+                </label>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCreateDialog(false);
+                  setCreateForm({
+                    full_name: '',
+                    email: '',
+                    phone: '',
+                    password: '',
+                    is_admin: false
+                  });
+                }}
+                disabled={creatingUser}
+              >
+                ביטול
+              </Button>
+              <Button
+                onClick={handleCreateUser}
+                disabled={creatingUser}
+                className="bg-accent hover:bg-accent/90"
+              >
+                {creatingUser ? 'יוצר...' : 'צור משתמש'}
               </Button>
             </DialogFooter>
           </DialogContent>
