@@ -1,13 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-
-// Dynamically import HTMLFlipBook to avoid SSR issues
-const HTMLFlipBook = dynamic(() => import('react-pageflip'), {
-  ssr: false,
-})
 
 interface PageProps {
   children: React.ReactNode
@@ -40,13 +34,26 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
   const [pdfPages, setPdfPages] = useState<string[]>([])
   const [dimensions, setDimensions] = useState({ width: 550, height: 733 })
   const [currentPage, setCurrentPage] = useState(0)
-  const [isMobile, setIsMobile] = useState(false)
+  const [totalPages, setTotalPages] = useState(0)
+  const [FlipBookComponent, setFlipBookComponent] = useState<any>(null)
+
+  // Load FlipBook library on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('react-pageflip').then((module) => {
+        console.log('FlipBook loaded:', module)
+        console.log('FlipBook default:', module.default)
+        setFlipBookComponent(() => module.default)
+      }).catch(err => {
+        console.error('Failed to load FlipBook:', err)
+      })
+    }
+  }, [])
 
   useEffect(() => {
     const updateDimensions = () => {
-      const mobile = window.innerWidth < 768
-      setIsMobile(mobile)
-      if (mobile) {
+      const isMobile = window.innerWidth < 768
+      if (isMobile) {
         // Mobile: full width
         const width = window.innerWidth - 20
         const height = window.innerHeight * 0.8
@@ -100,6 +107,7 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
         }
 
         setPdfPages(pages)
+        setTotalPages(pages.length)
         setLoading(false)
       } catch (error) {
         console.error('Error loading PDF:', error)
@@ -110,28 +118,68 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
     loadPDF()
   }, [pdfUrl])
 
-  const nextPage = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const nextPage = () => {
+    console.log('Next page - bookRef:', bookRef.current)
     if (bookRef.current) {
-      const flip = (bookRef.current as any).pageFlip
-      if (flip && typeof flip === 'function') {
-        const flipObj = flip()
-        if (flipObj && typeof flipObj.flipNext === 'function') {
-          flipObj.flipNext()
+      try {
+        const book = bookRef.current
+        console.log('Book methods:', Object.keys(book))
+
+        // Try pageFlip() method
+        if (typeof book.pageFlip === 'function') {
+          const flip = book.pageFlip()
+          console.log('Flip object:', flip, 'methods:', flip ? Object.keys(flip) : 'none')
+          if (flip && typeof flip.flipNext === 'function') {
+            flip.flipNext()
+            return
+          }
         }
+
+        // Try direct flipNext
+        if (typeof book.flipNext === 'function') {
+          book.flipNext()
+          return
+        }
+
+        // Fallback - just update state
+        if (currentPage < totalPages - 1) {
+          setCurrentPage(currentPage + 1)
+        }
+      } catch (e) {
+        console.error('Error in nextPage:', e)
       }
     }
   }
 
-  const prevPage = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const prevPage = () => {
+    console.log('Prev page - bookRef:', bookRef.current)
     if (bookRef.current) {
-      const flip = (bookRef.current as any).pageFlip
-      if (flip && typeof flip === 'function') {
-        const flipObj = flip()
-        if (flipObj && typeof flipObj.flipPrev === 'function') {
-          flipObj.flipPrev()
+      try {
+        const book = bookRef.current
+        console.log('Book methods:', Object.keys(book))
+
+        // Try pageFlip() method
+        if (typeof book.pageFlip === 'function') {
+          const flip = book.pageFlip()
+          console.log('Flip object:', flip, 'methods:', flip ? Object.keys(flip) : 'none')
+          if (flip && typeof flip.flipPrev === 'function') {
+            flip.flipPrev()
+            return
+          }
         }
+
+        // Try direct flipPrev
+        if (typeof book.flipPrev === 'function') {
+          book.flipPrev()
+          return
+        }
+
+        // Fallback - just update state
+        if (currentPage > 0) {
+          setCurrentPage(currentPage - 1)
+        }
+      } catch (e) {
+        console.error('Error in prevPage:', e)
       }
     }
   }
@@ -151,51 +199,9 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
         </div>
       )}
 
-      {!loading && pdfPages.length > 0 && (
+      {!loading && pdfPages.length > 0 && FlipBookComponent && (
         <div className="relative" style={{ transform: 'scaleX(-1)' }}>
-          {/* Navigation Arrows - Mobile Only */}
-          {isMobile && (
-            <>
-              <button
-                onClick={nextPage}
-                onTouchEnd={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  nextPage(e as any)
-                }}
-                disabled={currentPage >= pdfPages.length - 1}
-                className="absolute right-2 top-1/2 z-[100] bg-background-light/90 hover:bg-background-light p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                style={{
-                  transform: 'scaleX(-1) translateY(-50%)',
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation'
-                }}
-                aria-label="עמוד הבא"
-              >
-                <ChevronRight className="w-6 h-6 text-primary" style={{ pointerEvents: 'none' }} />
-              </button>
-              <button
-                onClick={prevPage}
-                onTouchEnd={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  prevPage(e as any)
-                }}
-                disabled={currentPage === 0}
-                className="absolute left-2 top-1/2 z-[100] bg-background-light/90 hover:bg-background-light p-3 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                style={{
-                  transform: 'scaleX(-1) translateY(-50%)',
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation'
-                }}
-                aria-label="עמוד קודם"
-              >
-                <ChevronLeft className="w-6 h-6 text-primary" style={{ pointerEvents: 'none' }} />
-              </button>
-            </>
-          )}
-
-          <HTMLFlipBook
+          <FlipBookComponent
             ref={bookRef}
             width={dimensions.width}
             height={dimensions.height}
@@ -210,7 +216,7 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
             onFlip={onFlip}
             className=""
             style={{}}
-            startPage={0}
+            startPage={currentPage}
             drawShadow={true}
             flippingTime={700}
             usePortrait={true}
@@ -232,7 +238,42 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
                 />
               </Page>
             ))}
-          </HTMLFlipBook>
+          </FlipBookComponent>
+        </div>
+      )}
+
+      {!loading && pdfPages.length > 0 && !FlipBookComponent && (
+        <div className="text-center p-8">
+          <p className="text-text-light">Loading FlipBook library...</p>
+        </div>
+      )}
+
+      {/* Navigation Arrows */}
+      {!loading && pdfPages.length > 0 && (
+        <div className="relative w-full flex justify-center mt-4">
+          <div className="relative w-full max-w-md flex justify-between items-center px-4">
+            <button
+              onClick={prevPage}
+              disabled={currentPage === 0}
+              className="bg-primary text-text-dark p-4 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110 active:scale-95"
+              aria-label="עמוד קודם"
+              type="button"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+            <span className="text-text-light text-sm">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              onClick={nextPage}
+              disabled={currentPage >= totalPages - 1}
+              className="bg-primary text-text-dark p-4 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110 active:scale-95"
+              aria-label="עמוד הבא"
+              type="button"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          </div>
         </div>
       )}
     </div>

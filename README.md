@@ -1,198 +1,209 @@
-# CoffeeLand Website
+# ☕️ CoffeeLand - מערכת ניהול מלאה לבית קפה משפחתי
 
-A modern, family-friendly website for CoffeeLand - a playground, café, and workshops space.
-
-## 🎨 Design System
-
-### Color Palette
-- **Primary (חום כהה):** `#4C2C21` - Main text, dark CTAs, logo
-- **Secondary (קפוצ'ינו):** `#8D5A40` - Secondary backgrounds, highlights  
-- **Background (לאטה):** `#E8DED1` - Main background, light sections
-- **Accent (ירוק טרופי):** `#5F614C` - Action buttons, highlights, icons
-- **Text Light:** `#2A1C15` - High contrast on light backgrounds
-- **Text Dark:** `#F9F7F3` - White-cream on dark backgrounds
-
-### Typography
-- **Font:** Heebo (Google Fonts) - Supports Hebrew, Latin, numbers
-- **H1:** 28-34px (mobile) / 40-48px (desktop)
-- **H2:** 22-26px (mobile) / 32-36px (desktop)
-- **Body:** 16-18px
-- **Small:** 14px
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 20.x or later
-- npm 10.x or later
-
-### Installation
-
-```bash
-# Install dependencies
-npm install
-
-# Create environment variables
-cp .env.example .env.local
-# Edit .env.local with your values
-
-# Run development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## 📁 Project Structure
-
-```
-coffeeland/
-├── memory-bank/              # Project documentation
-├── app/                      # Next.js App Router
-│   ├── (public)/            # Public-facing pages
-│   ├── api/                 # API routes
-│   ├── layout.tsx           # Root layout
-│   └── globals.css          # Global styles
-├── components/              # React components
-│   ├── ui/                 # shadcn base components
-│   ├── layout/             # Header, Footer
-│   ├── hero/               # HeroCarousel
-│   ├── navigation/         # NavTiles
-│   ├── gallery/            # Gallery, Lightbox
-│   ├── calendar/           # Calendar components
-│   ├── floating/           # FloatingPassButton
-│   ├── dialogs/            # ExitIntentDialog
-│   └── forms/              # ContactMiniForm
-├── lib/                    # Utility functions
-├── types/                  # TypeScript types
-└── public/                 # Static assets
-```
-
-## 🛠️ Available Scripts
-
-```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run start    # Start production server
-npm run lint     # Run ESLint
-```
-
-## 🎯 Key Features
-
-- **Hero Carousel:** 3 rotating slides for playground, events, workshops
-- **5 Navigation Tiles:** Quick access to main sections
-- **Calendar System:** Availability view and recurring classes schedule
-- **Gallery:** Photo showcase with lightbox viewing
-- **Floating Pass Button:** Always-accessible CTA for passes/memberships
-- **Exit Intent Popup:** Last-chance engagement before user leaves
-- **Contact Forms:** Quick inquiry with WhatsApp integration
-- **Mobile-First:** Optimized for mobile devices
-
-## 📱 Responsive Breakpoints
-
-- **sm:** 640px (large phones)
-- **md:** 768px (tablets)
-- **lg:** 1024px (small desktops)
-- **xl:** 1280px (large desktops)
-
-## ♿ Accessibility
-
-Built to WCAG 2.1 Level AA standards:
-- Semantic HTML
-- ARIA labels and roles
-- Keyboard navigation
-- Screen reader support
-- Color contrast ≥ 4.5:1
-- Focus indicators
-- Skip to content link
-
-## 🔧 Technology Stack
-
-- **Framework:** Next.js 14+ (App Router)
-- **Language:** TypeScript (strict mode)
-- **Styling:** Tailwind CSS + shadcn/ui
-- **Animation:** Framer Motion
-- **Forms:** React Hook Form + Zod
-- **Icons:** Lucide React
-
-## 📊 Performance Targets
-
-- **FCP (First Contentful Paint):** < 1.5s
-- **LCP (Largest Contentful Paint):** < 2.5s
-- **TTI (Time to Interactive):** < 3.5s
-- **CLS (Cumulative Layout Shift):** < 0.1
-- **Bundle Size:** < 200KB (initial, gzipped)
-
-## 🔮 Future Enhancements
-
-### Phase 2
-- Real Google Calendar API integration
-- Online booking system
-- Payment processing for passes
-- Email confirmations
-
-### Phase 3
-- User accounts
-- Admin dashboard
-- Analytics dashboard
-- Customer reviews
-
-## 📝 Content Management
-
-### Replacing Placeholder Content
-
-**Images:**
-- Hero images: `public/images/hero/`
-- Gallery images: `public/images/gallery/`
-
-**Text Content:**
-- Homepage: `app/(public)/page.tsx`
-- Other pages: `app/(public)/[page]/page.tsx`
-
-**Calendar Events:**
-- Mock data: `lib/calendar-mock-data.ts`
-- API routes: `app/api/calendar/*/route.ts`
-
-### Connecting Google Calendar
-
-See `memory-bank/techContext.md` for detailed instructions on connecting your Google Calendar to replace mock data.
-
-## 🌐 Deployment
-
-### Recommended: Vercel
-
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
-vercel
-```
-
-Set environment variables in Vercel dashboard.
-
-### Alternative Platforms
-- Netlify
-- AWS Amplify
-- Self-hosted (Node.js server)
-
-## 📚 Documentation
-
-Comprehensive documentation available in `memory-bank/`:
-- `projectbrief.md` - Project overview and objectives
-- `productContext.md` - User experience and product vision
-- `systemPatterns.md` - Architecture and design patterns
-- `techContext.md` - Technology stack and setup
-- `activeContext.md` - Current focus and decisions
-- `progress.md` - Development progress tracker
-
-## 📄 License
-
-Private - All rights reserved
-
-## 🤝 Contributing
-
-This is a private project. For questions or support, contact the project owner.
+מערכת אחודה ומקצועית לניהול בית קפה עם משחקייה, חוגים וסדנאות - כולל POS וירטואלי, כרטיסיות נאמנות, וסנכרון אוטומטי ליומן Google Calendar.
 
 ---
 
-**Built with ❤️ for families**
+## 🌟 תכונות עיקריות
 
+### 👨‍👩‍👧‍👦 למשתמשים (לקוחות)
+
+- **כרטיסיות משחקייה** - רכישה אונליין או בקופה, QR אישי לכל משתמש
+- **כרטיסיית נאמנות קפה** - 10 חותמות = קפה חינם 🎁
+- **הרשמה לחוגים וסדנאות** - ממשק נוח, תשלום מאובטח, אישור במייל
+- **ניהול ילדים** - הוספת מספר ילדים לחשבון אחד
+- **איזור אישי** - צפייה בכרטיסיות פעילות, היסטוריה, הרשמות קרובות
+
+### 👨‍💼 לאדמינים
+
+- **דשבורד מקיף** - סטטיסטיקות, הכנסות, כרטיסיות פעילות
+- **POS וירטואלי** - מכירת כרטיסיות במקום (מזומן/אשראי/Bit)
+- **ניהול אירועים** - יצירה ועריכה של חוגים וסדנאות
+- **סריקת QR** - הוספת חותמות נאמנות, ניצול כרטיסיות
+- **ניהול לקוחות** - רשימת לקוחות, ילדים, תשלומים
+- **לוג פעולות (Audit Log)** - מעקב מלא אחר כל פעולה במערכת
+
+### 🔗 אינטגרציות
+
+- **Google Calendar** - סנכרון אוטומטי של כל אירוע שנוצר (חד-כיווני)
+- **Green Invoice** - (מוכן לחיבור) הנפקת חשבוניות אוטומטית
+- **WhatsApp** - קישורים ישירים ליצירת קשר
+- **Email** - אישורי רישום והודעות אוטומטיות
+
+---
+
+## 🛠️ טכנולוגיות
+
+### Frontend
+- **Next.js 14** (App Router)
+- **React 18** + **TypeScript**
+- **Tailwind CSS** + shadcn/ui
+- **Framer Motion** (אנימציות)
+
+### Backend
+- **Next.js API Routes**
+- **Supabase** (Database + Auth + RLS)
+- **Google Calendar API** (OAuth2)
+
+### כלים
+- **html5-qrcode** - סריקת QR
+- **qrcode.react** - יצירת QR
+- **nanoid** - מזהים ייחודיים
+
+---
+
+## 🚀 התקנה מהירה
+
+```bash
+# 1. שכפול
+git clone <your-repo>
+cd coffeeland
+
+# 2. התקנת תלויות
+npm install
+
+# 3. הגדרת משתני סביבה
+cp .env.example .env.local
+# ערוך את .env.local עם הפרטים שלך
+
+# 4. הרצת סקריפט Google Refresh Token
+cd scripts
+npm install
+cd ..
+node scripts/get-google-refresh-token.mjs
+
+# 5. הרצה מקומית
+npm run dev
+# פתח http://localhost:3000
+```
+
+📖 **למדריך מפורט**: ראה [INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md)
+
+---
+
+## 📁 מבנה הפרויקט
+
+```
+coffeeland/
+├── app/
+│   ├── (auth)/              # הרשמה והתחברות
+│   ├── (public)/            # עמודים ציבוריים
+│   │   ├── classes/         # חוגים וסדנאות
+│   │   ├── passes/          # רכישת כרטיסיות
+│   │   └── my-account/      # איזור אישי
+│   ├── admin/               # ממשק אדמין
+│   │   ├── scan/            # סריקת QR
+│   │   ├── pos/             # קופה וירטואלית
+│   │   └── events/          # ניהול אירועים
+│   └── api/                 # API Routes
+│       ├── events/          # CRUD אירועים
+│       ├── registrations/   # הרשמות
+│       ├── payments/        # תשלומים (mockup + POS)
+│       ├── card-types/      # סוגי כרטיסיות
+│       └── children/        # ניהול ילדים
+├── components/
+│   ├── account/             # רכיבי חשבון משתמש
+│   ├── admin/               # רכיבי אדמין
+│   ├── calendar/            # רכיבי יומן
+│   └── ui/                  # רכיבי UI בסיסיים
+├── lib/
+│   ├── googleCalendar.ts    # אינטגרציית Google Calendar
+│   ├── supabase.ts          # Supabase client
+│   └── utils.ts             # פונקציות עזר
+├── scripts/
+│   └── get-google-refresh-token.mjs  # הפקת Refresh Token
+├── memory-bank/             # תיעוד פרויקט
+└── [קבצי הגדרה...]
+```
+
+---
+
+## 🗄️ מבנה Database (Supabase)
+
+### טבלאות עיקריות
+
+| טבלה | תיאור |
+|------|-------|
+| **users** | משתמשים (לקוחות) |
+| **admins** | אדמינים מורשים |
+| **children** | ילדים שייכים להורים |
+| **card_types** | סוגי כרטיסיות (משחקייה, סדנאות...) |
+| **passes** | כרטיסיות פעילות |
+| **pass_usages** | היסטוריית ניצול כרטיסיות |
+| **loyalty_cards** | כרטיסיות נאמנות קפה |
+| **loyalty_stamps** | חותמות נאמנות |
+| **events** | חוגים וסדנאות |
+| **registrations** | הרשמות לאירועים |
+| **instructors** | מדריכים |
+| **rooms** | חדרים/מיקומים |
+| **payments** | תשלומים (אונליין + POS) |
+| **audit_log** | לוג פעולות |
+
+---
+
+## 🔐 אבטחה
+
+- **Row Level Security (RLS)** על כל הטבלאות
+- **משתמשים** רואים רק את הנתונים שלהם
+- **אדמינים** גישה מלאה דרך policies מובנים
+- **Authentication** דרך Supabase Auth (JWT)
+- **Middleware** לבדיקת הרשאות בעמודי אדמין
+
+---
+
+## 📱 תכונות נוספות
+
+### Google Calendar Sync
+כל אירוע שנוצר באדמין מסתנכרן אוטומטית ליומן Google:
+- יצירה → `POST /api/events` → Google Calendar
+- עדכון → `PATCH /api/events/:id` → Google Calendar
+- מחיקה → `DELETE /api/events/:id` → Google Calendar
+
+### POS (קופה וירטואלית)
+- חיפוש לקוח לפי טלפון
+- בחירת כרטיסייה מתוך קטלוג
+- תשלום מזומן/אשראי/Bit/אחר
+- הפקת "קבלה" (mockup - מוכן לחיבור Green Invoice)
+
+### כרטיסיית נאמנות
+- 10 חותמות = קפה חינם
+- ויזואליזציה עם לוגו של הקפה
+- מימוש אוטומטי + איפוס המונה
+
+---
+
+## 🎯 Roadmap עתידי
+
+- [ ] חיבור Green Invoice API אמיתי
+- [ ] שליחת SMS/WhatsApp אוטומטית (GreenAPI)
+- [ ] דוחות ואנליטיקות מתקדמות
+- [ ] רשימת המתנה לאירועים מלאים
+- [ ] קופונים והנחות
+- [ ] אפליקציה מובייל (React Native)
+
+---
+
+## 📞 תמיכה
+
+- **Email**: support@coffeeland.com
+- **WhatsApp**: 050-123-4567
+- **Docs**: [INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md)
+
+---
+
+## 📄 רישיון
+
+MIT License
+
+---
+
+## 🙏 תודות
+
+- [Next.js](https://nextjs.org)
+- [Supabase](https://supabase.com)
+- [shadcn/ui](https://ui.shadcn.com)
+- [Tailwind CSS](https://tailwindcss.com)
+
+---
+
+**בנוי ב-❤️ עבור CoffeeLand ☕️**

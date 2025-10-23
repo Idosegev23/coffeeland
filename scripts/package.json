@@ -1,0 +1,15 @@
+{
+  "name": "coffeeland-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Helper scripts for CoffeeLand setup",
+  "scripts": {
+    "get-token": "node get-google-refresh-token.mjs"
+  },
+  "dependencies": {
+    "googleapis": "^134.0.0",
+    "express": "^4.19.2",
+    "open": "^10.1.0"
+  }
+}
+
