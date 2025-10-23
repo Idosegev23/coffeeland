@@ -4,10 +4,25 @@
  */
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+// Service Role client for admin operations (bypasses RLS)
+const getServiceClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+};
 
 // GET - קבלת רשימת סוגי כרטיסיות
 export async function GET(request: Request) {
@@ -87,7 +102,10 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    const { data: cardType, error } = await supabase
+    // Use service role client for insert (bypasses RLS)
+    const serviceClient = getServiceClient();
+    
+    const { data: cardType, error } = await serviceClient
       .from('card_types')
       .insert({
         name: body.name,
@@ -104,9 +122,15 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Insert error:', error);
+      throw error;
+    }
 
-    await supabase.from('audit_log').insert({
+    console.log('✅ Card type created:', cardType.id);
+
+    // Audit log
+    await serviceClient.from('audit_log').insert({
       admin_id: admin.id,
       action: 'create_card_type',
       entity_type: 'card_type',
@@ -116,6 +140,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ card_type: cardType });
   } catch (error: any) {
+    console.error('❌ Fatal error:', error);
     return NextResponse.json(
       { error: 'Failed to create card type', details: error.message },
       { status: 500 }
