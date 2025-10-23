@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { getCurrentUser } from '@/lib/supabase'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -111,9 +110,12 @@ export default function PassesPage() {
 
     try {
       // Check if user is logged in
-      const user = await getCurrentUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
       
-      if (!user) {
+      console.log('Purchase - auth check:', { user: user?.id, error: authError })
+      
+      if (!user || authError) {
+        console.log('No user found, redirecting to register')
         // Redirect to register
         router.push('/register')
         return
