@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -31,12 +30,25 @@ export default function MyAccountPage() {
 
   async function loadData() {
     try {
-      const currentUser = await getCurrentUser()
-      if (!currentUser) {
+      // Check auth directly with supabase client
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      console.log('My Account - auth check:', { user: user?.id, error })
+      
+      if (!user || error) {
+        console.log('No user found, redirecting to login')
         router.push('/login')
         return
       }
 
+      // Get user data from users table
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      const currentUser = userData || { id: user.id, email: user.email }
       setUser(currentUser)
 
       // Load passes
