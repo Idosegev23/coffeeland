@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { Calendar, Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Users, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 interface Event {
   id: string;
@@ -136,6 +137,14 @@ export default function AdminEventsPage() {
   return (
     <div className="min-h-screen bg-background p-6" dir="rtl">
       <div className="max-w-7xl mx-auto">
+        {/* כפתור חזרה */}
+        <Link href="/admin">
+          <Button variant="outline" className="mb-4 flex items-center gap-2">
+            <ArrowRight size={18} />
+            חזרה לפאנל ניהול
+          </Button>
+        </Link>
+
         {/* כותרת */}
         <div className="flex items-center justify-between mb-8">
           <div>

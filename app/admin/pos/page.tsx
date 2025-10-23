@@ -20,8 +20,10 @@ import {
   Search,
   ShoppingCart,
   Check,
-  Printer
+  Printer,
+  ArrowRight
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface CardType {
   id: string;
@@ -172,6 +174,14 @@ export default function POSPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6" dir="rtl">
       <div className="max-w-6xl mx-auto">
+        {/* כפתור חזרה */}
+        <Link href="/admin">
+          <Button variant="outline" className="mb-4 flex items-center gap-2 bg-white">
+            <ArrowRight size={18} />
+            חזרה לפאנל ניהול
+          </Button>
+        </Link>
+
         {/* כותרת */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h1 className="text-3xl font-bold text-primary flex items-center">
