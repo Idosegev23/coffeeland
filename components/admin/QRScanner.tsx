@@ -136,6 +136,7 @@ export function QRScanner({ onScan }: QRScannerProps) {
       <div
         id="qr-reader"
         className={`w-full ${isScanning ? 'block' : 'hidden'} rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none overflow-hidden`}
+        style={{ minHeight: isScanning ? '300px' : '0' }}
       />
 
       {/* Error Message */}
