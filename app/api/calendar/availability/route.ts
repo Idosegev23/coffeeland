@@ -6,12 +6,13 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    // חישוב טווח תאריכים - החודש הקרב ועוד חודשיים
     const now = new Date()
-    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1) // תחילת החודש
-    const timeMax = new Date(now.getFullYear(), now.getMonth() + 3, 0) // סוף 3 חודשים
+    const timeMin = new Date()
+    timeMin.setHours(0, 0, 0, 0)
+    const timeMax = new Date()
+    timeMax.setDate(timeMax.getDate() + 60) // 60 ימים קדימה
     
-    // שליפת אירועים מ-Google Calendar
+    // שליפת אירועים תפוסים מ-Google Calendar
     const calendar = await calendarClient()
     
     const response = await calendar.events.list({
@@ -20,39 +21,81 @@ export async function GET() {
       timeMax: timeMax.toISOString(),
       singleEvents: true,
       orderBy: 'startTime',
-      maxResults: 100
+      maxResults: 200
     })
 
-    const events = response.data.items || []
+    const busyEvents = response.data.items || []
 
-    // המרה לפורמט שהאפליקציה מצפה לו
-    const formattedEvents = events
+    // יצירת מפה של תאריכים תפוסים
+    const busySlots = busyEvents
       .filter(event => event.start && event.start.dateTime)
-      .map(event => {
-        const start = new Date(event.start!.dateTime!)
-        const end = new Date(event.end!.dateTime!)
-        
-        return {
-          id: event.id,
-          title: event.summary || 'אירוע',
-          start: event.start!.dateTime,
-          end: event.end!.dateTime,
-          description: event.description,
-          available: true // כל אירוע ביומן Google הוא זמין להזמנה
-        }
-      })
+      .map(event => ({
+        start: event.start!.dateTime!,
+        end: event.end!.dateTime!,
+        title: event.summary || 'תפוס'
+      }))
+
+    // יצירת זמנים זמינים: כל יום מ-9:00 עד 20:00 פרט לזמנים תפוסים
+    const availableSlots: any[] = []
+    const daysToShow = 60
     
-    return NextResponse.json(formattedEvents, {
+    for (let i = 0; i < daysToShow; i++) {
+      const day = new Date()
+      day.setDate(day.getDate() + i)
+      day.setHours(0, 0, 0, 0)
+      
+      // דלג על ימי שישי ושבת (אופציונלי - תוכל להסיר)
+      const dayOfWeek = day.getDay()
+      if (dayOfWeek === 5 || dayOfWeek === 6) continue
+      
+      // שעות פעילות: 9:00-20:00
+      for (let hour = 9; hour < 20; hour += 3) { // כל 3 שעות
+        const slotStart = new Date(day)
+        slotStart.setHours(hour, 0, 0, 0)
+        
+        const slotEnd = new Date(day)
+        slotEnd.setHours(hour + 3, 0, 0, 0)
+        
+        // בדוק אם השעה הזו תפוסה
+        const isBusy = busySlots.some(busy => {
+          const busyStart = new Date(busy.start)
+          const busyEnd = new Date(busy.end)
+          
+          // יש חפיפה אם:
+          // - התחלת הסלוט בתוך אירוע תפוס
+          // - סוף הסלוט בתוך אירוע תפוס
+          // - הסלוט מכסה את כל האירוע התפוס
+          return (
+            (slotStart >= busyStart && slotStart < busyEnd) ||
+            (slotEnd > busyStart && slotEnd <= busyEnd) ||
+            (slotStart <= busyStart && slotEnd >= busyEnd)
+          )
+        })
+        
+        if (!isBusy && slotStart > now) {
+          availableSlots.push({
+            id: `available-${slotStart.toISOString()}`,
+            title: 'זמין להזמנה',
+            start: slotStart.toISOString(),
+            end: slotEnd.toISOString(),
+            available: true,
+            type: 'available'
+          })
+        }
+      }
+    }
+    
+    return NextResponse.json(availableSlots, {
       headers: {
         'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
       },
     })
   } catch (error) {
-    console.error('Failed to fetch availability events:', error)
+    console.error('Failed to fetch availability:', error)
     
     return NextResponse.json(
       [],
-      { status: 200 } // מחזיר מערך ריק במקום שגיאה
+      { status: 200 }
     )
   }
 }
