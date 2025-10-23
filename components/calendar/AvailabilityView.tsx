@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Calendar, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -16,6 +16,10 @@ export function AvailabilityView() {
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [currentMonthStart, setCurrentMonthStart] = useState<Date>(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1)
+  })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,6 +54,35 @@ export function AvailabilityView() {
     window.open(link, '_blank')
   }
 
+  const goToPreviousMonth = () => {
+    const newMonthStart = new Date(currentMonthStart)
+    newMonthStart.setMonth(newMonthStart.getMonth() - 1)
+    setCurrentMonthStart(newMonthStart)
+  }
+
+  const goToNextMonth = () => {
+    const newMonthStart = new Date(currentMonthStart)
+    newMonthStart.setMonth(newMonthStart.getMonth() + 1)
+    setCurrentMonthStart(newMonthStart)
+  }
+
+  const goToThisMonth = () => {
+    const now = new Date()
+    setCurrentMonthStart(new Date(now.getFullYear(), now.getMonth(), 1))
+  }
+
+  // בדיקה אם זה החודש הנוכחי
+  const isCurrentMonth = () => {
+    const now = new Date()
+    return currentMonthStart.getFullYear() === now.getFullYear() && 
+           currentMonthStart.getMonth() === now.getMonth()
+  }
+
+  // פורמט שם החודש לכותרת
+  const getMonthYearText = () => {
+    return currentMonthStart.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
+  }
+
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -60,20 +93,20 @@ export function AvailabilityView() {
     )
   }
 
-  if (events.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Calendar className="w-12 h-12 text-text-light/30 mb-4" />
-          <p className="text-text-light/70 mb-2">אין זמינות כרגע</p>
-          <p className="text-sm text-text-light/50">צרו קשר לבדיקת תאריכים נוספים</p>
-        </CardContent>
-      </Card>
-    )
-  }
+  // סינון אירועים לפי החודש הנוכחי
+  const monthStart = new Date(currentMonthStart)
+  const monthEnd = new Date(currentMonthStart)
+  monthEnd.setMonth(monthEnd.getMonth() + 1)
+  monthEnd.setDate(0) // סוף החודש
+  monthEnd.setHours(23, 59, 59, 999)
+
+  const monthEvents = events.filter(event => {
+    const eventDate = new Date(event.start)
+    return eventDate >= monthStart && eventDate <= monthEnd
+  })
 
   // Sort events by date
-  const sortedEvents = [...events].sort(
+  const sortedEvents = [...monthEvents].sort(
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
   )
 
@@ -105,7 +138,56 @@ export function AvailabilityView() {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* כפתורי ניווט לחודשים */}
+      <div className="flex items-center justify-between mb-6 p-4 bg-background-light rounded-lg">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={goToPreviousMonth}
+          className="gap-2"
+        >
+          <ChevronRight className="w-4 h-4" />
+          חודש קודם
+        </Button>
+
+        <div className="text-center">
+          <h3 className="text-lg sm:text-xl font-bold text-primary">
+            {getMonthYearText()}
+          </h3>
+          {!isCurrentMonth() && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={goToThisMonth}
+              className="text-xs mt-1"
+            >
+              חזרה לחודש הנוכחי
+            </Button>
+          )}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={goToNextMonth}
+          className="gap-2"
+        >
+          חודש הבא
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* הודעה אם אין אירועים בחודש */}
+      {sortedEvents.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Calendar className="w-12 h-12 text-text-light/30 mb-4" />
+            <p className="text-text-light/70 mb-2">אין זמינות ב{getMonthYearText()}</p>
+            <p className="text-sm text-text-light/50">נסו חודש אחר או צרו קשר לבדיקת תאריכים</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sortedEvents.map((event, index) => {
           const startDate = new Date(event.start)
           const endDate = new Date(event.end)
@@ -164,7 +246,8 @@ export function AvailabilityView() {
             </motion.div>
           )
         })}
-      </div>
+        </div>
+      )}
 
       <EventModal
         event={selectedEvent}

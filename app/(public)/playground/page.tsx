@@ -7,8 +7,20 @@ import { MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { generateWhatsAppLink } from '@/lib/utils'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
+
+interface CardType {
+  id: string
+  name: string
+  price: number
+  sale_price: number | null
+  entries_count: number
+  description: string | null
+  type: string
+  is_active: boolean
+}
 
 const features = [
   {
@@ -38,11 +50,6 @@ const features = [
   },
 ]
 
-const pricing = [
-  { name: 'כניסה בודדת', price: 40, description: 'עד 3 שעות משחק' },
-  { name: '5 כניסות', price: 180, description: 'חיסכון של 20 ש"ח', highlight: false },
-  { name: '10 כניסות', price: 320, description: 'חיסכון של 80 ש"ח', highlight: true },
-]
 
 function LottieIcon({ src }: { src: string }) {
   const [animationData, setAnimationData] = React.useState<any>(null)
@@ -69,6 +76,33 @@ function LottieIcon({ src }: { src: string }) {
 }
 
 export default function PlaygroundPage() {
+  const supabase = createClientComponentClient()
+  const [cardTypes, setCardTypes] = React.useState<CardType[]>([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    loadCardTypes()
+  }, [])
+
+  const loadCardTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('card_types')
+        .select('*')
+        .eq('type', 'playroom')
+        .eq('is_active', true)
+        .order('entries_count', { ascending: true })
+
+      if (error) throw error
+
+      setCardTypes(data || [])
+    } catch (err) {
+      console.error('Error loading card types:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const whatsappLink = generateWhatsAppLink(
     process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '972501234567',
     'שלום, אני מעוניין/ת לקבל מידע נוסף על המשחקייה'
@@ -210,29 +244,74 @@ export default function PlaygroundPage() {
           <p className="text-center text-text-light/70 mb-12 max-w-2xl mx-auto">
             בחרו את האופציה המתאימה לכם. כל כניסה כוללת עד 3 שעות משחק וכוס קפה להורה.
           </p>
-          <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {pricing.map((option) => (
-              <Card
-                key={option.name}
-                className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none ${option.highlight ? 'border-accent border-2' : ''}`}
-              >
-                {option.highlight && (
-                  <div className="bg-accent text-accent-foreground px-3 py-1 text-sm font-semibold text-center rounded-t-lg">
-                    הכי משתלם
-                  </div>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-lg">{option.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="text-3xl font-bold text-accent">
-                    ₪{option.price}
-                  </div>
-                  <p className="text-sm text-text-light/70">{option.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          
+          {loading ? (
+            <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none">
+                  <CardHeader>
+                    <div className="h-6 bg-gray-200 rounded animate-pulse" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-10 bg-gray-200 rounded animate-pulse mb-2" />
+                    <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : cardTypes.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-text-light/70">אין כרטיסיות זמינות כרגע</p>
+              <p className="text-sm text-text-light/50 mt-2">צרו איתנו קשר לפרטים</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {cardTypes.map((card, index) => {
+                const displayPrice = card.sale_price || card.price
+                const hasDiscount = card.sale_price && card.sale_price < card.price
+                const isPopular = index === 1 // אמצעי הוא הפופולרי
+                
+                return (
+                  <Card
+                    key={card.id}
+                    className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none ${isPopular ? 'border-accent border-2' : ''}`}
+                  >
+                    {isPopular && (
+                      <div className="bg-accent text-accent-foreground px-3 py-1 text-sm font-semibold text-center rounded-t-lg">
+                        הכי משתלם
+                      </div>
+                    )}
+                    <CardHeader>
+                      <CardTitle className="text-lg">{card.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-baseline gap-2">
+                        <div className="text-3xl font-bold text-accent">
+                          ₪{displayPrice}
+                        </div>
+                        {hasDiscount && (
+                          <div className="text-lg text-text-light/50 line-through">
+                            ₪{card.price}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-text-light/70">
+                        {card.entries_count} כניסות
+                      </p>
+                      {card.description && (
+                        <p className="text-xs text-text-light/60">{card.description}</p>
+                      )}
+                      {hasDiscount && (
+                        <div className="text-xs font-semibold text-accent">
+                          חיסכון של ₪{card.price - (card.sale_price || 0)}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
           <div className="text-center mt-8">
             <Button size="lg" asChild>
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="gap-2">
