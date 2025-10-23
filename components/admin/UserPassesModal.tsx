@@ -146,14 +146,15 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
         />
 
         {/* Modal */}
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          transition={{ type: 'spring', duration: 0.5 }}
-          className="fixed inset-x-4 top-1/2 -translate-y-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:inset-x-auto z-50 w-auto sm:w-[95%] sm:max-w-2xl max-h-[85vh] overflow-y-auto"
-        >
-          <div className="bg-background-light rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-2xl p-4 sm:p-6 md:p-8 relative">
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: 'spring', duration: 0.5 }}
+            className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto pointer-events-auto"
+          >
+            <div className="bg-background-light rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-2xl p-4 sm:p-6 md:p-8 relative">
             {/* Close Button */}
             <button
               onClick={onClose}
@@ -328,8 +329,9 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
               </div>
               )
             })()}
-          </div>
-        </motion.div>
+            </div>
+          </motion.div>
+        </div>
       </>
     </AnimatePresence>
   )
