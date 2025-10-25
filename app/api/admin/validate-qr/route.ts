@@ -7,25 +7,53 @@ export async function POST(request: Request) {
     const supabase = createRouteHandlerClient({ cookies })
     const { qrCode } = await request.json()
 
+    console.log('🔍 Validate QR - Start:', { qrCode })
+
     if (!qrCode) {
+      console.log('❌ No QR code provided')
       return NextResponse.json({ error: 'QR code is required' }, { status: 400 })
     }
 
     // Verify admin
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+    
+    console.log('👤 Auth check:', {
+      hasUser: !!authUser,
+      userId: authUser?.id,
+      userEmail: authUser?.email,
+      error: authError?.message
+    })
+
+    if (!authUser || authError) {
+      console.log('❌ Unauthorized - no user found')
+      return NextResponse.json({ 
+        error: 'Unauthorized - Please login', 
+        details: authError?.message 
+      }, { status: 401 })
     }
 
-    const { data: adminData } = await supabase
+    const { data: adminData, error: adminError } = await supabase
       .from('admins')
-      .select('is_active')
+      .select('id, is_active')
       .eq('user_id', authUser.id)
       .maybeSingle()
 
+    console.log('🔐 Admin check:', {
+      hasAdmin: !!adminData,
+      adminId: adminData?.id,
+      isActive: adminData?.is_active,
+      error: adminError?.message
+    })
+
     if (!adminData?.is_active) {
-      return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
+      console.log('❌ Not an admin or inactive')
+      return NextResponse.json({ 
+        error: 'Not an admin',
+        details: `User ${authUser.id} is not an active admin`
+      }, { status: 403 })
     }
+
+    console.log('✅ Admin verified:', adminData.id)
 
     // Find user by QR code
     const { data: user, error: userError } = await supabase

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -9,33 +9,82 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { QRScanner } from '@/components/admin/QRScanner'
 import { UserPassesModal } from '@/components/admin/UserPassesModal'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function AdminScanPage() {
   const router = useRouter()
+  const supabase = createClientComponentClient()
   const [scannedUser, setScannedUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [authChecked, setAuthChecked] = useState(false)
+
+  // Verify admin on mount
+  useEffect(() => {
+    const verifyAdmin = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      console.log('Admin Scan Page - Auth check:', {
+        hasUser: !!user,
+        userId: user?.id,
+        error: error?.message
+      })
+
+      if (!user || error) {
+        console.log('Not authenticated, redirecting to login')
+        router.push('/login')
+        return
+      }
+
+      const { data: adminData } = await supabase
+        .from('admins')
+        .select('is_active')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      console.log('Admin check result:', adminData)
+
+      if (!adminData?.is_active) {
+        console.log('Not an admin, redirecting to home')
+        router.push('/')
+        return
+      }
+
+      setAuthChecked(true)
+    }
+
+    verifyAdmin()
+  }, [router, supabase])
 
   const handleScan = async (qrCode: string) => {
     setError('')
     setLoading(true)
+
+    console.log('📱 Scanning QR code:', qrCode)
 
     try {
       const response = await fetch('/api/admin/validate-qr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qrCode }),
+        credentials: 'include', // Ensure cookies are sent
       })
+
+      console.log('📥 Response status:', response.status)
 
       if (!response.ok) {
         const data = await response.json()
+        console.error('❌ Validation failed:', data)
         throw new Error(data.error || 'QR לא תקין')
       }
 
       const data = await response.json()
+      console.log('✅ Scan successful:', data)
       setScannedUser(data)
     } catch (err: any) {
+      console.error('❌ Scan error:', err)
       setError(err.message || 'שגיאה בסריקה')
+      alert('שגיאה: ' + (err.message || 'שגיאה בסריקה'))
     } finally {
       setLoading(false)
     }
@@ -44,6 +93,18 @@ export default function AdminScanPage() {
   const handleClose = () => {
     setScannedUser(null)
     setError('')
+  }
+
+  // Show loading while checking auth
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-text-light/70">בודק הרשאות...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
