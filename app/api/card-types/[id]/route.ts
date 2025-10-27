@@ -29,18 +29,38 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    
+    console.log('📦 Update request body:', body);
+
+    // Prepare update data - only include fields that are provided
+    const updateData: any = {
+      name: body.name,
+      description: body.description,
+      type: body.type,
+      entries_count: body.entries_count,
+      price: body.price,
+      is_active: body.is_active
+    };
+    
+    // Add optional fields only if provided
+    if (body.sale_price !== null && body.sale_price !== undefined) {
+      updateData.sale_price = body.sale_price;
+    }
+    if (body.validity_days !== null && body.validity_days !== undefined) {
+      updateData.validity_days = body.validity_days;
+    }
+    if (body.validity_months !== null && body.validity_months !== undefined) {
+      updateData.validity_months = body.validity_months;
+    }
+    if (body.is_family !== null && body.is_family !== undefined) {
+      updateData.is_family = body.is_family;
+    }
+    
+    console.log('💾 Update data:', updateData);
 
     const { data: cardType, error } = await supabase
       .from('card_types')
-      .update({
-        name: body.name,
-        description: body.description,
-        type: body.type,
-        entries_count: body.entries_count,
-        price: body.price,
-        sale_price: body.sale_price,
-        is_active: body.is_active
-      })
+      .update(updateData)
       .eq('id', params.id)
       .select()
       .single();

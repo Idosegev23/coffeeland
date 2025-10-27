@@ -39,9 +39,12 @@ export default function CardTypesPage() {
     description: '',
     type: 'playground',
     entries_count: '',
+    validity_days: '',
+    validity_months: '',
     price: '',
     sale_price: '',
-    is_active: true
+    is_active: true,
+    is_family: false
   });
 
   const supabase = createClientComponentClient();
@@ -69,18 +72,25 @@ export default function CardTypesPage() {
 
   const handleCreate = async () => {
     try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        entries_count: parseInt(formData.entries_count),
+        price: parseFloat(formData.price),
+        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+        validity_days: formData.validity_days ? parseInt(formData.validity_days) : null,
+        validity_months: formData.validity_months ? parseInt(formData.validity_months) : null,
+        is_active: formData.is_active,
+        is_family: formData.is_family
+      };
+      
+      console.log('Creating card type with payload:', payload);
+      
       const res = await fetch('/api/card-types', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          type: formData.type,
-          entries_count: parseInt(formData.entries_count),
-          price: parseFloat(formData.price),
-          sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
-          is_active: formData.is_active
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -102,18 +112,25 @@ export default function CardTypesPage() {
     if (!editingCard) return;
 
     try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        entries_count: parseInt(formData.entries_count),
+        price: parseFloat(formData.price),
+        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+        validity_days: formData.validity_days ? parseInt(formData.validity_days) : null,
+        validity_months: formData.validity_months ? parseInt(formData.validity_months) : null,
+        is_active: formData.is_active,
+        is_family: formData.is_family
+      };
+      
+      console.log('Updating card type with payload:', payload);
+      
       const res = await fetch(`/api/card-types/${editingCard.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          type: formData.type,
-          entries_count: parseInt(formData.entries_count),
-          price: parseFloat(formData.price),
-          sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
-          is_active: formData.is_active
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -159,9 +176,12 @@ export default function CardTypesPage() {
       description: card.description || '',
       type: card.type,
       entries_count: card.entries_count.toString(),
+      validity_days: (card as any).validity_days?.toString() || '',
+      validity_months: (card as any).validity_months?.toString() || '',
       price: card.price.toString(),
       sale_price: card.sale_price?.toString() || '',
-      is_active: card.is_active
+      is_active: card.is_active,
+      is_family: (card as any).is_family || false
     });
   };
 
@@ -171,9 +191,12 @@ export default function CardTypesPage() {
       description: '',
       type: 'playground',
       entries_count: '',
+      validity_days: '',
+      validity_months: '',
       price: '',
       sale_price: '',
-      is_active: true
+      is_active: true,
+      is_family: false
     });
   };
 
@@ -382,6 +405,32 @@ export default function CardTypesPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">תוקף בימים</label>
+                  <input
+                    type="number"
+                    value={formData.validity_days}
+                    onChange={e => setFormData({ ...formData, validity_days: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="30 (אופציונלי)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">למשל: 30 ימים מיום הקנייה</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">תוקף בחודשים</label>
+                  <input
+                    type="number"
+                    value={formData.validity_months}
+                    onChange={e => setFormData({ ...formData, validity_months: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="3 (אופציונלי)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">למשל: 3 חודשים מיום הקנייה</p>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">מחיר מבצע (₪)</label>
                 <input
@@ -394,17 +443,32 @@ export default function CardTypesPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4"
-                />
-                <label htmlFor="is_active" className="text-sm font-medium cursor-pointer">
-                  כרטיסייה פעילה (זמינה למכירה)
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="is_active" className="text-sm font-medium cursor-pointer">
+                    כרטיסייה פעילה (זמינה למכירה)
+                  </label>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_family"
+                    checked={formData.is_family}
+                    onChange={e => setFormData({ ...formData, is_family: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="is_family" className="text-sm font-medium cursor-pointer">
+                    כרטיסייה משפחתית
+                  </label>
+                </div>
               </div>
             </div>
 
