@@ -6,7 +6,7 @@ const footerLinks = {
   main: [
     { name: 'משחקייה', href: '/playground' },
     { name: 'אירועים וימי הולדת', href: '/events' },
-    { name: 'סדנאות', href: '/workshops' },
+    { name: 'סדנאות וחוגים', href: '/workshops' },
     { name: 'תפריט', href: '/menu' },
     { name: 'גלריה', href: '/gallery' },
   ],
@@ -18,11 +18,11 @@ const footerLinks = {
 }
 
 const contactInfo = {
-  phone: '050-123-4567',
-  phoneRaw: '972501234567',
-  email: 'info@coffeeland.co.il',
-  address: 'רחוב הקפה 123, תל אביב',
-  hours: 'ראשון-חמישי: 09:00-19:00 | שישי-שבת: 09:00-15:00',
+  phone: '052-5636067',
+  phoneRaw: '972525636067',
+  email: 'coffeeland256@gmail.com',
+  address: 'גבע 2, אשקלון',
+  hours: 'א׳-ה׳: 07:30-21:00 | ו׳: 07:30-15:00 | ש׳: סגור',
 }
 
 export function Footer() {
@@ -39,8 +39,8 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-accent">אודות CoffeeLand</h3>
             <p className="text-sm text-text-dark/80 leading-relaxed">
-              מקום חם ומזמין למשפחות. משחקייה בטוחה לילדים, קפה איכותי, ימי הולדת
-              בלתי נשכחים וסדנאות יצירתיות.
+              בית קפה משפחתי עם משחקייה לגיל הרך (0-5). קפה איכותי, משחקייה בטוחה,
+              ימי הולדת בלתי נשכחים, סדנאות וחוגים יצירתיים.
             </p>
           </div>
 
