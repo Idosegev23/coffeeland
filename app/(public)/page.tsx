@@ -21,12 +21,6 @@ export default function HomePage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-primary mb-3">
               הציצו לתוך המשחקייה
             </h2>
-            <p className="text-lg text-text-light/70 max-w-2xl mx-auto mb-4">
-              צפו בתמונות מהמשחקייה, אירועים וסדנאות שלנו
-            </p>
-            <p className="text-sm text-text-light/60 max-w-xl mx-auto">
-              העבר עכבר על הכרטיסים לצפייה בפרטים • אפקט תאורה ו-Border Glow
-            </p>
           </div>
           
           <MagicBento
