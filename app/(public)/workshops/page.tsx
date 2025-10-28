@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { CalendarTabs } from '@/components/calendar/CalendarTabs'
+import { ClassesView } from '@/components/calendar/ClassesView'
 import { Button } from '@/components/ui/button'
 import { MessageCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -24,8 +24,8 @@ const features = [
   },
   {
     lottie: '/lottie/fresh.json',
-    title: 'חומרים איכותיים',
-    description: 'כל מה שצריך לסדנה מושלמת',
+    title: 'תוכן איכותי',
+    description: 'כל מה שצריך לסדנא מושלמת ומקיפה',
   },
   {
     lottie: '/lottie/parentseasy.json',
@@ -65,7 +65,7 @@ function LottieIcon({ src }: { src: string }) {
 
 export default function WorkshopsPage() {
   const whatsappLink = generateWhatsAppLink(
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '972501234567',
+    '972525636067',
     'שלום, אני מעוניין/ת לקבל מידע נוסף על הסדנאות והחוגים'
   )
 
@@ -114,8 +114,7 @@ export default function WorkshopsPage() {
             </h2>
             <p className="text-lg text-text-light/80 leading-relaxed">
               ב-CoffeeLand אנחנו מציעים מגוון רחב של חוגים וסדנאות שבועיות לילדים ולהורים
-              יחד. כל הסדנאות שלנו מתמקדות בלמידה דרך משחק, יצירתיות והנאה. המדריכים
-              שלנו מקצועיים, מנוסים ומלאי אהבה למה שהם עושים.
+              יחד. כל הסדנאות שלנו מתמקדות בלמידה דרך משחק, יצירתיות והנאה.
             </p>
           </div>
         </div>
@@ -188,8 +187,20 @@ export default function WorkshopsPage() {
         </div>
       </section>
 
-      {/* Calendar */}
-      <CalendarTabs />
+      {/* Classes and Workshops */}
+      <section className="py-12 sm:py-16 lg:py-20" id="classes">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-primary mb-3">
+              החוגים והסדנאות שלנו
+            </h2>
+            <p className="text-lg text-text-light/70 max-w-2xl mx-auto">
+              צפו בחוגים והסדנאות השבועיים המתקיימים אצלנו
+            </p>
+          </div>
+          <ClassesView />
+        </div>
+      </section>
 
       {/* CTA */}
       <section className="relative py-16 bg-accent text-accent-foreground overflow-hidden">

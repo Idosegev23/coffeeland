@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { MessageCircle, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { MessageCircle, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -63,15 +63,6 @@ const eventTypes = [
   },
 ]
 
-const extras = [
-  { name: 'צלם מקצועי' },
-  { name: 'מופע קוסם' },
-  { name: 'פעילות אומנות' },
-  { name: 'הופעת דמות מוכרת' },
-  { name: 'עוגה מיוחדת גדולה' },
-  { name: 'בלונים מעופפים' },
-]
-
 const invitations = [
   '/invitations/1.png',
   '/invitations/2.png',
@@ -92,18 +83,18 @@ const features = [
   },
   {
     lottie: '/lottie/people.json',
-    title: 'מקום מושלם',
-    description: 'משחקייה גדולה, מוגנת ומלאה באטרקציות',
+    title: 'מרחב מושלם',
+    description: 'משחקייה מעוצבת בסטייל עם שולחנות מעוצבים לאירוע',
   },
   {
     lottie: '/lottie/coffee.json',
     title: 'אוכל מעולה',
-    description: 'עוגות מדהימות, אוכל טעים ושתייה לכולם',
+    description: 'תפריט אוכל ושתייה מגוון, עוגה מעוצבת אישית פי קונספט ושירותי בר',
   },
   {
     lottie: '/lottie/gallery.json',
-    title: 'רגעים מושלמים',
-    description: 'זיכרונות בלתי נשכחים לכל החיים',
+    title: 'תוספות מושלמות',
+    description: 'הפעלות, בלונים, בובות מתנפחות, צלמים ועוד מגוון רחב',
   },
 ]
 
@@ -132,20 +123,10 @@ function LottieIcon({ src }: { src: string }) {
 }
 
 export default function EventsPage() {
-  const [currentInvitation, setCurrentInvitation] = React.useState(0)
-  
   const whatsappLink = generateWhatsAppLink(
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '972501234567',
+    '972525636067',
     'שלום, אני מעוניין/ת לקבל מידע נוסף על אירועים וימי הולדת'
   )
-
-  const nextInvitation = () => {
-    setCurrentInvitation((prev) => (prev + 1) % invitations.length)
-  }
-
-  const prevInvitation = () => {
-    setCurrentInvitation((prev) => (prev - 1 + invitations.length) % invitations.length)
-  }
 
   return (
     <>
@@ -195,7 +176,6 @@ export default function EventsPage() {
             </h2>
             <p className="text-lg text-text-light/80 leading-relaxed">
               אנחנו מציעים אירועי יום הולדת מושלמים במשחקייה הגדולה והמאובזרת שלנו.
-              הילדים ישחקו וייהנו במרחב הבטוח והמהנה, בזמן שאתם תירגעו עם קפה ועוגה טעימה.
               כל הפרטים מטופלים - אתם פשוט צריכים להגיע וליהנות מהחגיגה!
             </p>
           </div>
@@ -334,43 +314,7 @@ export default function EventsPage() {
         </div>
       </section>
 
-      {/* Extras */}
-      <section className="relative py-12 sm:py-16 bg-background overflow-hidden">
-        {/* Decorations */}
-        <div className="absolute inset-0 pointer-events-none opacity-10">
-          <Image src="/palmLeaf2.svg" alt="" width={200} height={200} className="absolute -top-10 right-20 rotate-45" />
-          <Image src="/BananaLeaf1.svg" alt="" width={180} height={180} className="absolute bottom-10 -left-10 -rotate-12" />
-          <Image src="/coldshake2.svg" alt="" width={130} height={130} className="absolute top-1/2 right-10 rotate-6" />
-        </div>
-        
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-4 sm:mb-6 text-center">
-              תוספות מיוחדות
-            </h2>
-            <p className="text-center text-text-light/70 mb-6 sm:mb-8 text-sm sm:text-base">
-              הפכו את האירוע לבלתי נשכח עם תוספות מיוחדות
-            </p>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 max-w-3xl mx-auto">
-              {extras.map((extra, idx) => (
-                <Card
-                  key={idx}
-                  className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-gradient-to-br from-accent/10 to-primary/10 p-3 sm:p-4 hover:shadow-lg transition-all hover:scale-105 text-center"
-                >
-                  <h4 className="font-semibold text-primary text-xs sm:text-sm">{extra.name}</h4>
-                </Card>
-              ))}
-            </div>
-            
-            <div className="text-center mt-6 sm:mt-8">
-              <p className="text-text-light/60 text-sm">ועוד הרבה תוספות נוספות...</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Invitations Gallery - Carousel */}
+      {/* Invitations Gallery - Phone Mockup with Auto-scroll */}
       <section className="py-12 sm:py-16 lg:py-20 bg-background-light">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
@@ -378,71 +322,43 @@ export default function EventsPage() {
               הזמנות מעוצבות
             </h2>
             <p className="text-base sm:text-lg text-text-light/70 max-w-2xl mx-auto">
-              אנחנו גם מעצבים הזמנות מקסימות לאירוע שלכם
+              תוכלו לבחור הזמנה מעוצבת ממגוון ההזמנות שלנו
             </p>
           </div>
 
-          {/* Carousel Container */}
-          <div className="max-w-sm sm:max-w-md mx-auto">
+          {/* Phone Mockup Container */}
+          <div className="max-w-xs mx-auto">
             <div className="relative">
-              {/* Main Image Stack */}
-              <div className="relative aspect-[3/4] rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none overflow-hidden">
-                {/* Stack effect - background cards */}
-                <div className="absolute inset-0 z-0">
-                  <div className="absolute top-2 left-2 right-2 bottom-2 bg-accent/20 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none transform rotate-2" />
-                  <div className="absolute top-4 left-4 right-4 bottom-4 bg-accent/10 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none transform -rotate-1" />
-                </div>
-                
-                {/* Current Image */}
-                <div className="relative w-full h-full z-10 bg-white rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-2xl">
-                  <Image
-                    src={invitations[currentInvitation]}
-                    alt={`הזמנה ${currentInvitation + 1}`}
-                    fill
-                    className="object-cover rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none"
-                    priority={currentInvitation === 0}
-                  />
+              {/* Phone Frame */}
+              <div className="relative mx-auto" style={{ width: '280px', height: '580px' }}>
+                {/* Phone Border and Notch */}
+                <div className="absolute inset-0 bg-gray-900 rounded-[45px] shadow-2xl p-3">
+                  {/* Screen */}
+                  <div className="relative w-full h-full bg-white rounded-[35px] overflow-hidden">
+                    {/* Notch */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-3xl z-10" />
+                    
+                    {/* Scrolling Container */}
+                    <div className="flex flex-col animate-scroll-invitations">
+                      {/* Duplicate images for seamless loop */}
+                      {[...invitations, ...invitations].map((invitation, idx) => (
+                        <div key={idx} className="relative flex-shrink-0" style={{ width: '100%', height: '580px' }}>
+                          <Image
+                            src={invitation}
+                            alt={`הזמנה ${(idx % invitations.length) + 1}`}
+                            fill
+                            className="object-contain"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Home Indicator */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-gray-700 rounded-full" />
                 </div>
               </div>
-
-              {/* Navigation Arrows */}
-              <button
-                onClick={prevInvitation}
-                className="absolute top-1/2 -translate-y-1/2 -right-4 sm:-right-12 z-20 bg-white hover:bg-accent text-primary hover:text-white rounded-full p-2 sm:p-3 shadow-lg transition-all"
-                aria-label="הזמנה קודמת"
-              >
-                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-              <button
-                onClick={nextInvitation}
-                className="absolute top-1/2 -translate-y-1/2 -left-4 sm:-left-12 z-20 bg-white hover:bg-accent text-primary hover:text-white rounded-full p-2 sm:p-3 shadow-lg transition-all"
-                aria-label="הזמנה הבאה"
-              >
-                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
             </div>
-
-            {/* Indicators */}
-            <div className="flex items-center justify-center gap-2 mt-6">
-              {invitations.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentInvitation(idx)}
-                  className={`h-2 rounded-full transition-all ${
-                    idx === currentInvitation 
-                      ? 'w-8 bg-accent' 
-                      : 'w-2 bg-accent/30 hover:bg-accent/50'
-                  }`}
-                  aria-label={`עבור להזמנה ${idx + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="text-center mt-6 sm:mt-8">
-            <p className="text-text-light/60 text-sm sm:text-base">
-              עיצוב אישי ומותאם לכל אירוע
-            </p>
           </div>
         </div>
       </section>

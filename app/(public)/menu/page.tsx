@@ -64,8 +64,7 @@ export default function MenuPage() {
               ארוחה קלה וקפה איכותי
             </h2>
             <p className="text-lg text-text-light/80 leading-relaxed">
-              בזמן שהילדים משחקים, תוכלו ליהנות מקפה טרי מהקלייה שלנו, מאפים ביתיים
-              ואוכל איכותי. כל המנות מוכנות טריות ומהחומרים הטובים ביותר.
+              בזמן שהילדים משחקים תוכלו להנות מקפה טרי, מאפים ביתיים ואוכל איכותי.
             </p>
           </div>
         </div>
@@ -100,11 +99,11 @@ export default function MenuPage() {
           <div className="max-w-2xl mx-auto bg-secondary/10 p-6 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none">
             <h3 className="text-lg font-semibold text-primary mb-3">שימו לב:</h3>
             <ul className="space-y-2 text-sm text-text-light/80">
-              <li>• כל כרטיסייה כוללת משקה חם אחד להורה</li>
-              <li>• ניתן להזמין אוכל ושתייה נוספים בנפרד</li>
-              <li>• אנחנו דואגים לכשרות ונקיון מוקפדים</li>
+              <li>• הכניסה למשחקיה עד גיל 5</li>
+              <li>• המקום תחת כשרות מהדרין</li>
               <li>• מומלץ להודיע על אלרגיות מראש</li>
-              <li>• התפריט עשוי להשתנות בהתאם לעונה ולזמינות</li>
+              <li>• התפריט עשוי להשתנות בהתאם לעונה והזמינות</li>
+              <li>• לא ניתן להכנס עם אוכל ושתייה למתחם המשחקיה</li>
             </ul>
           </div>
         </div>

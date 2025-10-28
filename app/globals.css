@@ -115,6 +115,20 @@
     animation: float-slow linear infinite;
   }
 
+  /* Scroll invitations animation for phone mockup */
+  @keyframes scrollInvitations {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(-50%);
+    }
+  }
+
+  .animate-scroll-invitations {
+    animation: scrollInvitations 20s linear infinite;
+  }
+
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *,
