@@ -26,27 +26,22 @@ const features = [
   {
     lottie: '/lottie/safty.json',
     title: 'בטיחות מקסימלית',
-    description: 'משטחי משחק רכים, ציוד מאושר ופיקוח מתמיד',
-  },
-  {
-    lottie: '/lottie/fresh.json',
-    title: 'ציוד חדשני',
-    description: 'צעצועים ומתקנים מתקדמים שמעוררים את הדמיון',
+    description: 'ציוד מותאם במיוחד לגילאי 0-5, משטחי משחק רכים ופיקוח מתמיד',
   },
   {
     lottie: '/lottie/people.json',
-    title: 'מתאים לכל הגילאים',
-    description: 'אזורי משחק מותאמים לתינוקות, פעוטות וילדים גדולים',
+    title: 'מותאם במיוחד לגילאי 0-5',
+    description: 'אזורי משחק מותאמים לתינוקות, פעוטות וילדים עד גיל 5',
   },
   {
     lottie: '/lottie/parentseasy.json',
     title: 'נוח להורים',
-    description: 'פינת ישיבה נעימה עם קפה איכותי וWi-Fi חינם',
+    description: 'פינות ישיבה נעימות עם קפה איכותי, תפריט מגוון וWi-Fi',
   },
   {
     lottie: '/lottie/hours.json',
     title: 'שעות גמישות',
-    description: 'פתוח 7 ימים בשבוע, ללא צורך בהזמנה מראש',
+    description: 'א׳-ה׳: 07:30-21:00 | ו׳: 07:30-15:00 | ש׳: סגור',
   },
 ]
 
@@ -149,14 +144,25 @@ export default function PlaygroundPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-4">
-              מרחב משחק מושלם לכל הגילאים
+              מרחב משחק מושלם לגיל הרך
             </h2>
             <p className="text-lg text-text-light/80 leading-relaxed">
-              המשחקייה של CoffeeLand היא מרחב בטוח, נקי ומעורר דמיון לילדים מגיל 0 עד 12.
-              אנחנו מציעים שטח משחק גדול עם מגוון רחב של צעצועים איכותיים, משטחים רכים,
-              ומתקני משחק מעוצבים. בזמן שהילדים נהנים, ההורים יכולים להירגע עם כוס קפה
-              טעימה בפינת הישיבה המעוצבת שלנו.
+              המשחקייה של CoffeeLand היא מרחב בטוח ונקי לילדים מגיל 0-5. אנחנו מציעים 
+              שטח משחק גדול עם מתקנים מתנפחים, משטחים רכים ומתקני משחק מעוצבים. 
+              בזמן שהילדים נהנים, ההורים יכולים להירגע בבית הקפה שלנו עם מבט לילדים שלהם.
             </p>
+          </div>
+          
+          {/* Placeholder Image */}
+          <div className="mt-8 max-w-4xl mx-auto">
+            <div className="relative w-full h-64 sm:h-96 rounded-2xl overflow-hidden">
+              <Image
+                src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1200&h=600&fit=crop"
+                alt="משחקייה CoffeeLand"
+                fill
+                className="object-cover"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -175,7 +181,7 @@ export default function PlaygroundPage() {
             למה להגיע אלינו?
           </h2>
           <div className="max-w-4xl mx-auto">
-            {/* Bento Grid - פריסה סימטרית במובייל ודסקטופ */}
+            {/* Bento Grid - 4 קלפים */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {/* קארד 1 - שמאל למעלה */}
               <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
@@ -183,7 +189,7 @@ export default function PlaygroundPage() {
                   <LottieIcon src={features[0].lottie} />
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[0].title}</h3>
-                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[0].description}</p>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-3">{features[0].description}</p>
               </Card>
 
               {/* קארד 2 - ימין למעלה */}
@@ -192,36 +198,25 @@ export default function PlaygroundPage() {
                   <LottieIcon src={features[1].lottie} />
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[1].title}</h3>
-                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[1].description}</p>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-3">{features[1].description}</p>
               </Card>
 
-              {/* קארד 3 - רחב באמצע */}
-              <Card className="col-span-2 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-row items-center gap-3 sm:gap-4 p-3 sm:p-4">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center flex-shrink-0">
+              {/* קארד 3 - שמאל למטה */}
+              <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2 mx-auto">
                   <LottieIcon src={features[2].lottie} />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-sm sm:text-base font-semibold text-text-dark mb-0.5">{features[2].title}</h3>
-                  <p className="text-xs sm:text-sm text-text-dark/80 line-clamp-2">{features[2].description}</p>
-                </div>
+                <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[2].title}</h3>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-3">{features[2].description}</p>
               </Card>
 
-              {/* קארד 4 - שמאל למטה */}
+              {/* קארד 4 - ימין למטה */}
               <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
                 <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2 mx-auto">
                   <LottieIcon src={features[3].lottie} />
                 </div>
                 <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[3].title}</h3>
-                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[3].description}</p>
-              </Card>
-
-              {/* קארד 5 - ימין למטה */}
-              <Card className="aspect-square rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] flex flex-col justify-center p-3 sm:p-4">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center mb-2 mx-auto">
-                  <LottieIcon src={features[4].lottie} />
-                </div>
-                <h3 className="text-sm sm:text-base font-semibold text-text-dark text-center mb-1">{features[4].title}</h3>
-                <p className="text-xs text-text-dark/80 text-center line-clamp-2">{features[4].description}</p>
+                <p className="text-xs text-text-dark/80 text-center line-clamp-3">{features[3].description}</p>
               </Card>
             </div>
           </div>
@@ -242,7 +237,7 @@ export default function PlaygroundPage() {
             מחירים
           </h2>
           <p className="text-center text-text-light/70 mb-12 max-w-2xl mx-auto">
-            בחרו את האופציה המתאימה לכם. כל כניסה כוללת עד 3 שעות משחק וכוס קפה להורה.
+            בחרו את האופציה המתאימה לכם
           </p>
           
           {loading ? (
