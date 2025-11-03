@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Menu, X, User, Home, Scan } from 'lucide-react'
+import { Menu, X, User, Home, Scan, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -40,6 +40,11 @@ export function Header() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full bg-background-light/95 backdrop-blur supports-[backdrop-filter]:bg-background-light/80 border-b-2 border-border shadow-sm">
@@ -110,6 +115,10 @@ export function Header() {
                       <User className="w-4 h-4" />
                       {userData?.full_name || 'איזור אישי'}
                     </Link>
+                  </Button>
+                  <Button onClick={handleLogout} variant="ghost" size="sm" className="gap-2">
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden lg:inline">התנתק</span>
                   </Button>
                 </>
               ) : (
@@ -190,6 +199,10 @@ export function Header() {
                           <User className="w-4 h-4" />
                           {userData?.full_name || 'איזור אישי'}
                         </Link>
+                      </Button>
+                      <Button onClick={handleLogout} variant="ghost" size="default" className="w-full gap-2">
+                        <LogOut className="w-4 h-4" />
+                        התנתק
                       </Button>
                     </>
                   ) : (

@@ -9,7 +9,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { LogOut, Scan, Users, Ticket, Coffee, Home, Calendar, ShoppingCart, CreditCard, List } from 'lucide-react'
+import { Scan, Users, Ticket, Coffee, Calendar, ShoppingCart, CreditCard, List } from 'lucide-react'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -129,35 +129,11 @@ export default function AdminDashboardPage() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-1">
-              פאנל ניהול
-            </h1>
-            <p className="text-text-light/70">שלום, {user?.full_name} (מנהל)</p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-              asChild
-            >
-              <Link href="/">
-                <Home className="w-4 h-4" />
-                <span className="hidden sm:inline">דף הבית</span>
-              </Link>
-            </Button>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">יציאה</span>
-            </Button>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-1">
+            פאנל ניהול
+          </h1>
+          <p className="text-text-light/70">שלום, {user?.full_name} (מנהל)</p>
         </div>
 
         {/* Quick Scan Button */}

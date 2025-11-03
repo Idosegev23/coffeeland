@@ -13,9 +13,10 @@ export const dynamic = 'force-dynamic';
 // GET - קבלת אירוע בודד
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createRouteHandlerClient({ cookies });
 
     const { data: event, error } = await supabase
@@ -35,7 +36,7 @@ export async function GET(
           child:children(id, name, age)
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) throw error;
@@ -52,7 +53,7 @@ export async function GET(
 // PUT - עדכון אירוע (alias ל-PATCH)
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   return PATCH(request, { params });
 }
@@ -60,9 +61,10 @@ export async function PUT(
 // PATCH - עדכון אירוע
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createRouteHandlerClient({ cookies });
     
     // בדיקת הרשאות
@@ -106,7 +108,7 @@ export async function PATCH(
     const { data: event, error } = await supabase
       .from('events')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -157,9 +159,10 @@ export async function PATCH(
 // DELETE - מחיקת אירוע
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createRouteHandlerClient({ cookies });
     
     // בדיקת הרשאות
@@ -183,7 +186,7 @@ export async function DELETE(
     const { data: event } = await supabase
       .from('events')
       .select('google_event_id, title')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     // מחיקה מיומן גוגל
@@ -199,7 +202,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('events')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) throw error;
 
@@ -208,7 +211,7 @@ export async function DELETE(
       admin_id: admin.id,
       action: 'delete_event',
       entity_type: 'event',
-      entity_id: params.id,
+      entity_id: id,
       details: { title: event?.title }
     });
 

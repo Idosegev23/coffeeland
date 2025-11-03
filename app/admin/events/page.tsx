@@ -4,7 +4,7 @@
  * אדמין - ניהול חוגים וסדנאות
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
 import { Calendar, Plus, Edit, Trash2, Users, ArrowRight, UserCheck } from 'lucide-react';
@@ -174,6 +175,22 @@ export default function AdminEventsPage() {
     });
   };
 
+  const handleEdit = useCallback((event: Event) => {
+    setEditingEvent(event);
+    setFormData({
+      title: event.title,
+      description: event.description || '',
+      type: event.type,
+      start_at: event.start_at.slice(0, 16),
+      end_at: event.end_at.slice(0, 16),
+      is_recurring: event.is_recurring,
+      recurrence_pattern: event.recurrence_pattern || '',
+      capacity: event.capacity?.toString() || '',
+      price: event.price?.toString() || '',
+    });
+    setShowCreateDialog(true);
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -189,8 +206,8 @@ export default function AdminEventsPage() {
     <div className="min-h-screen bg-background p-6" dir="rtl">
       <div className="max-w-7xl mx-auto">
         {/* כפתור חזרה */}
-        <Link href="/admin">
-          <Button variant="outline" className="mb-4 flex items-center gap-2">
+        <Link href="/admin" className="block mb-4">
+          <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center gap-2">
             <ArrowRight size={18} />
             חזרה לפאנל ניהול
           </Button>
@@ -330,21 +347,7 @@ export default function AdminEventsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setEditingEvent(event);
-                        setFormData({
-                          title: event.title,
-                          description: event.description || '',
-                          type: event.type,
-                          start_at: event.start_at.slice(0, 16),
-                          end_at: event.end_at.slice(0, 16),
-                          is_recurring: event.is_recurring,
-                          recurrence_pattern: event.recurrence_pattern || '',
-                          capacity: event.capacity?.toString() || '',
-                          price: event.price?.toString() || '',
-                        });
-                        setShowCreateDialog(true);
-                      }}
+                      onClick={() => handleEdit(event)}
                     >
                       <Edit size={16} />
                     </Button>
@@ -374,6 +377,9 @@ export default function AdminEventsPage() {
           <DialogContent className="max-w-2xl" dir="rtl">
             <DialogHeader>
               <DialogTitle>{editingEvent ? 'עריכת אירוע' : 'יצירת אירוע חדש'}</DialogTitle>
+              <DialogDescription>
+                {editingEvent ? 'עדכן את פרטי האירוע והסנכרן ליומן Google' : 'צור אירוע חדש והוסף ליומן Google'}
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -519,6 +525,9 @@ export default function AdminEventsPage() {
               <DialogTitle>
                 רשימת נרשמים - {selectedEvent?.title}
               </DialogTitle>
+              <DialogDescription>
+                צפייה ברשימת הנרשמים לאירוע ופרטי קשר שלהם
+              </DialogDescription>
             </DialogHeader>
 
             <div className="py-4">

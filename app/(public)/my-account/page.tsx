@@ -12,7 +12,7 @@ import { QRCodeDisplay } from '@/components/account/QRCodeDisplay'
 import { PassCard } from '@/components/account/PassCard'
 import { LoyaltyCard } from '@/components/account/LoyaltyCard'
 import { UsageHistory } from '@/components/account/UsageHistory'
-import { LogOut, Plus, Ticket, Home, Calendar, Clock } from 'lucide-react'
+import { Plus, Ticket, Calendar, Clock } from 'lucide-react'
 
 export default function MyAccountPage() {
   const router = useRouter()
@@ -132,23 +132,9 @@ export default function MyAccountPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">שלום, {user.full_name}</h1>
-            <p className="text-text-light/70">האיזור האישי שלך</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="gap-2" asChild>
-              <Link href="/">
-                <Home className="w-4 h-4" />
-                <span className="hidden sm:inline">דף הבית</span>
-              </Link>
-            </Button>
-            <Button onClick={handleLogout} variant="outline" size="sm" className="gap-2">
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">יציאה</span>
-            </Button>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-primary">שלום, {user.full_name}</h1>
+          <p className="text-text-light/70">האיזור האישי שלך</p>
         </div>
 
         <QRCodeDisplay qrCode={user.qr_code} userName={user.full_name} />

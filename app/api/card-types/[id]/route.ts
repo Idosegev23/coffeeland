@@ -7,9 +7,10 @@ export const dynamic = 'force-dynamic';
 // PATCH - עדכון סוג כרטיסייה (אדמין בלבד)
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createRouteHandlerClient({ cookies });
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -61,7 +62,7 @@ export async function PATCH(
     const { data: cardType, error } = await supabase
       .from('card_types')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -87,9 +88,10 @@ export async function PATCH(
 // DELETE - מחיקת סוג כרטיסייה (אדמין בלבד)
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createRouteHandlerClient({ cookies });
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -112,7 +114,7 @@ export async function DELETE(
     const { count } = await supabase
       .from('passes')
       .select('id', { count: 'exact', head: true })
-      .eq('card_type_id', params.id);
+      .eq('card_type_id', id);
 
     if (count && count > 0) {
       return NextResponse.json(
@@ -124,7 +126,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('card_types')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) throw error;
 
@@ -132,7 +134,7 @@ export async function DELETE(
       admin_id: admin.id,
       action: 'delete_card_type',
       entity_type: 'card_type',
-      entity_id: params.id,
+      entity_id: id,
       details: {}
     });
 

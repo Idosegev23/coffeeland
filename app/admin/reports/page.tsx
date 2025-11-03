@@ -234,8 +234,8 @@ export default function ReportsPage() {
     <div className="min-h-screen bg-background p-6" dir="rtl">
       <div className="max-w-7xl mx-auto">
         {/* כפתור חזרה */}
-        <Link href="/admin">
-          <Button variant="outline" className="mb-4 flex items-center gap-2">
+        <Link href="/admin" className="block mb-4">
+          <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center gap-2">
             <ArrowRight size={18} />
             חזרה לפאנל ניהול
           </Button>

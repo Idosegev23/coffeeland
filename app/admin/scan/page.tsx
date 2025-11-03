@@ -119,10 +119,11 @@ export default function AdminScanPage() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4 max-w-2xl mx-auto">
             <Button
               variant="ghost"
               size="sm"
+              className="w-full sm:w-auto"
               asChild
             >
               <Link href="/admin" className="gap-2">
@@ -133,6 +134,7 @@ export default function AdminScanPage() {
             <Button
               variant="ghost"
               size="sm"
+              className="w-full sm:w-auto"
               asChild
             >
               <Link href="/" className="gap-2">
@@ -142,12 +144,14 @@ export default function AdminScanPage() {
             </Button>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">
-            סריקת QR
-          </h1>
-          <p className="text-text-light/70">
-            סרוק את ה-QR של הלקוח כדי לנצל כרטיסייה או להוסיף חותמת
-          </p>
+          <div className="text-center max-w-2xl mx-auto">
+            <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">
+              סריקת QR
+            </h1>
+            <p className="text-text-light/70">
+              סרוק את ה-QR של הלקוח כדי לנצל כרטיסייה או להוסיף חותמת
+            </p>
+          </div>
         </div>
 
         {/* Scanner Card */}

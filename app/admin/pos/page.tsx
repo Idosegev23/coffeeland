@@ -160,8 +160,8 @@ export default function POSPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6" dir="rtl">
       <div className="max-w-6xl mx-auto">
         {/* כפתור חזרה */}
-        <Link href="/admin">
-          <Button variant="outline" className="mb-4 flex items-center gap-2 bg-white">
+        <Link href="/admin" className="block mb-4">
+          <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white">
             <ArrowRight size={18} />
             חזרה לפאנל ניהול
           </Button>

@@ -36,15 +36,15 @@ interface Customer {
   email: string;
   qr_code: string;
   created_at: string;
-  loyalty_card?: Array<{
+  loyalty_cards?: Array<{
     total_stamps: number;
     redeemed_coffees: number;
   }>;
   passes?: Array<{
     id: string;
-    card_type: Array<{
+    card_types: {
       name: string;
-    }>;
+    } | null;
     entries_used: number;
     entries_remaining: number;
     status: string;
@@ -89,26 +89,29 @@ export default function CustomersPage() {
           email,
           qr_code,
           created_at,
-          loyalty_card:loyalty_cards(
+          loyalty_cards(
             total_stamps,
             redeemed_coffees
           ),
-          passes:passes(
+          passes(
             id,
             entries_used,
             entries_remaining,
             status,
-            card_type:card_types(name)
+            card_types(name)
           )
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading customers:', error);
+        throw error;
+      }
       setCustomers(data || []);
       setFilteredCustomers(data || []);
     } catch (error: any) {
       console.error('Error loading customers:', error);
-      alert('שגיאה בטעינת לקוחות');
+      alert('שגיאה בטעינת לקוחות: ' + (error.message || 'שגיאה לא ידועה'));
     } finally {
       setLoading(false);
     }
@@ -200,8 +203,8 @@ export default function CustomersPage() {
     <div className="min-h-screen bg-background p-6" dir="rtl">
       <div className="max-w-7xl mx-auto">
         {/* כפתור חזרה */}
-        <Link href="/admin">
-          <Button variant="outline" className="mb-4 flex items-center gap-2">
+        <Link href="/admin" className="block mb-4">
+          <Button variant="outline" className="w-full sm:w-auto flex items-center justify-center gap-2">
             <ArrowRight size={18} />
             חזרה לפאנל ניהול
           </Button>
@@ -254,7 +257,7 @@ export default function CustomersPage() {
               <div>
                 <p className="text-gray-500 text-sm">חותמות נאספו</p>
                 <p className="text-3xl font-bold text-green-600">
-                  {customers.reduce((sum, c) => sum + (c.loyalty_card?.[0]?.total_stamps || 0), 0)}
+                  {customers.reduce((sum, c) => sum + (c.loyalty_cards?.[0]?.total_stamps || 0), 0)}
                 </p>
               </div>
               <Coffee className="text-green-600 opacity-20" size={48} />
@@ -333,7 +336,7 @@ export default function CustomersPage() {
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
                         <Coffee size={14} />
-                        {customer.loyalty_card?.[0]?.total_stamps || 0}
+                        {customer.loyalty_cards?.[0]?.total_stamps || 0}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-600 text-sm">
@@ -419,13 +422,13 @@ export default function CustomersPage() {
                       <div>
                         <p className="text-sm text-gray-600">חותמות נאספו</p>
                         <p className="text-3xl font-bold text-green-700">
-                          {selectedCustomer.loyalty_card?.[0]?.total_stamps || 0}
+                          {selectedCustomer.loyalty_cards?.[0]?.total_stamps || 0}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">קפה חינם נוצל</p>
                         <p className="text-3xl font-bold text-green-700">
-                          {selectedCustomer.loyalty_card?.[0]?.redeemed_coffees || 0}
+                          {selectedCustomer.loyalty_cards?.[0]?.redeemed_coffees || 0}
                         </p>
                       </div>
                     </div>
@@ -451,7 +454,7 @@ export default function CustomersPage() {
                         >
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="font-medium">{pass.card_type?.[0]?.name || 'לא ידוע'}</p>
+                              <p className="font-medium">{pass.card_types?.name || 'לא ידוע'}</p>
                               <p className="text-sm text-gray-600">
                                 נוצלו: {pass.entries_used} | נותרו: {pass.entries_remaining}
                               </p>
