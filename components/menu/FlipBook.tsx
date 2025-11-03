@@ -54,9 +54,9 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
     const updateDimensions = () => {
       const isMobile = window.innerWidth < 768
       if (isMobile) {
-        // Mobile: full width
+        // Mobile: reduce height to fit navigation arrows on screen
         const width = window.innerWidth - 20
-        const height = window.innerHeight * 0.8
+        const height = window.innerHeight * 0.65 // Reduced from 0.8 to leave room for arrows
         setDimensions({ width: Math.floor(width), height: Math.floor(height) })
       } else {
         // Desktop: each page is 600px wide = 1200px book
@@ -189,12 +189,41 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-4">
       {loading && (
         <div className="flex items-center justify-center min-h-[600px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-4 border-accent border-t-transparent mx-auto mb-4" />
             <p className="text-text-light">טוען תפריט...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Arrows - Above the book */}
+      {!loading && pdfPages.length > 0 && (
+        <div className="relative w-full flex justify-center mb-2">
+          <div className="relative w-full max-w-md flex justify-between items-center px-4">
+            <button
+              onClick={prevPage}
+              disabled={currentPage === 0}
+              className="bg-primary text-text-dark p-3 sm:p-4 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110 active:scale-95"
+              aria-label="עמוד קודם"
+              type="button"
+            >
+              <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
+            </button>
+            <span className="text-text-light text-base sm:text-sm font-medium">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              onClick={nextPage}
+              disabled={currentPage >= totalPages - 1}
+              className="bg-primary text-text-dark p-3 sm:p-4 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110 active:scale-95"
+              aria-label="עמוד הבא"
+              type="button"
+            >
+              <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
+            </button>
           </div>
         </div>
       )}
@@ -245,35 +274,6 @@ export function FlipBook({ pdfUrl }: FlipBookProps) {
       {!loading && pdfPages.length > 0 && !FlipBookComponent && (
         <div className="text-center p-8">
           <p className="text-text-light">Loading FlipBook library...</p>
-        </div>
-      )}
-
-      {/* Navigation Arrows */}
-      {!loading && pdfPages.length > 0 && (
-        <div className="relative w-full flex justify-center mt-4">
-          <div className="relative w-full max-w-md flex justify-between items-center px-4">
-            <button
-              onClick={prevPage}
-              disabled={currentPage === 0}
-              className="bg-primary text-text-dark p-4 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110 active:scale-95"
-              aria-label="עמוד קודם"
-              type="button"
-            >
-              <ChevronLeft className="w-8 h-8" />
-            </button>
-            <span className="text-text-light text-sm">
-              {currentPage + 1} / {totalPages}
-            </span>
-            <button
-              onClick={nextPage}
-              disabled={currentPage >= totalPages - 1}
-              className="bg-primary text-text-dark p-4 rounded-full shadow-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110 active:scale-95"
-              aria-label="עמוד הבא"
-              type="button"
-            >
-              <ChevronRight className="w-8 h-8" />
-            </button>
-          </div>
         </div>
       )}
     </div>
