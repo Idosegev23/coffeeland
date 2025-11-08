@@ -132,7 +132,7 @@ export function NavTiles() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-100px' }}
-          className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6"
+          className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 max-w-7xl mx-auto justify-items-center"
         >
           {tiles.map((tile, index) => {
             const isLight = tile.variant === 'light'
@@ -148,6 +148,7 @@ export function NavTiles() {
                 key={tile.id} 
                 variants={item}
                 className={cn(
+                  'w-full',
                   isLastItem && 'col-span-2 lg:col-span-1',
                   mobileOrder
                 )}
