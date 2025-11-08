@@ -132,7 +132,7 @@ export function NavTiles() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-100px' }}
-          className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 max-w-7xl mx-auto justify-items-center"
+          className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 max-w-6xl mx-auto place-items-center justify-center"
         >
           {tiles.map((tile, index) => {
             const isLight = tile.variant === 'light'
