@@ -13,53 +13,66 @@ const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
 const eventTypes = [
   {
-    id: 'intimate',
-    name: 'אירוע אינטימי',
-    duration: '2-3 שעות',
-    capacity: 'עד 15 ילדים',
-    description: 'מושלם לחגיגה משפחתית קטנה ואינטימית',
+    id: 'basic',
+    name: 'חבילה בסיסית',
+    price: '1,000 ₪',
+    duration: '2 שעות',
+    capacity: 'עד 20 ילדים',
+    description: 'החבילה המושלמת לחגיגה קטנה ואינטימית',
     includes: [
-      'שימוש במשחקייה',
-      'עוגת יום הולדת',
-      'שתייה קלה',
-      'כלים חד-פעמיים',
-      'קישוט בסיסי',
+      'עד 20 ילדים (כל ילד נוסף 35 ₪)',
+      '7 פיצות',
+      'כוס ברד לכל ילד',
+      'כניסה לג׳ימבורי (משחקייה)',
+      'שהייה של 2 שעות במתחם',
     ],
   },
   {
     id: 'standard',
-    name: 'אירוע סטנדרטי',
-    duration: '3 שעות',
-    capacity: 'עד 25 ילדים',
+    name: 'חבילה סטנדרטית',
+    price: '1,500 ₪',
+    duration: '2 שעות',
+    capacity: 'עד 20 ילדים + 20 מבוגרים',
     popular: true,
-    description: 'האופציה הפופולרית ביותר - כל מה שצריך ליום הולדת מושלם',
+    description: 'החבילה הפופולרית ביותר - כל מה שצריך ליום הולדת מושלם',
     includes: [
-      'שימוש במשחקייה למשך 3 שעות',
-      'עוגת יום הולדת מעוצבת',
-      'שתייה ומאפים',
-      'קפה ועוגה להורים',
-      'קישוט מלא',
-      'מנחה לפעילות',
-      'מוזיקה והגברה',
+      'עד 20 ילדים (כל ילד נוסף 35 ₪)',
+      'עד 20 מבוגרים',
+      '15 פיצות',
+      'כוס ברד לכל ילד',
+      'שתייה קלה',
+      'קפה לכל מבוגר',
+      'כניסה לג׳ימבורי (משחקייה)',
+      'שהייה של 2 שעות במתחם',
     ],
   },
+]
+
+const premiumAddons = [
   {
-    id: 'premium',
-    name: 'אירוע פרימיום',
-    duration: '4 שעות',
-    capacity: 'עד 35 ילדים',
-    description: 'חוויה VIP מלאה - אירוע בלתי נשכח עם כל התוספות',
-    includes: [
-      'שימוש במשחקייה 4 שעות',
-      'עוגת יום הולדת מיוחדת',
-      'מזנון מלא',
-      'קפה, שתייה ועוגות',
-      'קישוט מלא + בלונים מעופפים',
-      'מנחה מקצועי + פעילות',
-      'מוזיקה והגברה',
-      'צילום מקצועי',
-      'מתנות לאורחים',
-    ],
+    name: 'עוגה מעוצבת אישית',
+    price: '300 ₪',
+    description: 'עוגה מעוצבת בהתאמה אישית לפי הקונספט שבחרתם',
+  },
+  {
+    name: 'בובת ענק',
+    price: '500 ₪',
+    description: 'בובת מתנפחת ענקית למשחקי ילדים',
+  },
+  {
+    name: 'מגשי אירוח למבוגרים',
+    price: 'החל מ-500 ₪',
+    description: 'מגוון מגשים לאירוח המבוגרים',
+  },
+  {
+    name: 'עיצוב בלונים',
+    price: '300 ₪',
+    description: 'עיצוב מלא של האירוע בבלונים צבעוניים',
+  },
+  {
+    name: 'פנקייקים/קינוחים אישיים',
+    price: 'החל מ-200 ₪',
+    description: 'פנקייקים או קינוחים אישיים מעוצבים',
   },
 ]
 
@@ -268,19 +281,22 @@ export default function EventsPage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
+          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto">
             {eventTypes.map((event) => (
               <Card
                 key={event.id}
                 className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none ${event.popular ? 'border-accent border-2 relative' : 'relative'}`}
               >
                 {event.popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 bg-accent">
                     הכי פופולרי
                   </Badge>
                 )}
                 <CardHeader>
                   <CardTitle className="text-xl sm:text-2xl text-center">{event.name}</CardTitle>
+                  <p className="text-2xl sm:text-3xl font-bold text-accent text-center mt-2">
+                    {event.price}
+                  </p>
                   <p className="text-sm text-text-light/70 text-center italic mt-2">
                     {event.description}
                   </p>
@@ -307,6 +323,47 @@ export default function EventsPage() {
                       ))}
                     </ul>
                   </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Premium Addons */}
+      <section className="relative py-12 sm:py-16 bg-background overflow-hidden">
+        {/* Decorations */}
+        <div className="absolute inset-0 pointer-events-none opacity-10">
+          <Image src="/BananaLeaf1.svg" alt="" width={180} height={180} className="absolute top-10 left-10 rotate-12" />
+          <Image src="/palmLeaf.svg" alt="" width={160} height={160} className="absolute bottom-10 right-10 -rotate-12" />
+        </div>
+        
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-primary mb-3">
+              תוספות פרימיום
+            </h2>
+            <p className="text-lg text-text-light/70">
+              הפכו את האירוע למושלם עם תוספות מיוחדות
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
+            {premiumAddons.map((addon, index) => (
+              <Card
+                key={index}
+                className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none hover:shadow-lg transition-shadow"
+              >
+                <CardHeader>
+                  <CardTitle className="text-lg text-center">{addon.name}</CardTitle>
+                  <p className="text-xl font-bold text-accent text-center mt-2">
+                    {addon.price}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-text-light/70 text-center">
+                    {addon.description}
+                  </p>
                 </CardContent>
               </Card>
             ))}
