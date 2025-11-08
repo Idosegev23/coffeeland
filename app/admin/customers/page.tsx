@@ -42,7 +42,7 @@ interface Customer {
   }>;
   passes?: Array<{
     id: string;
-    card_types: {
+    card_types?: {
       name: string;
     } | null;
     entries_used: number;
@@ -107,8 +107,8 @@ export default function CustomersPage() {
         console.error('Error loading customers:', error);
         throw error;
       }
-      setCustomers((data as Customer[]) || []);
-      setFilteredCustomers((data as Customer[]) || []);
+      setCustomers((data as any) || []);
+      setFilteredCustomers((data as any) || []);
     } catch (error: any) {
       console.error('Error loading customers:', error);
       alert('שגיאה בטעינת לקוחות: ' + (error.message || 'שגיאה לא ידועה'));
