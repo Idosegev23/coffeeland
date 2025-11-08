@@ -24,7 +24,7 @@ const slides: Slide[] = [
     id: 'playground',
     title: 'ברוכים הבאים ל-CoffeeLand',
     description: 'מקום חם ומזמין למשפחות - משחקייה, קפה וסדנאות',
-    image: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=1200&h=600&fit=crop',
+    image: '/images/untitled-10.jpg',
     cta: {
       text: 'קנו כרטיסייה',
       href: '/#passes',
@@ -34,7 +34,7 @@ const slides: Slide[] = [
     id: 'events',
     title: 'חוגגים יום הולדת?',
     description: 'אירועים בלתי נשכחים עם כל הפינוקים',
-    image: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1200&h=600&fit=crop',
+    image: '/images/untitled-30.jpg',
     cta: {
       text: 'שריינו תאריך',
       href: '/events',
@@ -44,7 +44,7 @@ const slides: Slide[] = [
     id: 'workshops',
     title: 'סדנאות הורה-ילד',
     description: 'פעילויות יצירתיות ומהנות לכל המשפחה',
-    image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1200&h=600&fit=crop',
+    image: '/images/untitled-20.jpg',
     cta: {
       text: 'לצפייה בלוח',
       href: '/workshops',

@@ -114,7 +114,7 @@ export default function PlaygroundPage() {
         </div>
         
         <Image
-          src="https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=1200&h=400&fit=crop"
+          src="/images/untitled-5.jpg"
           alt="משחקייה"
           fill
           className="object-cover"
@@ -157,7 +157,7 @@ export default function PlaygroundPage() {
           <div className="mt-8 max-w-4xl mx-auto">
             <div className="relative w-full h-64 sm:h-96 rounded-2xl overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1200&h=600&fit=crop"
+                src="/images/untitled-8.jpg"
                 alt="משחקייה CoffeeLand"
                 fill
                 className="object-cover"

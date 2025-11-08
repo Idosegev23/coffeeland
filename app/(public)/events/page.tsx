@@ -152,7 +152,7 @@ export default function EventsPage() {
         </div>
         
         <Image
-          src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1200&h=400&fit=crop"
+          src="/images/untitled-28.jpg"
           alt="אירועים וימי הולדת"
           fill
           className="object-cover"

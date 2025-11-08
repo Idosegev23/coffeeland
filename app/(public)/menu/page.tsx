@@ -31,7 +31,7 @@ export default function MenuPage() {
         </div>
         
         <Image
-          src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200&h=400&fit=crop"
+          src="/images/untitled-45.jpg"
           alt="תפריט"
           fill
           className="object-cover"

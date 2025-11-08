@@ -80,7 +80,7 @@ export default function WorkshopsPage() {
         </div>
         
         <Image
-          src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1200&h=400&fit=crop"
+          src="/images/untitled-18.jpg"
           alt="סדנאות וחוגים"
           fill
           className="object-cover"
