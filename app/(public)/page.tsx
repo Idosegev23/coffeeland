@@ -27,42 +27,42 @@ export default function HomePage() {
             cards={[
               {
                 id: '1',
-                image: '/images/untitled-1.jpg',
+                image: '/images/untitled-1.webp',
                 label: 'משחקייה',
                 title: 'מתקני משחק מגוונים',
                 description: 'מגלשות, טרמפולינות ופינות משחק מאובטחות לכל הגילאים'
               },
               {
                 id: '2',
-                image: '/images/untitled-15.jpg',
+                image: '/images/untitled-15.webp',
                 label: 'סדנאות',
                 title: 'יצירה והנאה',
                 description: 'סדנאות יצירה מגוונות לילדים בכל גיל'
               },
               {
                 id: '3',
-                image: '/images/untitled-25.jpg',
+                image: '/images/untitled-25.webp',
                 label: 'ימי הולדת',
                 title: 'חגיגות בלתי נשכחות',
                 description: 'חבילות מלאות לימי הולדת עם אירוח חם ומקצועי'
               },
               {
                 id: '4',
-                image: '/images/untitled-40.jpg',
+                image: '/images/untitled-40.webp',
                 label: 'בית קפה',
                 title: 'תפריט מגוון',
                 description: 'קפה איכותי, עוגות טריות וארוחות קלות להורים וילדים'
               },
               {
                 id: '5',
-                image: '/images/untitled-50.jpg',
+                image: '/images/untitled-50.webp',
                 label: 'חוגים',
                 title: 'פעילויות שבועיות',
                 description: 'חוגים קבועים ופעילויות העשרה לילדים'
               },
               {
                 id: '6',
-                image: '/images/untitled-60.jpg',
+                image: '/images/untitled-60.webp',
                 label: 'אירועים',
                 title: 'מקום לכל אירוע',
                 description: 'מתאים לימי הולדת, חגיגות משפחתיות ואירועים מיוחדים'

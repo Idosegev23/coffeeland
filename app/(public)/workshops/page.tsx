@@ -80,7 +80,7 @@ export default function WorkshopsPage() {
         </div>
         
         <Image
-          src="/images/untitled-18.jpg"
+          src="/images/untitled-18.webp"
           alt="סדנאות וחוגים"
           fill
           className="object-cover"

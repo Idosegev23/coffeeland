@@ -31,7 +31,7 @@ export default function MenuPage() {
         </div>
         
         <Image
-          src="/images/untitled-45.jpg"
+          src="/images/untitled-45.webp"
           alt="תפריט"
           fill
           className="object-cover"

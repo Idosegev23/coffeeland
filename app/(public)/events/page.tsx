@@ -152,7 +152,7 @@ export default function EventsPage() {
         </div>
         
         <Image
-          src="/images/untitled-28.jpg"
+          src="/images/untitled-28.webp"
           alt="אירועים וימי הולדת"
           fill
           className="object-cover"
