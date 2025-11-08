@@ -107,8 +107,8 @@ export default function CustomersPage() {
         console.error('Error loading customers:', error);
         throw error;
       }
-      setCustomers(data || []);
-      setFilteredCustomers(data || []);
+      setCustomers((data as Customer[]) || []);
+      setFilteredCustomers((data as Customer[]) || []);
     } catch (error: any) {
       console.error('Error loading customers:', error);
       alert('שגיאה בטעינת לקוחות: ' + (error.message || 'שגיאה לא ידועה'));
