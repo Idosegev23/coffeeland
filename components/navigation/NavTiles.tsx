@@ -43,13 +43,6 @@ const tiles: NavTile[] = [
     lottieFile: '/lottie/workshops.json',
     variant: 'dark',
   },
-  {
-    id: 'gallery',
-    name: 'גלריה',
-    href: '/gallery',
-    lottieFile: '/lottie/gallery.json',
-    variant: 'light',
-  },
 ]
 
 const container = {

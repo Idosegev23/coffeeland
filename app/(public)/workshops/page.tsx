@@ -215,15 +215,12 @@ export default function WorkshopsPage() {
           <p className="text-lg mb-8 opacity-90 max-w-2xl mx-auto">
             בדקו את לוח השיעורים למעלה ובחרו את החוג המתאים לכם
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center">
             <Button variant="secondary" size="lg" asChild>
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="gap-2">
                 <MessageCircle className="w-5 h-5" />
                 שאלו אותנו
               </a>
-            </Button>
-            <Button variant="outline" size="lg" asChild className="bg-transparent border-accent-foreground text-accent-foreground hover:bg-accent-foreground hover:text-accent">
-              <a href="/gallery">לגלריית תמונות</a>
             </Button>
           </div>
         </div>

@@ -8,7 +8,6 @@ const footerLinks = {
     { name: 'אירועים וימי הולדת', href: '/events' },
     { name: 'סדנאות וחוגים', href: '/workshops' },
     { name: 'תפריט', href: '/menu' },
-    { name: 'גלריה', href: '/gallery' },
   ],
   legal: [
     { name: 'תנאי שימוש', href: '/terms' },

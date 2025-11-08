@@ -114,13 +114,6 @@ export const analytics = {
     trackEvent('exit_intent_dismiss', {})
   },
 
-  // Gallery
-  galleryImageOpen: (imageIndex: number) => {
-    trackEvent('gallery_image_open', {
-      image_index: imageIndex,
-    })
-  },
-
   // Navigation
   navTileClick: (tileName: string, targetPage: string) => {
     trackEvent('nav_tile_click', {

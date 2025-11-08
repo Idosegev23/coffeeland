@@ -16,7 +16,6 @@ const navigation = [
   { name: 'אירועים', href: '/events' },
   { name: 'סדנאות', href: '/workshops' },
   { name: 'תפריט', href: '/menu' },
-  { name: 'גלריה', href: '/gallery' },
 ]
 
 export function Header() {
