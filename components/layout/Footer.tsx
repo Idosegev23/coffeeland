@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Phone, MessageCircle, MapPin, Mail } from 'lucide-react'
 import { generateWhatsAppLink } from '@/lib/utils'
 
@@ -128,11 +129,26 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-text-dark/20">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-text-dark/70">
             <p>© {new Date().getFullYear()} CoffeeLand. כל הזכויות שמורות.</p>
-            <p>
-              נבנה ב
-              <span className="text-accent mx-1">❤️</span>
-              למשפחות
-            </p>
+            <div className="flex items-center gap-2">
+              <p>
+                נבנה באהבה על ידי
+              </p>
+              <Link
+                href="https://www.2-create.co.il/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity"
+                aria-label="2Create - בניית אתרים"
+              >
+                <Image
+                  src="/2create-logo.webp"
+                  alt="2Create Logo"
+                  width={80}
+                  height={24}
+                  className="h-6 w-auto"
+                />
+              </Link>
+            </div>
           </div>
         </div>
       </div>
