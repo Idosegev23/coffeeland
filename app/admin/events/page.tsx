@@ -61,6 +61,22 @@ function addMinutesToDateTimeLocal(dt: string, minutes: number) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+function addDaysToDate(dateStr: string, days: number) {
+  const d = new Date(`${dateStr}T00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+const weekdayLabels: Array<{ key: number; label: string }> = [
+  { key: 0, label: 'א׳' },
+  { key: 1, label: 'ב׳' },
+  { key: 2, label: 'ג׳' },
+  { key: 3, label: 'ד׳' },
+  { key: 4, label: 'ה׳' },
+  { key: 5, label: 'ו׳' },
+  { key: 6, label: 'ש׳' },
+];
+
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +104,19 @@ export default function AdminEventsPage() {
   const [repeatToTime, setRepeatToTime] = useState('14:00');
   const [repeatDurationMinutes, setRepeatDurationMinutes] = useState(120);
   const [repeatGapMinutes, setRepeatGapMinutes] = useState(0);
+  const [repeatCountPerDay, setRepeatCountPerDay] = useState<number>(0); // 0 = auto (fill window)
+  const [repeatAcrossDays, setRepeatAcrossDays] = useState(false);
+  const [repeatRangeStart, setRepeatRangeStart] = useState('');
+  const [repeatRangeEnd, setRepeatRangeEnd] = useState('');
+  const [repeatWeekdays, setRepeatWeekdays] = useState<Record<number, boolean>>({
+    0: true,
+    1: true,
+    2: true,
+    3: true,
+    4: true,
+    5: false,
+    6: false,
+  });
 
   // Selected-dates mode
   const [datesInput, setDatesInput] = useState('');
@@ -120,24 +149,69 @@ export default function AdminEventsPage() {
       let occurrences: Array<{ start_at: string; end_at: string }> | null = null;
 
       if (createMode === 'repeat_in_day') {
-        if (!repeatDate) throw new Error('נא לבחור תאריך');
-        const start = combineDateAndTime(repeatDate, repeatFromTime);
-        const end = combineDateAndTime(repeatDate, repeatToTime);
-        if (new Date(start) >= new Date(end)) throw new Error('טווח שעות לא תקין (שעת סיום חייבת להיות אחרי שעת התחלה)');
         if (repeatDurationMinutes <= 0) throw new Error('משך מפגש חייב להיות גדול מ-0');
         if (repeatGapMinutes < 0) throw new Error('מרווח לא יכול להיות שלילי');
+        if (repeatCountPerDay < 0) throw new Error('כמות מופעים ביום לא יכולה להיות שלילית');
+
+        const makeOccurrencesForDay = (date: string) => {
+          const start = combineDateAndTime(date, repeatFromTime);
+          const end = combineDateAndTime(date, repeatToTime);
+          if (new Date(start) >= new Date(end)) throw new Error('טווח שעות לא תקין (שעת סיום חייבת להיות אחרי שעת התחלה)');
+
+          const occ: Array<{ start_at: string; end_at: string }> = [];
+
+          if (repeatCountPerDay && repeatCountPerDay > 0) {
+            let cursor = start;
+            for (let i = 0; i < repeatCountPerDay; i++) {
+              const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
+              if (new Date(occEnd) > new Date(end)) {
+                throw new Error(`אין מספיק זמן ביום ${new Date(date).toLocaleDateString('he-IL')} ל-${repeatCountPerDay} מופעים`);
+              }
+              occ.push({ start_at: cursor, end_at: occEnd });
+              cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
+            }
+            return occ;
+          }
+
+          // Auto-fill: fill the window with duration+gap
+          let cursor = start;
+          while (new Date(cursor) < new Date(end)) {
+            const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
+            if (new Date(occEnd) > new Date(end)) break;
+            occ.push({ start_at: cursor, end_at: occEnd });
+            cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
+            if (occ.length > 100) break;
+          }
+          return occ;
+        };
 
         const occ: Array<{ start_at: string; end_at: string }> = [];
-        let cursor = start;
-        while (new Date(cursor) < new Date(end)) {
-          const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
-          if (new Date(occEnd) > new Date(end)) break;
-          occ.push({ start_at: cursor, end_at: occEnd });
-          cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
-          if (occ.length > 100) throw new Error('נוצרו יותר מדי מופעים (מקסימום 100)');
+
+        if (repeatAcrossDays) {
+          if (!repeatRangeStart || !repeatRangeEnd) throw new Error('נא לבחור טווח תאריכים');
+          if (new Date(`${repeatRangeStart}T00:00`) > new Date(`${repeatRangeEnd}T00:00`)) {
+            throw new Error('טווח תאריכים לא תקין');
+          }
+
+          // Iterate days (inclusive)
+          let cursorDate = repeatRangeStart;
+          for (let guard = 0; guard < 366; guard++) {
+            const day = new Date(`${cursorDate}T00:00`);
+            const dow = day.getDay();
+            if (repeatWeekdays[dow]) {
+              const dayOcc = makeOccurrencesForDay(cursorDate);
+              occ.push(...dayOcc);
+              if (occ.length > 100) throw new Error('נוצרו יותר מדי מופעים (מקסימום 100)');
+            }
+            if (cursorDate === repeatRangeEnd) break;
+            cursorDate = addDaysToDate(cursorDate, 1);
+          }
+        } else {
+          if (!repeatDate) throw new Error('נא לבחור תאריך');
+          occ.push(...makeOccurrencesForDay(repeatDate));
         }
 
-        if (occ.length === 0) throw new Error('לא נוצרו מופעים לפי ההגדרות (בדוק טווח/משך)');
+        if (occ.length === 0) throw new Error('לא נוצרו מופעים לפי ההגדרות (בדוק טווח/משך/ימים)');
         occurrences = occ;
       }
 
@@ -258,6 +332,19 @@ export default function AdminEventsPage() {
     setRepeatToTime('14:00');
     setRepeatDurationMinutes(120);
     setRepeatGapMinutes(0);
+    setRepeatCountPerDay(0);
+    setRepeatAcrossDays(false);
+    setRepeatRangeStart('');
+    setRepeatRangeEnd('');
+    setRepeatWeekdays({
+      0: true,
+      1: true,
+      2: true,
+      3: true,
+      4: true,
+      5: false,
+      6: false,
+    });
     setDatesInput('');
     setSelectedDates([]);
     setSelectedDatesStartTime('10:00');
@@ -576,15 +663,35 @@ export default function AdminEventsPage() {
                   {createMode === 'repeat_in_day' && (
                     <div className="mt-4 space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">תאריך</label>
-                          <input
-                            type="date"
-                            value={repeatDate}
-                            onChange={(e) => setRepeatDate(e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md bg-white"
-                          />
-                        </div>
+                        {!repeatAcrossDays ? (
+                          <div>
+                            <label className="block text-sm font-medium mb-1">תאריך</label>
+                            <input
+                              type="date"
+                              value={repeatDate}
+                              onChange={(e) => setRepeatDate(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-sm font-medium mb-1">טווח תאריכים</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="date"
+                                value={repeatRangeStart}
+                                onChange={(e) => setRepeatRangeStart(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-md bg-white"
+                              />
+                              <input
+                                type="date"
+                                value={repeatRangeEnd}
+                                onChange={(e) => setRepeatRangeEnd(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-md bg-white"
+                              />
+                            </div>
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="block text-sm font-medium mb-1">בין שעה</label>
@@ -606,6 +713,39 @@ export default function AdminEventsPage() {
                           </div>
                         </div>
                       </div>
+
+                      <div className="flex items-center justify-between bg-white border rounded-md p-3">
+                        <div>
+                          <p className="text-sm font-medium">חזרה במספר ימים בשבוע</p>
+                          <p className="text-xs text-gray-600">סמן כדי להחיל את אותו הדפוס על טווח תאריכים + ימי שבוע</p>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={repeatAcrossDays}
+                            onChange={(e) => setRepeatAcrossDays(e.target.checked)}
+                          />
+                          החל על טווח ימים
+                        </label>
+                      </div>
+
+                      {repeatAcrossDays && (
+                        <div className="bg-white border rounded-md p-3">
+                          <p className="text-sm font-medium mb-2">ימי שבוע</p>
+                          <div className="flex flex-wrap gap-2">
+                            {weekdayLabels.map(({ key, label }) => (
+                              <label key={key} className="flex items-center gap-2 text-sm bg-gray-50 border rounded px-3 py-2">
+                                <input
+                                  type="checkbox"
+                                  checked={!!repeatWeekdays[key]}
+                                  onChange={(e) => setRepeatWeekdays((prev) => ({ ...prev, [key]: e.target.checked }))}
+                                />
+                                {label}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -634,23 +774,60 @@ export default function AdminEventsPage() {
                         </div>
                       </div>
 
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">מספר מופעים ביום (אופציונלי)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={repeatCountPerDay}
+                            onChange={(e) => setRepeatCountPerDay(parseInt(e.target.value || '0'))}
+                            className="w-full px-3 py-2 border rounded-md bg-white"
+                            placeholder="0 = מלא את החלון אוטומטית"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            לדוגמה: טווח 10:00–18:00 + 4 מופעים + משך 120 ⇒ 10-12, 12-14, 14-16, 16-18
+                          </p>
+                        </div>
+                        <div className="text-xs text-gray-600 bg-white border rounded-md p-3">
+                          <p className="font-medium mb-1">איך זה עובד?</p>
+                          <p>אם הזנת “מספר מופעים ביום”, המערכת תיצור בדיוק N מופעים החל מהשעה הראשונה.</p>
+                          <p>אם השארת 0, המערכת תמלא את הטווח לפי משך+מרווח.</p>
+                        </div>
+                      </div>
+
                       <div className="bg-white border rounded-md p-3">
                         <p className="text-sm font-medium mb-2">תצוגה מקדימה</p>
                         <div className="text-sm text-gray-700 space-y-1">
                           {(() => {
                             try {
-                              if (!repeatDate) return <p className="text-gray-500">בחר תאריך כדי לראות מופעים</p>;
-                              const start = combineDateAndTime(repeatDate, repeatFromTime);
-                              const end = combineDateAndTime(repeatDate, repeatToTime);
+                              const previewDate = repeatAcrossDays ? repeatRangeStart : repeatDate;
+                              if (!previewDate) return <p className="text-gray-500">בחר תאריך/טווח כדי לראות מופעים</p>;
+
+                              const start = combineDateAndTime(previewDate, repeatFromTime);
+                              const end = combineDateAndTime(previewDate, repeatToTime);
                               if (new Date(start) >= new Date(end)) return <p className="text-red-600">טווח שעות לא תקין</p>;
                               const items: string[] = [];
-                              let cursor = start;
-                              while (new Date(cursor) < new Date(end)) {
-                                const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
-                                if (new Date(occEnd) > new Date(end)) break;
-                                items.push(`${cursor.slice(11, 16)}–${occEnd.slice(11, 16)}`);
-                                cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
-                                if (items.length > 20) break;
+
+                              if (repeatCountPerDay && repeatCountPerDay > 0) {
+                                let cursor = start;
+                                for (let i = 0; i < repeatCountPerDay; i++) {
+                                  const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
+                                  if (new Date(occEnd) > new Date(end)) break;
+                                  items.push(`${cursor.slice(11, 16)}–${occEnd.slice(11, 16)}`);
+                                  cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
+                                  if (items.length > 20) break;
+                                }
+                              } else {
+                                let cursor = start;
+                                while (new Date(cursor) < new Date(end)) {
+                                  const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
+                                  if (new Date(occEnd) > new Date(end)) break;
+                                  items.push(`${cursor.slice(11, 16)}–${occEnd.slice(11, 16)}`);
+                                  cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
+                                  if (items.length > 20) break;
+                                }
                               }
                               if (items.length === 0) return <p className="text-gray-500">אין מופעים לפי ההגדרות</p>;
                               return (
@@ -826,7 +1003,7 @@ export default function AdminEventsPage() {
                   !formData.title ||
                   (createMode === 'single' && !editingEvent && (!formData.start_at || !formData.end_at)) ||
                   (editingEvent && (!formData.start_at || !formData.end_at)) ||
-                  (createMode === 'repeat_in_day' && !repeatDate) ||
+                  (createMode === 'repeat_in_day' && ((!repeatAcrossDays && !repeatDate) || (repeatAcrossDays && (!repeatRangeStart || !repeatRangeEnd)))) ||
                   (createMode === 'selected_dates' && selectedDates.length === 0)
                 }
                 className="bg-accent hover:bg-accent/90"

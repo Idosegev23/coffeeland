@@ -64,6 +64,16 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
 
       const data = await response.json()
       setSuccess(passId)
+      if (data?.validUntil) {
+        alert(
+          `✅ כניסה נוצלה!\nתקף עד: ${new Date(data.validUntil).toLocaleString('he-IL', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+          })}`
+        )
+      }
       
       // Force full reload immediately
       setTimeout(() => {

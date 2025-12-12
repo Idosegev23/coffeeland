@@ -17,6 +17,8 @@ const getServiceClient = () => {
   );
 };
 
+const PLAYGROUND_ENTRY_DURATION_MINUTES = 120;
+
 export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -93,19 +95,29 @@ export async function POST(request: Request) {
     console.log('✅ Pass updated:', updatedPass)
 
     // Create usage record (also with service client)
-    const { error: usageError } = await serviceClient
+    const { data: usage, error: usageError } = await serviceClient
       .from('pass_usages')
       .insert({
         pass_id: passId,
         used_by_admin: adminData.id,
       })
+      .select('id, used_at')
+      .single()
 
     if (usageError) console.error('Usage record error:', usageError)
+
+    const usedAt = usage?.used_at || new Date().toISOString();
+    const validUntil =
+      pass.type === 'playground'
+        ? new Date(new Date(usedAt).getTime() + PLAYGROUND_ENTRY_DURATION_MINUTES * 60 * 1000).toISOString()
+        : null;
 
     return NextResponse.json({
       success: true,
       remainingEntries: newRemaining,
       status: newStatus,
+      usedAt,
+      validUntil,
     })
   } catch (error: any) {
     console.error('Use pass error:', error)
