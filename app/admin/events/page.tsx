@@ -44,6 +44,23 @@ interface Event {
   }>;
 }
 
+type CreateMode = 'single' | 'repeat_in_day' | 'selected_dates';
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+function combineDateAndTime(date: string, time: string) {
+  // returns datetime-local: YYYY-MM-DDTHH:mm
+  return `${date}T${time}`;
+}
+
+function addMinutesToDateTimeLocal(dt: string, minutes: number) {
+  const d = new Date(dt);
+  d.setMinutes(d.getMinutes() + minutes);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +79,21 @@ export default function AdminEventsPage() {
     capacity: '',
     price: '',
   });
+
+  const [createMode, setCreateMode] = useState<CreateMode>('single');
+
+  // Repeat-in-day mode
+  const [repeatDate, setRepeatDate] = useState('');
+  const [repeatFromTime, setRepeatFromTime] = useState('10:00');
+  const [repeatToTime, setRepeatToTime] = useState('14:00');
+  const [repeatDurationMinutes, setRepeatDurationMinutes] = useState(120);
+  const [repeatGapMinutes, setRepeatGapMinutes] = useState(0);
+
+  // Selected-dates mode
+  const [datesInput, setDatesInput] = useState('');
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedDatesStartTime, setSelectedDatesStartTime] = useState('10:00');
+  const [selectedDatesDurationMinutes, setSelectedDatesDurationMinutes] = useState(120);
 
   const supabase = createClientComponentClient();
 
@@ -83,11 +115,53 @@ export default function AdminEventsPage() {
 
   const handleCreate = async () => {
     try {
+      if (editingEvent) return;
+
+      let occurrences: Array<{ start_at: string; end_at: string }> | null = null;
+
+      if (createMode === 'repeat_in_day') {
+        if (!repeatDate) throw new Error('נא לבחור תאריך');
+        const start = combineDateAndTime(repeatDate, repeatFromTime);
+        const end = combineDateAndTime(repeatDate, repeatToTime);
+        if (new Date(start) >= new Date(end)) throw new Error('טווח שעות לא תקין (שעת סיום חייבת להיות אחרי שעת התחלה)');
+        if (repeatDurationMinutes <= 0) throw new Error('משך מפגש חייב להיות גדול מ-0');
+        if (repeatGapMinutes < 0) throw new Error('מרווח לא יכול להיות שלילי');
+
+        const occ: Array<{ start_at: string; end_at: string }> = [];
+        let cursor = start;
+        while (new Date(cursor) < new Date(end)) {
+          const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
+          if (new Date(occEnd) > new Date(end)) break;
+          occ.push({ start_at: cursor, end_at: occEnd });
+          cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
+          if (occ.length > 100) throw new Error('נוצרו יותר מדי מופעים (מקסימום 100)');
+        }
+
+        if (occ.length === 0) throw new Error('לא נוצרו מופעים לפי ההגדרות (בדוק טווח/משך)');
+        occurrences = occ;
+      }
+
+      if (createMode === 'selected_dates') {
+        if (selectedDates.length === 0) throw new Error('נא להוסיף לפחות תאריך אחד');
+        if (selectedDatesDurationMinutes <= 0) throw new Error('משך מפגש חייב להיות גדול מ-0');
+        const occ = selectedDates
+          .slice()
+          .sort()
+          .map((d) => {
+            const start = combineDateAndTime(d, selectedDatesStartTime);
+            const end = addMinutesToDateTimeLocal(start, selectedDatesDurationMinutes);
+            return { start_at: start, end_at: end };
+          });
+        occurrences = occ;
+      }
+
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          // כאשר יוצרים סדרה - נשלח occurrences ונגדיר recurring לתצוגה
+          ...(occurrences ? { occurrences, is_recurring: true, recurrence_pattern: createMode } : {}),
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           requires_registration: true
@@ -97,10 +171,15 @@ export default function AdminEventsPage() {
       if (!res.ok) throw new Error('Failed to create event');
 
       const data = await res.json();
-      setEvents([...events, data.event]);
+      if (data.events && Array.isArray(data.events)) {
+        setEvents([...events, ...data.events]);
+        alert(`✅ נוצרו ${data.events.length} מופעים וסונכרנו (ככל האפשר) ליומן Google!`);
+      } else {
+        setEvents([...events, data.event]);
+        alert('✅ אירוע נוצר בהצלחה וסונכרן ליומן Google!');
+      }
       setShowCreateDialog(false);
       resetForm();
-      alert('✅ אירוע נוצר בהצלחה וסונכרן ליומן Google!');
     } catch (error: any) {
       alert('❌ שגיאה: ' + error.message);
     }
@@ -173,6 +252,16 @@ export default function AdminEventsPage() {
       capacity: '',
       price: '',
     });
+    setCreateMode('single');
+    setRepeatDate('');
+    setRepeatFromTime('10:00');
+    setRepeatToTime('14:00');
+    setRepeatDurationMinutes(120);
+    setRepeatGapMinutes(0);
+    setDatesInput('');
+    setSelectedDates([]);
+    setSelectedDatesStartTime('10:00');
+    setSelectedDatesDurationMinutes(120);
   };
 
   const handleEdit = useCallback((event: Event) => {
@@ -188,6 +277,7 @@ export default function AdminEventsPage() {
       capacity: event.capacity?.toString() || '',
       price: event.price?.toString() || '',
     });
+    setCreateMode('single');
     setShowCreateDialog(true);
   }, []);
 
@@ -432,33 +522,266 @@ export default function AdminEventsPage() {
                         is_recurring: e.target.checked
                       })}
                       className="ml-2"
+                      disabled={createMode !== 'single'}
                     />
                     <span className="text-sm">מפגש חוזר</span>
                   </label>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">תאריך ושעת התחלה</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.start_at}
-                    onChange={e => setFormData({ ...formData, start_at: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md"
-                  />
-                </div>
+              {!editingEvent && (
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-sm">יצירת מופעים</p>
+                      <p className="text-xs text-gray-600">
+                        אפשר ליצור מופע יחיד, כמה מופעים באותו יום (לפי שעות), או סדרה לפי תאריכים מסומנים.
+                      </p>
+                    </div>
+                    <select
+                      value={createMode}
+                      onChange={(e) => setCreateMode(e.target.value as CreateMode)}
+                      className="px-3 py-2 border rounded-md bg-white"
+                    >
+                      <option value="single">מופע יחיד</option>
+                      <option value="repeat_in_day">חוזר במהלך היום</option>
+                      <option value="selected_dates">לפי תאריכים נבחרים</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">תאריך ושעת סיום</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.end_at}
-                    onChange={e => setFormData({ ...formData, end_at: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md"
-                  />
+                  {createMode === 'single' && (
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">תאריך ושעת התחלה</label>
+                        <input
+                          type="datetime-local"
+                          value={formData.start_at}
+                          onChange={e => setFormData({ ...formData, start_at: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-md bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">תאריך ושעת סיום</label>
+                        <input
+                          type="datetime-local"
+                          value={formData.end_at}
+                          onChange={e => setFormData({ ...formData, end_at: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-md bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {createMode === 'repeat_in_day' && (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">תאריך</label>
+                          <input
+                            type="date"
+                            value={repeatDate}
+                            onChange={(e) => setRepeatDate(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-md bg-white"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">בין שעה</label>
+                            <input
+                              type="time"
+                              value={repeatFromTime}
+                              onChange={(e) => setRepeatFromTime(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">עד שעה</label>
+                            <input
+                              type="time"
+                              value={repeatToTime}
+                              onChange={(e) => setRepeatToTime(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">משך מפגש (בדקות)</label>
+                          <input
+                            type="number"
+                            min={15}
+                            step={15}
+                            value={repeatDurationMinutes}
+                            onChange={(e) => setRepeatDurationMinutes(parseInt(e.target.value || '0'))}
+                            className="w-full px-3 py-2 border rounded-md bg-white"
+                            placeholder="120"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">מרווח בין מפגשים (בדקות)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={5}
+                            value={repeatGapMinutes}
+                            onChange={(e) => setRepeatGapMinutes(parseInt(e.target.value || '0'))}
+                            className="w-full px-3 py-2 border rounded-md bg-white"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-white border rounded-md p-3">
+                        <p className="text-sm font-medium mb-2">תצוגה מקדימה</p>
+                        <div className="text-sm text-gray-700 space-y-1">
+                          {(() => {
+                            try {
+                              if (!repeatDate) return <p className="text-gray-500">בחר תאריך כדי לראות מופעים</p>;
+                              const start = combineDateAndTime(repeatDate, repeatFromTime);
+                              const end = combineDateAndTime(repeatDate, repeatToTime);
+                              if (new Date(start) >= new Date(end)) return <p className="text-red-600">טווח שעות לא תקין</p>;
+                              const items: string[] = [];
+                              let cursor = start;
+                              while (new Date(cursor) < new Date(end)) {
+                                const occEnd = addMinutesToDateTimeLocal(cursor, repeatDurationMinutes);
+                                if (new Date(occEnd) > new Date(end)) break;
+                                items.push(`${cursor.slice(11, 16)}–${occEnd.slice(11, 16)}`);
+                                cursor = addMinutesToDateTimeLocal(occEnd, repeatGapMinutes);
+                                if (items.length > 20) break;
+                              }
+                              if (items.length === 0) return <p className="text-gray-500">אין מופעים לפי ההגדרות</p>;
+                              return (
+                                <div className="flex flex-wrap gap-2">
+                                  {items.map((t) => (
+                                    <span key={t} className="px-2 py-1 bg-gray-100 rounded text-xs">
+                                      {t}
+                                    </span>
+                                  ))}
+                                  {items.length >= 20 && (
+                                    <span className="text-xs text-gray-500">... (מוצגים רק 20 ראשונים)</span>
+                                  )}
+                                </div>
+                              );
+                            } catch {
+                              return <p className="text-gray-500">לא ניתן לחשב תצוגה מקדימה</p>;
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {createMode === 'selected_dates' && (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">הוסף תאריך</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="date"
+                              value={datesInput}
+                              onChange={(e) => setDatesInput(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                if (!datesInput) return;
+                                setSelectedDates((prev) => {
+                                  const next = Array.from(new Set([...prev, datesInput]));
+                                  next.sort();
+                                  return next;
+                                });
+                                setDatesInput('');
+                              }}
+                            >
+                              הוסף
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">שעת התחלה</label>
+                            <input
+                              type="time"
+                              value={selectedDatesStartTime}
+                              onChange={(e) => setSelectedDatesStartTime(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">משך (בדקות)</label>
+                            <input
+                              type="number"
+                              min={15}
+                              step={15}
+                              value={selectedDatesDurationMinutes}
+                              onChange={(e) => setSelectedDatesDurationMinutes(parseInt(e.target.value || '0'))}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                              placeholder="120"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border rounded-md p-3">
+                        <p className="text-sm font-medium mb-2">תאריכים שנבחרו</p>
+                        {selectedDates.length === 0 ? (
+                          <p className="text-sm text-gray-500">עדיין לא נוספו תאריכים</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {selectedDates.map((d) => (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => setSelectedDates((prev) => prev.filter((x) => x !== d))}
+                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
+                                title="לחץ להסרה"
+                              >
+                                {new Date(d).toLocaleDateString('he-IL')} ×
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {selectedDates.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            ייווצר מופע לכל תאריך בשעה {selectedDatesStartTime} למשך {selectedDatesDurationMinutes} דקות.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
+
+              {editingEvent && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">תאריך ושעת התחלה</label>
+                    <input
+                      type="datetime-local"
+                      value={formData.start_at}
+                      onChange={e => setFormData({ ...formData, start_at: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">תאריך ושעת סיום</label>
+                    <input
+                      type="datetime-local"
+                      value={formData.end_at}
+                      onChange={e => setFormData({ ...formData, end_at: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -499,7 +822,13 @@ export default function AdminEventsPage() {
               </Button>
               <Button
                 onClick={editingEvent ? handleUpdate : handleCreate}
-                disabled={!formData.title || !formData.start_at || !formData.end_at}
+                disabled={
+                  !formData.title ||
+                  (createMode === 'single' && !editingEvent && (!formData.start_at || !formData.end_at)) ||
+                  (editingEvent && (!formData.start_at || !formData.end_at)) ||
+                  (createMode === 'repeat_in_day' && !repeatDate) ||
+                  (createMode === 'selected_dates' && selectedDates.length === 0)
+                }
                 className="bg-accent hover:bg-accent/90"
               >
                 {editingEvent ? (
