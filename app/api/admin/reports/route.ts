@@ -130,7 +130,9 @@ export async function GET(request: Request) {
 
     const counts: Record<string, number> = {}
     for (const p of passesData || []) {
-      const name = p.card_type?.name || 'לא ידוע'
+      // card_type can be array or object depending on Supabase config
+      const cardType = Array.isArray(p.card_type) ? p.card_type[0] : p.card_type
+      const name = cardType?.name || 'לא ידוע'
       counts[name] = (counts[name] || 0) + 1
     }
 
