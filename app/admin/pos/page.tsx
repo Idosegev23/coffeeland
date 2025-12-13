@@ -4,7 +4,7 @@
  * POS - קופה וירטואלית למכירת כרטיסיות
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
@@ -44,7 +44,23 @@ interface Customer {
   qr_code: string;
 }
 
+// Wrapper component with Suspense for useSearchParams
 export default function POSPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>טוען קופה...</p>
+        </div>
+      </div>
+    }>
+      <POSContent />
+    </Suspense>
+  );
+}
+
+function POSContent() {
   const searchParams = useSearchParams();
   const [cardTypes, setCardTypes] = useState<CardType[]>([]);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
