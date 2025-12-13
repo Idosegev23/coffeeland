@@ -9,15 +9,18 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { QRScanner } from '@/components/admin/QRScanner'
 import { UserPassesModal } from '@/components/admin/UserPassesModal'
+import { ReservationCheckInModal } from '@/components/admin/ReservationCheckInModal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function AdminScanPage() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [scannedUser, setScannedUser] = useState<any>(null)
+  const [scannedReservation, setScannedReservation] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [authChecked, setAuthChecked] = useState(false)
+  const [mode, setMode] = useState<'user' | 'reservation'>('user')
 
   // Verify admin on mount
   useEffect(() => {
@@ -63,12 +66,15 @@ export default function AdminScanPage() {
     console.log('📱 Scanning QR code:', qrCode)
 
     try {
-      const response = await fetch('/api/admin/validate-qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrCode }),
-        credentials: 'include', // Ensure cookies are sent
-      })
+      const response = await fetch(
+        mode === 'user' ? '/api/admin/validate-qr' : '/api/admin/validate-reservation',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qrCode }),
+          credentials: 'include', // Ensure cookies are sent
+        }
+      )
 
       console.log('📥 Response status:', response.status)
 
@@ -80,7 +86,11 @@ export default function AdminScanPage() {
 
       const data = await response.json()
       console.log('✅ Scan successful:', data)
-      setScannedUser(data)
+      if (mode === 'user') {
+        setScannedUser(data)
+      } else {
+        setScannedReservation(data.reservation)
+      }
     } catch (err: any) {
       console.error('❌ Scan error:', err)
       setError(err.message || 'שגיאה בסריקה')
@@ -92,6 +102,7 @@ export default function AdminScanPage() {
 
   const handleClose = () => {
     setScannedUser(null)
+    setScannedReservation(null)
     setError('')
   }
 
@@ -149,7 +160,7 @@ export default function AdminScanPage() {
               סריקת QR
             </h1>
             <p className="text-text-light/70">
-              סרוק את ה-QR של הלקוח כדי לנצל כרטיסייה או להוסיף חותמת
+              סרוק QR של לקוח (כרטיסיות/נאמנות) או QR של שריון לפעילות (אישור הגעה + POS)
             </p>
           </div>
         </div>
@@ -157,6 +168,23 @@ export default function AdminScanPage() {
         {/* Scanner Card */}
         <div className="max-w-2xl mx-auto">
           <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6 bg-background-light">
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={mode === 'user' ? 'default' : 'outline'}
+                className="flex-1"
+                onClick={() => setMode('user')}
+              >
+                סריקת לקוח
+              </Button>
+              <Button
+                variant={mode === 'reservation' ? 'default' : 'outline'}
+                className="flex-1"
+                onClick={() => setMode('reservation')}
+              >
+                סריקת שריון
+              </Button>
+            </div>
+
             <QRScanner onScan={handleScan} />
 
             {/* Loading State */}
@@ -183,6 +211,10 @@ export default function AdminScanPage() {
           user={scannedUser}
           onClose={handleClose}
         />
+      )}
+
+      {scannedReservation && (
+        <ReservationCheckInModal reservation={scannedReservation} onClose={handleClose} />
       )}
     </div>
   )

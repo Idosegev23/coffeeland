@@ -134,6 +134,19 @@ export default function AdminDashboardPage() {
             פאנל ניהול
           </h1>
           <p className="text-text-light/70">שלום, {user?.full_name} (מנהל)</p>
+          <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
+            <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
+              <Link href="/">כניסה לדף הבית</Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="w-full sm:w-auto"
+            >
+              התנתקות
+            </Button>
+          </div>
         </div>
 
         {/* Quick Scan Button */}

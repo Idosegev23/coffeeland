@@ -7,6 +7,7 @@ import { MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { generateWhatsAppLink } from '@/lib/utils'
+import Link from 'next/link'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
@@ -309,10 +310,10 @@ export default function PlaygroundPage() {
           )}
           <div className="text-center mt-8">
             <Button size="lg" asChild>
-              <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="gap-2">
+              <Link href="/passes" className="gap-2">
                 <MessageCircle className="w-5 h-5" />
-                רכשו כרטיסייה
-              </a>
+                לרכישת כרטיסייה
+              </Link>
             </Button>
           </div>
         </div>

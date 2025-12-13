@@ -129,7 +129,7 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-text-dark/20">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-text-dark/70">
             <p>© {new Date().getFullYear()} CoffeeLand. כל הזכויות שמורות.</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
               <p>
                 נבנה באהבה על ידי
               </p>

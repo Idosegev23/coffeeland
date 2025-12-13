@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +45,7 @@ interface Customer {
 }
 
 export default function POSPage() {
+  const searchParams = useSearchParams();
   const [cardTypes, setCardTypes] = useState<CardType[]>([]);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -58,6 +60,18 @@ export default function POSPage() {
   useEffect(() => {
     loadCardTypes();
   }, []);
+
+  useEffect(() => {
+    const phone = searchParams.get('phone');
+    if (phone && !customer) {
+      setPhoneSearch(phone);
+      // auto-search
+      setTimeout(() => {
+        searchCustomer();
+      }, 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const loadCardTypes = async () => {
     try {
@@ -116,6 +130,7 @@ export default function POSPage() {
           total_entries: selectedCard.entries_count,
           price_paid: finalPrice,
           payment_method: paymentMethod,
+          pass_type: selectedCard.type,
           card_type_name: selectedCard.name
         })
       });

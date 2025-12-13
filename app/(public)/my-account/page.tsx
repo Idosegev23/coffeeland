@@ -13,6 +13,7 @@ import { PassCard } from '@/components/account/PassCard'
 import { LoyaltyCard } from '@/components/account/LoyaltyCard'
 import { UsageHistory } from '@/components/account/UsageHistory'
 import { Plus, Ticket, Calendar, Clock } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function MyAccountPage() {
   const router = useRouter()
@@ -24,6 +25,7 @@ export default function MyAccountPage() {
   const [loyaltyCard, setLoyaltyCard] = useState<any>(null)
   const [usages, setUsages] = useState<any[]>([])
   const [registrations, setRegistrations] = useState<any[]>([])
+  const [reservations, setReservations] = useState<any[]>([])
 
   useEffect(() => {
     loadData()
@@ -94,6 +96,15 @@ export default function MyAccountPage() {
         .order('registered_at', { ascending: false })
 
       setRegistrations(registrationsData || [])
+
+      // Load reservations (new)
+      try {
+        const res = await fetch('/api/reservations', { credentials: 'include' })
+        const json = await res.json()
+        setReservations(json.reservations || [])
+      } catch {
+        setReservations([])
+      }
 
       setLoading(false)
     } catch (err) {
@@ -264,6 +275,59 @@ export default function MyAccountPage() {
                       האירוע הסתיים
                     </div>
                   )}
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
+        <Separator className="my-8" />
+
+        <h2 className="text-2xl font-semibold text-primary mb-4">שריונות לפעילויות</h2>
+        {reservations.length === 0 ? (
+          <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-8 text-center">
+            <p className="text-text-light/70 mb-4">אין שריונות כרגע</p>
+            <Button asChild>
+              <Link href="/classes">שריין מקום</Link>
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid gap-4 mb-8">
+            {reservations.map((r: any) => {
+              const ev = Array.isArray(r.event) ? r.event[0] : r.event
+              return (
+                <Card key={r.id} className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-lg font-bold text-primary">{ev?.title || 'פעילות'}</h3>
+                        <span className="px-2 py-1 bg-gray-100 rounded text-xs">{r.status}</span>
+                      </div>
+                      {ev?.start_at && (
+                        <div className="text-sm text-text-light/70 flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-accent" />
+                          <span>
+                            {new Date(ev.start_at).toLocaleDateString('he-IL', {
+                              weekday: 'long',
+                              day: 'numeric',
+                              month: 'long',
+                            })}{' '}
+                            {new Date(ev.start_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="text-sm text-text-light/70 flex items-center gap-2 mt-1">
+                        <Ticket className="w-4 h-4 text-accent" />
+                        <span>מקומות: {r.seats}</span>
+                      </div>
+                    </div>
+                    {r.qr_code && (
+                      <div className="bg-white p-3 rounded-lg border inline-block">
+                        <QRCodeSVG value={r.qr_code} size={120} level="H" includeMargin={true} />
+                        <div className="text-xs text-gray-500 mt-1 font-mono text-center">{r.qr_code}</div>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               )
             })}

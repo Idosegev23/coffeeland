@@ -551,7 +551,7 @@ export default function AdminEventsPage() {
             resetForm();
           }
         }}>
-          <DialogContent className="max-w-2xl" dir="rtl">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
             <DialogHeader>
               <DialogTitle>{editingEvent ? 'עריכת אירוע' : 'יצירת אירוע חדש'}</DialogTitle>
               <DialogDescription>
@@ -1026,7 +1026,7 @@ export default function AdminEventsPage() {
 
         {/* Dialog - רשימת נרשמים */}
         <Dialog open={showRegistrationsDialog} onOpenChange={setShowRegistrationsDialog}>
-          <DialogContent className="max-w-2xl" dir="rtl">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
             <DialogHeader>
               <DialogTitle>
                 רשימת נרשמים - {selectedEvent?.title}

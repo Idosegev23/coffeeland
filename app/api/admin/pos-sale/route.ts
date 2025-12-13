@@ -1,8 +1,23 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+// Service Role client for admin operations (bypasses RLS)
+const getServiceClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+};
 
 /**
  * POST - מכירת כרטיסייה ב-POS (אדמין בלבד)
@@ -38,6 +53,7 @@ export async function POST(request: Request) {
       total_entries, 
       price_paid, 
       payment_method,
+      pass_type,
       card_type_name 
     } = body;
 
@@ -49,32 +65,31 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // יצירת תוקף (3 חודשים מהיום)
+    // יצירת תוקף (ברירת מחדל: 3 חודשים)
     const expiryDate = new Date();
     expiryDate.setMonth(expiryDate.getMonth() + 3);
 
-    // יצירת כרטיסייה
-    console.log('💳 Creating pass with data:', {
+    // נשתמש ב-Service Role כדי לעקוף RLS ולמנוע נפילות הרשאות
+    const serviceClient = getServiceClient();
+
+    // יצירת כרטיסייה (סכמת passes בפועל)
+    const passInsert = {
       user_id: customer_id,
       card_type_id: card_type_id,
-      entries_used: 0,
-      entries_remaining: total_entries,
-      expires_at: expiryDate.toISOString(),
+      type: pass_type || 'playground',
+      total_entries: total_entries,
+      remaining_entries: total_entries,
+      expiry_date: expiryDate.toISOString(),
+      price_paid: price_paid,
       status: 'active',
-      purchased_at: new Date().toISOString()
-    });
-    
-    const { data: pass, error: passError } = await supabase
+      purchase_date: new Date().toISOString(),
+    };
+
+    console.log('💳 Creating pass with data:', passInsert);
+
+    const { data: pass, error: passError } = await serviceClient
       .from('passes')
-      .insert({
-        user_id: customer_id,
-        card_type_id: card_type_id,
-        entries_used: 0,
-        entries_remaining: total_entries,
-        expires_at: expiryDate.toISOString(),
-        status: 'active',
-        purchased_at: new Date().toISOString()
-      })
+      .insert(passInsert)
       .select()
       .single();
 
@@ -90,38 +105,48 @@ export async function POST(request: Request) {
     
     console.log('✅ Pass created successfully:', pass);
 
-    // יצירת תשלום
-    console.log('💰 Creating payment with data:', {
+    const paymentType =
+      payment_method === 'cash'
+        ? 'pos_cash'
+        : payment_method === 'credit'
+        ? 'pos_credit'
+        : payment_method === 'bit'
+        ? 'pos_bit'
+        : 'pos_other';
+
+    // יצירת תשלום (סכמת payments בפועל)
+    const paymentInsert = {
       user_id: customer_id,
       amount: price_paid,
-      payment_method: `POS - ${payment_method}`,
-      payment_status: 'completed',
+      currency: 'ILS',
+      payment_type: paymentType,
+      payment_method: payment_method,
       item_type: 'pass',
-      item_id: pass.id
-    });
-    
-    const { data: payment, error: paymentError } = await supabase
+      item_id: pass.id,
+      status: 'completed',
+      processed_by_admin: admin.id,
+      completed_at: new Date().toISOString(),
+      notes: `מכירת כרטיסייה ${card_type_name || ''}`.trim(),
+      metadata: {
+        created_via: 'pos',
+        admin_id: admin.id,
+        card_type_id,
+        card_type_name,
+      }
+    };
+
+    console.log('💰 Creating payment with data:', paymentInsert);
+
+    const { data: payment, error: paymentError } = await serviceClient
       .from('payments')
-      .insert({
-        user_id: customer_id,
-        amount: price_paid,
-        payment_method: `POS - ${payment_method}`,
-        payment_status: 'completed',
-        item_type: 'pass',
-        item_id: pass.id,
-        metadata: {
-          admin_id: admin.id,
-          card_type: card_type_name,
-          notes: `מכירת כרטיסייה ${card_type_name}`
-        }
-      })
+      .insert(paymentInsert)
       .select()
       .single();
 
     if (paymentError) {
       console.error('❌ Error creating payment:', paymentError);
       // במקרה של שגיאה בתשלום, נמחק את הכרטיסייה
-      await supabase.from('passes').delete().eq('id', pass.id);
+      await serviceClient.from('passes').delete().eq('id', pass.id);
       return NextResponse.json({ 
         error: 'Failed to create payment', 
         details: paymentError.message,
@@ -132,8 +157,14 @@ export async function POST(request: Request) {
     
     console.log('✅ Payment created successfully:', payment);
 
+    // קישור התשלום לכרטיסייה (לא חובה אבל שימושי)
+    await serviceClient
+      .from('passes')
+      .update({ payment_id: payment.id })
+      .eq('id', pass.id);
+
     // רישום ב-audit log
-    await supabase.from('audit_log').insert({
+    await serviceClient.from('audit_log').insert({
       admin_id: admin.id,
       action: 'pos_sale',
       entity_type: 'pass',

@@ -45,9 +45,12 @@ interface Customer {
     card_types?: {
       name: string;
     } | null;
-    entries_used: number;
-    entries_remaining: number;
+    type?: string;
+    total_entries: number;
+    remaining_entries: number;
     status: string;
+    purchase_date?: string;
+    expiry_date?: string | null;
   }>;
 }
 
@@ -80,35 +83,16 @@ export default function CustomersPage() {
 
   const loadCustomers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          id,
-          full_name,
-          phone,
-          email,
-          qr_code,
-          created_at,
-          loyalty_cards(
-            total_stamps,
-            redeemed_coffees
-          ),
-          passes(
-            id,
-            entries_used,
-            entries_remaining,
-            status,
-            card_types(name)
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading customers:', error);
-        throw error;
+      const res = await fetch('/api/admin/customers', {
+        credentials: 'include',
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'שגיאה בטעינת לקוחות');
       }
-      setCustomers((data as any) || []);
-      setFilteredCustomers((data as any) || []);
+      const list = (json.customers || []) as Customer[];
+      setCustomers(list);
+      setFilteredCustomers(list);
     } catch (error: any) {
       console.error('Error loading customers:', error);
       alert('שגיאה בטעינת לקוחות: ' + (error.message || 'שגיאה לא ידועה'));
@@ -125,10 +109,10 @@ export default function CustomersPage() {
 
     const query = searchQuery.toLowerCase();
     const filtered = customers.filter(customer =>
-      customer.full_name.toLowerCase().includes(query) ||
-      customer.phone.includes(query) ||
-      customer.email.toLowerCase().includes(query) ||
-      customer.qr_code.toLowerCase().includes(query)
+      (customer.full_name || '').toLowerCase().includes(query) ||
+      (customer.phone || '').includes(query) ||
+      (customer.email || '').toLowerCase().includes(query) ||
+      (customer.qr_code || '').toLowerCase().includes(query)
     );
     setFilteredCustomers(filtered);
   };
@@ -441,6 +425,17 @@ export default function CustomersPage() {
                     <CreditCard size={20} />
                     כרטיסיות ({selectedCustomer.passes?.length || 0})
                   </h3>
+                  <div className="flex justify-end mb-3">
+                    <Link
+                      href={`/admin/pos?phone=${encodeURIComponent(selectedCustomer.phone || '')}`}
+                      className="block"
+                    >
+                      <Button className="bg-accent hover:bg-accent/90">
+                        <CreditCard size={16} className="ml-2" />
+                        מכור כרטיסייה ללקוח
+                      </Button>
+                    </Link>
+                  </div>
                   <div className="space-y-2">
                     {selectedCustomer.passes && selectedCustomer.passes.length > 0 ? (
                       selectedCustomer.passes.map((pass) => (
@@ -456,7 +451,7 @@ export default function CustomersPage() {
                             <div>
                               <p className="font-medium">{pass.card_types?.name || 'לא ידוע'}</p>
                               <p className="text-sm text-gray-600">
-                                נוצלו: {pass.entries_used} | נותרו: {pass.entries_remaining}
+                                נותרו: {pass.remaining_entries} | סה״כ: {pass.total_entries}
                               </p>
                             </div>
                             <span

@@ -15,6 +15,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Calendar, Clock, MapPin, Users, DollarSign, User, CheckCircle } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface Event {
   id: string;
@@ -31,6 +32,8 @@ interface Event {
   max_age?: number;
   price?: number;
   status: string;
+  registrations_count?: number;
+  reserved_seats_count?: number;
 }
 
 interface Child {
@@ -45,6 +48,8 @@ export default function ClassesPage() {
   const [user, setUser] = useState<any>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedChild, setSelectedChild] = useState<string>('');
+  const [seats, setSeats] = useState(1);
+  const [reservationQr, setReservationQr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -63,9 +68,10 @@ export default function ClassesPage() {
       setUser(userData);
 
       // טעינת אירועים
+      const nowIso = new Date().toISOString();
       const eventsUrl = filterType === 'all' 
-        ? '/api/events?status=active'
-        : `/api/events?status=active&type=${filterType}`;
+        ? `/api/public/events?status=active&from=${encodeURIComponent(nowIso)}&limit=50`
+        : `/api/public/events?status=active&type=${filterType}&from=${encodeURIComponent(nowIso)}&limit=50`;
       const eventsRes = await fetch(eventsUrl);
       const eventsData = await eventsRes.json();
       setEvents(eventsData.events || []);
@@ -94,59 +100,30 @@ export default function ClassesPage() {
 
     setRegistering(true);
     try {
-      // יצירת רישום
-      const regRes = await fetch('/api/registrations', {
+      // יצירת שריון מקום (פעילויות בלבד)
+      const resvRes = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           event_id: selectedEvent.id,
-          child_id: selectedChild || null,
-          notes: ''
+          seats
         })
       });
 
-      if (!regRes.ok) {
-        const error = await regRes.json();
-        throw new Error(error.error || 'Registration failed');
+      if (!resvRes.ok) {
+        const error = await resvRes.json();
+        throw new Error(error.error || 'Reservation failed');
       }
 
-      const regData = await regRes.json();
-      const registration = regData.registration;
-
-      // תשלום Mockup - יוצר תשלום ומאשר אותו מיד
-      const paymentRes = await fetch('/api/payments/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: selectedEvent.price || 0,
-          payment_type: 'online',
-          payment_method: 'mock',
-          item_type: 'event_registration',
-          item_id: registration.id,
-          notes: `רישום ל-${selectedEvent.title}`
-        })
-      });
-
-      if (!paymentRes.ok) throw new Error('Payment failed');
-
-      const paymentData = await paymentRes.json();
-
-      // אישור תשלום (mockup - מיידי)
-      await fetch('/api/payments/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          payment_id: paymentData.payment.id,
-          green_invoice_id: `MOCK-INV-${Date.now()}`,
-          green_invoice_url: '#'
-        })
-      });
+      const resvData = await resvRes.json();
+      setReservationQr(resvData?.reservation?.qr_code || null);
 
       setShowSuccess(true);
       setSelectedEvent(null);
       setSelectedChild('');
+      setSeats(1);
     } catch (error: any) {
-      alert('❌ שגיאה ברישום: ' + error.message);
+      alert('❌ שגיאה בשריון: ' + error.message);
     } finally {
       setRegistering(false);
     }
@@ -262,7 +239,11 @@ export default function ClassesPage() {
                     {event.capacity && (
                       <div className="flex items-center text-gray-700">
                         <Users size={16} className="ml-2 text-accent" />
-                        עד {event.capacity} משתתפים
+                        {(() => {
+                          const reserved = event.reserved_seats_count || 0;
+                          const available = Math.max(0, event.capacity - reserved);
+                          return `נותרו ${available} מתוך ${event.capacity}`;
+                        })()}
                       </div>
                     )}
                   </div>
@@ -280,7 +261,7 @@ export default function ClassesPage() {
                       onClick={() => setSelectedEvent(event)}
                       className="bg-accent hover:bg-accent/90"
                     >
-                      הירשם
+                      שריין מקום
                     </Button>
                   </div>
                 </div>
@@ -320,25 +301,20 @@ export default function ClassesPage() {
                   </p>
                 </div>
 
-                {children.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      בחר ילד (אופציונלי)
-                    </label>
-                    <select
-                      value={selectedChild}
-                      onChange={e => setSelectedChild(e.target.value)}
-                      className="w-full px-4 py-2 border rounded-md"
-                    >
-                      <option value="">רישום עבורי</option>
-                      {children.map(child => (
-                        <option key={child.id} value={child.id}>
-                          {child.name} (גיל {child.age})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium mb-2">כמות מקומות</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={seats}
+                    onChange={(e) => setSeats(parseInt(e.target.value || '1'))}
+                    className="w-full px-4 py-2 border rounded-md"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    שריון אפשרי עד 30 דקות לפני תחילת הפעילות. התשלום יתבצע בקופה בעת הגעה.
+                  </p>
+                </div>
 
                 {selectedEvent.price && (
                   <div className="p-4 bg-accent/10 rounded-lg">
@@ -349,7 +325,7 @@ export default function ClassesPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      תשלום מאובטח דרך פלטפורמת התשלומים
+                      תשלום בקופה בעת הגעה (POS)
                     </p>
                   </div>
                 )}
@@ -369,7 +345,7 @@ export default function ClassesPage() {
                 disabled={registering}
                 className="bg-accent hover:bg-accent/90"
               >
-                {registering ? 'מעבד...' : 'אישור והמשך לתשלום'}
+                {registering ? 'מעבד...' : 'אשר שריון'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -381,11 +357,17 @@ export default function ClassesPage() {
             <div className="py-6">
               <CheckCircle size={64} className="mx-auto text-green-500 mb-4" />
               <h2 className="text-2xl font-bold text-green-600 mb-2">
-                רישום הושלם בהצלחה!
+                שריון הושלם בהצלחה!
               </h2>
               <p className="text-gray-600 mb-4">
-                קיבלת מייל אישור עם פרטי האירוע
+                הצג את ה-QR הזה בקופה כדי לאשר הגעה ולשלם
               </p>
+              {reservationQr && (
+                <div className="bg-white p-4 rounded-lg inline-block border mb-4">
+                  <QRCodeSVG value={reservationQr} size={200} level="H" includeMargin={true} />
+                  <p className="text-xs text-gray-500 mt-2 font-mono">ID: {reservationQr}</p>
+                </div>
+              )}
               <Button
                 onClick={() => {
                   setShowSuccess(false);

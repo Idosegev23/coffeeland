@@ -5,7 +5,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import {
   BarChart3,
@@ -31,9 +30,7 @@ interface ReportData {
     id: string;
     amount: number;
     created_at: string;
-    user: Array<{
-      full_name: string;
-    }>;
+    customer_name?: string;
     payment_method: string;
   }>;
   popularCards: Array<{
@@ -54,8 +51,6 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year'>('month');
 
-  const supabase = createClientComponentClient();
-
   useEffect(() => {
     loadReportData();
   }, [dateRange]);
@@ -63,129 +58,16 @@ export default function ReportsPage() {
   const loadReportData = async () => {
     try {
       setLoading(true);
-
-      // חישוב תאריך התחלה לפי טווח
-      const now = new Date();
-      const startDate = new Date();
-      if (dateRange === 'week') {
-        startDate.setDate(now.getDate() - 7);
-      } else if (dateRange === 'month') {
-        startDate.setMonth(now.getMonth() - 1);
-      } else {
-        startDate.setFullYear(now.getFullYear() - 1);
-      }
-
-      // 1. סך הלקוחות
-      const { count: totalCustomers } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-
-      // 2. הכנסות כוללות
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'completed')
-        .gte('created_at', startDate.toISOString());
-
-      const totalRevenue = payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-
-      // 3. כרטיסיות פעילות
-      const { count: activeCards } = await supabase
-        .from('passes')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
-
-      // 4. חותמות כוללות
-      const { data: loyaltyCards } = await supabase
-        .from('loyalty_cards')
-        .select('total_stamps');
-
-      const totalStamps = loyaltyCards?.reduce((sum, lc) => sum + lc.total_stamps, 0) || 0;
-
-      // 5. אירועים קרובים
-      const { count: upcomingEvents } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .gte('start_at', now.toISOString());
-
-      // 6. רישומים כוללים
-      const { count: totalRegistrations } = await supabase
-        .from('registrations')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startDate.toISOString());
-
-      // 7. מכירות אחרונות
-      const { data: recentSales } = await supabase
-        .from('payments')
-        .select(`
-          id,
-          amount,
-          created_at,
-          payment_method,
-          user:users(full_name)
-        `)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      // 8. כרטיסיות פופולריות
-      const { data: passesData } = await supabase
-        .from('passes')
-        .select(`
-          card_type:card_types(name)
-        `)
-        .gte('created_at', startDate.toISOString());
-
-      const cardCounts = passesData?.reduce((acc: any, pass: any) => {
-        const name = pass.card_type?.name || 'לא ידוע';
-        acc[name] = (acc[name] || 0) + 1;
-        return acc;
-      }, {});
-
-      const popularCards = Object.entries(cardCounts || {})
-        .map(([name, count]) => ({ name, count: count as number }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-
-      // 9. סטטיסטיקות אירועים
-      const { data: eventStats } = await supabase
-        .from('events')
-        .select(`
-          title,
-          type,
-          capacity,
-          start_at,
-          registrations(count)
-        `)
-        .eq('status', 'active')
-        .gte('start_at', now.toISOString())
-        .order('start_at', { ascending: true })
-        .limit(10);
-
-      const formattedEventStats = eventStats?.map((event: any) => ({
-        title: event.title,
-        type: event.type,
-        capacity: event.capacity,
-        start_at: event.start_at,
-        registrations_count: event.registrations?.length || 0
-      })) || [];
-
-      setData({
-        totalCustomers: totalCustomers || 0,
-        totalRevenue,
-        activeCards: activeCards || 0,
-        totalStamps,
-        upcomingEvents: upcomingEvents || 0,
-        totalRegistrations: totalRegistrations || 0,
-        recentSales: recentSales || [],
-        popularCards,
-        eventStats: formattedEventStats
+      const res = await fetch(`/api/admin/reports?range=${dateRange}`, {
+        credentials: 'include',
       });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'שגיאה בטעינת דוחות');
+      setData(json);
 
     } catch (error: any) {
       console.error('Error loading report data:', error);
-      alert('שגיאה בטעינת דוחות');
+      alert('שגיאה בטעינת דוחות: ' + (error.message || 'שגיאה לא ידועה'));
     } finally {
       setLoading(false);
     }
@@ -328,7 +210,7 @@ export default function ReportsPage() {
                 data.recentSales.map((sale) => (
                   <div key={sale.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium">{sale.user?.[0]?.full_name || 'לא ידוע'}</p>
+                      <p className="font-medium">{sale.customer_name || 'לא ידוע'}</p>
                       <p className="text-sm text-gray-500">{formatDate(sale.created_at)}</p>
                     </div>
                     <div className="text-left">
