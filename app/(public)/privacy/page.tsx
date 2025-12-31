@@ -1,135 +1,34 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { ArrowLeft, Lock } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'מדיניות פרטיות',
-  description: 'מדיניות הפרטיות של CoffeeLand - כיצד אנו אוספים ומשתמשים במידע שלכם',
-}
+  title: 'מדיניות פרטיות | CoffeeLand Club',
+  description: 'מדיניות הפרטיות של CoffeeLand Club - כיצד אנו אוספים ומשתמשים במידע שלכם',
+};
 
 export default function PrivacyPage() {
   return (
-    <section className="py-12 sm:py-16 lg:py-20 bg-background-light">
+    <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-primary mb-8">מדיניות פרטיות</h1>
-          
-          <div className="prose prose-lg max-w-none space-y-6 text-text-light/80">
-            <p className="text-sm text-text-light/60">
-              עדכון אחרון: {new Date().toLocaleDateString('he-IL')}
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <Lock className="w-16 h-16 mx-auto text-blue-600 mb-6" />
+            <h1 className="text-3xl font-bold text-primary mb-4">מדיניות פרטיות</h1>
+            <p className="text-gray-600 mb-8">
+              מדיניות הפרטיות שלנו, יחד עם תנאי השימוש, מדיניות הביטולים ואבטחת המידע,
+              מרוכזים כעת בדף המסמכים המשפטיים המאוחד.
             </p>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">1. מבוא</h2>
-              <p>
-                ב-CoffeeLand אנו מכבדים את פרטיותכם ומחויבים להגן על המידע האישי שלכם. מדיניות
-                פרטיות זו מסבירה כיצד אנו אוספים, משתמשים ומגנים על המידע שלכם.
-              </p>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">2. מידע שאנו אוספים</h2>
-              <ul className="list-disc mr-6 space-y-2">
-              <li>
-                <strong>מידע אישי:</strong> שם, מספר טלפון, כתובת דוא{'"'}ל - כאשר אתם
-                מבצעים הזמנה או נרשמים לשירותים
-              </li>
-                <li>
-                  <strong>מידע על הילדים:</strong> גיל, שם (לצורך התאמת פעילויות ומסירת
-                  שירות אישי)
-                </li>
-                <li>
-                  <strong>מידע טכני:</strong> כתובת IP, סוג דפדפן, נתוני גלישה (דרך Google
-                  Analytics)
-                </li>
-              </ul>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">3. שימוש במידע</h2>
-              <p>אנו משתמשים במידע שנאסף למטרות הבאות:</p>
-              <ul className="list-disc mr-6 space-y-2">
-                <li>מתן שירותים - ניהול הזמנות, אירועים וכרטיסיות</li>
-                <li>תקשורת - יצירת קשר לגבי הזמנות, תזכורות, מבצעים</li>
-                <li>שיפור השירות - הבנת צרכי הלקוחות ושיפור החוויה</li>
-                <li>אבטחה - הגנה על המערכות והמידע שלנו ושלכם</li>
-              </ul>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">4. שיתוף מידע</h2>
-              <p>
-                אנו לא מוכרים או משכירים את המידע האישי שלכם לצדדים שלישיים. נשתף מידע רק
-                במקרים הבאים:
-              </p>
-              <ul className="list-disc mr-6 space-y-2">
-                <li>ספקי שירות (עיבוד תשלומים, משלוח הודעות) - בכפוף לחיסיון</li>
-                <li>חובה חוקית או בקשת רשות מוסמכת</li>
-                <li>הגנה על זכויותינו או בטיחות הציבור</li>
-              </ul>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">5. אבטחת מידע</h2>
-              <p>
-                אנו נוקטים באמצעי אבטחה סבירים כדי להגן על המידע שלכם מפני גישה לא מורשית,
-                שינוי, חשיפה או השמדה. עם זאת, אף שיטת העברה או אחסון אינה בטוחה ב-100%.
-              </p>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">6. עוגיות (Cookies)</h2>
-              <p>
-                אנו משתמשים בעוגיות כדי לשפר את חוויית הגלישה שלכם. ראו את{' '}
-                <a href="/cookies" className="text-accent hover:underline">
-                  מדיניות העוגיות
-                </a>{' '}
-                שלנו למידע נוסף.
-              </p>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">7. זכויותיכם</h2>
-              <p>יש לכם זכות:</p>
-              <ul className="list-disc mr-6 space-y-2">
-                <li>לדעת איזה מידע אנחנו מחזיקים עליכם</li>
-                <li>לבקש תיקון או עדכון של מידע שגוי</li>
-                <li>לבקש מחיקת המידע שלכם (בכפוף להגבלות חוקיות)</li>
-                <li>להתנגד לשימוש במידע למטרות שיווקיות</li>
-              </ul>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">8. ילדים</h2>
-              <p>
-                השירותים שלנו מיועדים למבוגרים. אנו לא אוספים במכוון מידע אישי מילדים
-                מתחת לגיל 18 ללא הסכמת הורים. אם הובא לידיעתנו שאספנו מידע כזה בטעות, נמחק
-                אותו מיד.
-              </p>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">9. שינויים במדיניות</h2>
-              <p>
-                אנו עשויים לעדכן מדיניות פרטיות זו מעת לעת. נודיע על שינויים מהותיים באתר
-                ובדוא{'"'}ל (אם הוא זמין).
-              </p>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-2xl font-semibold text-primary">10. צור קשר</h2>
-              <p>
-                לשאלות או בקשות הנוגעות לפרטיותכם, אנא פנו אלינו:
-                <br />
-                טלפון: 050-123-4567
-                <br />
-                דוא{'"'}ל: info@coffeeland.co.il
-                <br />
-                כתובת: רחוב הקפה 123, תל אביב
-              </p>
-            </section>
+            <Link 
+              href="/legal#privacy" 
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-full font-medium hover:bg-blue-700 transition-colors text-lg"
+            >
+              למדיניות הפרטיות
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }
-

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { Phone, MessageCircle, MapPin, Mail } from 'lucide-react'
+import { Phone, MessageCircle, MapPin, Mail, Shield } from 'lucide-react'
 import { generateWhatsAppLink } from '@/lib/utils'
 
 const footerLinks = {
@@ -9,11 +9,13 @@ const footerLinks = {
     { name: 'אירועים וימי הולדת', href: '/events' },
     { name: 'סדנאות וחוגים', href: '/workshops' },
     { name: 'תפריט', href: '/menu' },
+    { name: 'כרטיסיות', href: '/passes' },
   ],
   legal: [
-    { name: 'תנאי שימוש', href: '/terms' },
-    { name: 'מדיניות פרטיות', href: '/privacy' },
-    { name: 'מדיניות עוגיות', href: '/cookies' },
+    { name: 'מסמכים משפטיים', href: '/legal' },
+    { name: 'תנאי שימוש', href: '/legal' },
+    { name: 'מדיניות פרטיות', href: '/legal#privacy' },
+    { name: 'מדיניות ביטולים', href: '/legal#cancellation' },
   ],
 }
 
@@ -42,6 +44,13 @@ export function Footer() {
               בית קפה משפחתי עם משחקייה לגיל הרך (0-5). קפה איכותי, משחקייה בטוחה,
               ימי הולדת בלתי נשכחים, סדנאות וחוגים יצירתיים.
             </p>
+            {/* Security Badge */}
+            <div className="flex items-center gap-2 pt-2">
+              <Shield className="w-4 h-4 text-accent" />
+              <span className="text-xs text-text-dark/70">
+                אתר מאובטח | סליקה דרך ישראכרט
+              </span>
+            </div>
           </div>
 
           {/* Quick Links */}
@@ -49,7 +58,7 @@ export function Footer() {
             <h3 className="text-lg font-semibold text-accent">קישורים מהירים</h3>
             <ul className="space-y-2">
               {footerLinks.main.map((link) => (
-                <li key={link.href}>
+                <li key={link.href + link.name}>
                   <Link
                     href={link.href}
                     className="text-sm text-text-dark/80 hover:text-accent transition-colors"
@@ -110,8 +119,8 @@ export function Footer() {
             <div className="pt-4">
               <h4 className="text-sm font-semibold text-accent mb-2">משפטי</h4>
               <ul className="space-y-1">
-                {footerLinks.legal.map((link) => (
-                  <li key={link.href}>
+                {footerLinks.legal.map((link, index) => (
+                  <li key={link.href + index}>
                     <Link
                       href={link.href}
                       className="text-xs text-text-dark/70 hover:text-accent transition-colors"
@@ -127,12 +136,10 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-text-dark/20">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-text-dark/70">
-            <p>© {new Date().getFullYear()} CoffeeLand. כל הזכויות שמורות.</p>
-            <div className="flex items-center gap-2 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
-              <p>
-                נבנה באהבה על ידי
-              </p>
+          <div className="flex flex-col items-center gap-4 text-sm text-text-dark/70">
+            {/* Built with love - CENTERED */}
+            <div className="flex items-center gap-2 justify-center">
+              <p>נבנה באהבה על ידי</p>
               <Link
                 href="https://www.2-create.co.il/"
                 target="_blank"
@@ -149,10 +156,13 @@ export function Footer() {
                 />
               </Link>
             </div>
+            {/* Copyright */}
+            <p className="text-center">
+              © {new Date().getFullYear()} CoffeeLand Club. כל הזכויות שמורות.
+            </p>
           </div>
         </div>
       </div>
     </footer>
   )
 }
-
