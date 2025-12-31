@@ -17,8 +17,8 @@ function PaymentSuccessContent() {
   useEffect(() => {
     // Get transaction details from URL params if provided
     const type = searchParams.get('type') || 'רכישה';
-    const amount = searchParams.get('amount');
-    const name = searchParams.get('name');
+    const amount = searchParams.get('amount') ?? undefined;
+    const name = searchParams.get('name') ?? undefined;
     
     setTransactionDetails({ type, amount, name });
   }, [searchParams]);
