@@ -116,39 +116,15 @@ export default function PassesPage() {
       
       if (!user || authError) {
         console.log('No user found, redirecting to register')
-        // Redirect to register
-        router.push('/register')
+        // Redirect to register with return URL to checkout
+        router.push(`/register?redirect=/checkout?item=${pass.id}&type=pass`)
         return
       }
 
-      // Calculate expiry (3 or 6 months based on entries)
-      const expiryMonths = pass.totalEntries >= 10 ? 6 : pass.totalEntries >= 5 ? 3 : 2
-      const expiryDate = new Date()
-      expiryDate.setMonth(expiryDate.getMonth() + expiryMonths)
-
-      // Create pass (mockup - no real payment)
-      const { data, error: purchaseError } = await supabase
-        .from('passes')
-        .insert({
-          user_id: user.id,
-          card_type_id: pass.id,
-          type: pass.type,
-          total_entries: pass.totalEntries,
-          remaining_entries: pass.totalEntries,
-          expiry_date: expiryDate.toISOString(),
-          price_paid: pass.price,
-          status: 'active',
-        })
-        .select()
-        .single()
-
-      if (purchaseError) throw purchaseError
-
-      // Success! Redirect to my account
-      alert('✅ הכרטיסייה נרכשה בהצלחה! (מוקאפ - ללא תשלום אמיתי)')
-      router.push('/my-account')
+      // Redirect to checkout page with item details
+      router.push(`/checkout?item=${pass.id}&type=pass`)
     } catch (err: any) {
-      setError(err.message || 'שגיאה ברכישה')
+      setError(err.message || 'שגיאה')
     } finally {
       setLoading(null)
     }

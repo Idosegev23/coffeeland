@@ -1,18 +1,20 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Phone, Mail, Home, User, CreditCard } from 'lucide-react';
+import { CheckCircle, Phone, Mail, Home, User, CreditCard, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [transactionDetails, setTransactionDetails] = useState<{
     type?: string;
     amount?: string;
     name?: string;
   }>({});
+  const [countdown, setCountdown] = useState(8);
 
   useEffect(() => {
     // Get transaction details from URL params if provided
@@ -22,6 +24,22 @@ function PaymentSuccessContent() {
     
     setTransactionDetails({ type, amount, name });
   }, [searchParams]);
+
+  // Auto-redirect to my-account after countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          router.push('/my-account');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [router]);
 
   return (
     <section className="py-12 sm:py-16 lg:py-20 min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -78,16 +96,27 @@ function PaymentSuccessContent() {
               </p>
             </div>
 
+            {/* Auto-redirect Notice */}
+            <div className="bg-blue-50 rounded-xl p-4 mb-6 flex items-center justify-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-blue-600 font-bold text-lg">{countdown}</span>
+              </div>
+              <p className="text-blue-700 text-sm">
+                מעבר אוטומטי לאיזור האישי בעוד {countdown} שניות...
+              </p>
+            </div>
+
             {/* Action Buttons */}
             <div className="grid sm:grid-cols-2 gap-3">
               <Link href="/my-account">
-                <Button variant="outline" className="w-full h-12 gap-2">
+                <Button className="w-full h-12 gap-2 bg-green-600 hover:bg-green-700">
                   <User className="w-5 h-5" />
                   לאזור האישי
+                  <ArrowLeft className="w-4 h-4" />
                 </Button>
               </Link>
               <Link href="/">
-                <Button className="w-full h-12 gap-2 bg-green-600 hover:bg-green-700">
+                <Button variant="outline" className="w-full h-12 gap-2">
                   <Home className="w-5 h-5" />
                   לדף הבית
                 </Button>
