@@ -193,7 +193,6 @@ function CheckoutContent() {
             user_id: user.id,
             card_type_id: cartItem.id,
             type: cartItem.type,
-            pass_type: cartItem.type,
             total_entries: cartItem.entries,
             remaining_entries: cartItem.entries,
             expiry_date: expiryDate.toISOString(),
