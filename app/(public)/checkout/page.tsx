@@ -355,14 +355,14 @@ function CheckoutContent() {
                   <span>₪{cartItem?.price}</span>
                 </div>
                 <div className="flex justify-between text-green-600">
-                  <span>כולל מע"מ</span>
+                  <span>כולל מע&quot;מ</span>
                   <span>✓</span>
                 </div>
               </div>
 
               <div className="border-t border-gray-200 mt-4 pt-4">
                 <div className="flex justify-between text-lg font-bold">
-                  <span className="text-primary">סה"כ לתשלום</span>
+                  <span className="text-primary">סה&quot;כ לתשלום</span>
                   <span className="text-accent">₪{cartItem?.price}</span>
                 </div>
               </div>
@@ -529,7 +529,7 @@ function CheckoutContent() {
                 {/* Terms */}
                 <div className="mt-6 p-3 bg-gray-50 rounded-lg text-xs text-text-light/70">
                   <p>
-                    בלחיצה על "שלם עכשיו" אני מאשר/ת שקראתי והסכמתי ל
+                    בלחיצה על &quot;שלם עכשיו&quot; אני מאשר/ת שקראתי והסכמתי ל
                     <Link href="/legal" className="text-accent hover:underline mx-1">תנאי השימוש</Link>
                     ו
                     <Link href="/legal#privacy" className="text-accent hover:underline mx-1">מדיניות הפרטיות</Link>
