@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Sparkles, Star, Ticket } from 'lucide-react';
+import { Calendar, Ticket } from 'lucide-react';
 
 interface Show {
   id: string;
@@ -52,148 +52,77 @@ export default function FeaturedShows() {
   if (loading || shows.length === 0) return null;
 
   return (
-    <section className="relative py-16 sm:py-20 overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-amber-50">
-      {/* Background decorations */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-10 left-10 w-72 h-72 bg-pink-400 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-400 rounded-full blur-3xl"></div>
-      </div>
-      
-      <div className="container mx-auto px-4 relative z-10">
-        {/* Header */}
-        <div className="text-center mb-12 animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Sparkles className="w-10 h-10 text-pink-500 animate-pulse" />
-            <h2 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-pink-600 via-purple-600 to-amber-600 bg-clip-text text-transparent">
-              הצגות מיוחדות
-            </h2>
-            <Sparkles className="w-10 h-10 text-purple-500 animate-pulse" />
+    <section className="py-10 sm:py-14 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-end justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-primary">הצגות מיוחדות</h2>
+            <p className="text-text-light/70 mt-1">הצגות קסומות לכל המשפחה</p>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            הופעות מרהיבות לילדים 🎭 חוויה בלתי נשכחת של קסם ומופע
-          </p>
+          <Button variant="outline" asChild className="hidden sm:inline-flex">
+            <Link href="/shows">לכל ההצגות</Link>
+          </Button>
         </div>
         
-        {/* Shows Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-10">
-          {shows.map((show, idx) => (
-            <div
-              key={show.id}
-              className="group animate-slide-up"
-              style={{ animationDelay: `${idx * 100}ms` }}
+        <div className="grid md:grid-cols-3 gap-4">
+          {shows.map(show => (
+            <Card 
+              key={show.id} 
+              className="overflow-hidden hover:shadow-lg transition-shadow bg-white border rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none"
             >
-              <Card className="overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 bg-white border-2 border-transparent hover:border-pink-200">
-                {show.banner_image_url ? (
-                  <div className="relative w-full h-72 overflow-hidden">
-                    <Image 
-                      src={show.banner_image_url} 
-                      alt={show.title}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    <div className="absolute top-4 right-4 flex items-center gap-1 bg-gradient-to-r from-pink-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-xl animate-bounce">
-                      <Star className="w-4 h-4 fill-yellow-300 text-yellow-300" />
-                      מיוחד
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-2xl font-black text-white drop-shadow-lg">
-                        {show.title}
-                      </h3>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative w-full h-72 bg-gradient-to-br from-pink-400 via-purple-400 to-amber-400 flex items-center justify-center">
-                    <Ticket className="w-24 h-24 text-white/50" />
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <h3 className="text-2xl font-black text-white drop-shadow-lg">
-                        {show.title}
-                      </h3>
-                    </div>
-                  </div>
+              {show.banner_image_url && (
+                <div className="relative w-full h-48">
+                  <Image 
+                    src={show.banner_image_url} 
+                    alt={show.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <h3 className="text-lg font-bold text-primary">{show.title}</h3>
+                  <span className="px-2 py-1 bg-accent/10 text-accent text-xs rounded font-medium whitespace-nowrap">
+                    הצגה 🎭
+                  </span>
+                </div>
+                
+                {show.description && (
+                  <p className="text-sm text-text-light/70 line-clamp-2 mb-4">{show.description}</p>
                 )}
                 
-                <div className="p-6 space-y-4">
-                  <p className="text-gray-700 line-clamp-2 min-h-[3rem]">
-                    {show.description}
-                  </p>
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-amber-50 rounded-lg p-3">
-                    <Calendar className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                    <span className="font-medium">{formatDate(show.start_at)}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">החל מ-</p>
-                      <p className="text-3xl font-black bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                        ₪{show.price_show_only}
-                      </p>
-                    </div>
-                    <Button 
-                      asChild 
-                      size="lg"
-                      className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all"
-                    >
-                      <Link href="/shows">
-                        <Ticket className="w-4 h-4 ml-2" />
-                        קנה כרטיס
-                      </Link>
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-2 text-sm text-text-light/80 mb-4">
+                  <Calendar className="w-4 h-4 text-accent" />
+                  <span>{formatDate(show.start_at)}</span>
                 </div>
-              </Card>
-            </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-text-light/60">החל מ-</p>
+                    <p className="text-2xl font-bold text-accent">
+                      ₪{show.price_show_only}
+                    </p>
+                  </div>
+                  <Button asChild className="bg-accent hover:bg-accent/90">
+                    <Link href="/shows">
+                      <Ticket className="w-4 h-4 ml-2" />
+                      רכישה
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </Card>
           ))}
         </div>
         
-        {/* CTA */}
-        <div className="text-center">
-          <Button 
-            asChild 
-            size="lg"
-            className="bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 hover:from-pink-600 hover:via-purple-600 hover:to-amber-600 text-white font-bold text-lg px-8 py-6 rounded-2xl shadow-2xl hover:shadow-pink-500/50 transition-all transform hover:scale-105"
-          >
-            <Link href="/shows" className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
-              צפה בכל ההצגות
-              <Sparkles className="w-5 h-5" />
-            </Link>
+        <div className="mt-6 sm:hidden">
+          <Button variant="outline" asChild className="w-full">
+            <Link href="/shows">לכל ההצגות</Link>
           </Button>
         </div>
       </div>
-      
-      <style jsx global>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-        
-        .animate-slide-up {
-          animation: slide-up 0.6s ease-out backwards;
-        }
-      `}</style>
     </section>
   );
 }
