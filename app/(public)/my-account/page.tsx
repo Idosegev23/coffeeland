@@ -426,8 +426,9 @@ export default function MyAccountPage() {
                       
                       {canCancel && (
                         <Button 
-                          variant="destructive" 
+                          variant="outline" 
                           size="sm"
+                          className="border-red-500 text-red-600 hover:bg-red-50"
                           onClick={async () => {
                             if (!confirm('האם אתה בטוח שברצונך לבטל את הכרטיס? יינתן החזר כספי מלא.')) return
                             
