@@ -4,6 +4,7 @@ import { NavTiles } from '@/components/navigation/NavTiles'
 import { MagicBento } from '@/components/gallery/MagicBento'
 import { CalendarTabs } from '@/components/calendar/CalendarTabs'
 import { FeaturedEvents } from '@/components/home/FeaturedEvents'
+import FeaturedShows from '@/components/home/FeaturedShows'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 
@@ -12,6 +13,7 @@ export default function HomePage() {
     <>
       <HeroCarousel />
       <FeaturedEvents />
+      <FeaturedShows />
       <NavTiles />
       
       <Separator className="my-0" />

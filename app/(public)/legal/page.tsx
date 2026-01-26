@@ -231,6 +231,18 @@ export default function LegalPage() {
                   </ul>
                 </div>
 
+                {/* Shows */}
+                <div className="bg-pink-50 rounded-xl p-5">
+                  <h3 className="font-bold text-pink-800 mb-3">🎭 הצגות ומופעים</h3>
+                  <ul className="space-y-2 text-sm text-pink-700">
+                    <li>• <strong>החזר כספי מלא</strong> יינתן עבור ביטול כרטיס עד למועד הביטול המפורט בדף ההצגה (בדרך כלל 24 שעות לפני)</li>
+                    <li>• ביטול לאחר מועד זה <strong>לא יזכה בהחזר</strong></li>
+                    <li>• כרטיסים להצגות הם לשימוש חד-פעמי ולא ניתנים להעברה</li>
+                    <li>• במקרה של ביטול הצגה ביוזמת העסק, יינתן החזר מלא או זיכוי מלא לאירוע חלופי</li>
+                    <li>• ההחזר יעובד תוך 3-5 ימי עסקים לאמצעי התשלום המקורי</li>
+                  </ul>
+                </div>
+
                 {/* Birthdays */}
                 <div className="bg-purple-50 rounded-xl p-5">
                   <h3 className="font-bold text-purple-800 mb-3">ימי הולדת</h3>

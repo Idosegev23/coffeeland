@@ -1,7 +1,7 @@
 /**
  * Calendar event types
  */
-export type EventType = 'class' | 'event' | 'block'
+export type EventType = 'class' | 'event' | 'block' | 'show'
 
 /**
  * Availability status for events
@@ -37,6 +37,12 @@ export interface EventMeta {
   recurring?: boolean
   /** Image URL for the event */
   imageUrl?: string
+  /** Show banner image URL */
+  bannerImageUrl?: string
+  /** Price for show-only ticket */
+  priceShowOnly?: number
+  /** Price for show + playground ticket */
+  priceShowAndPlayground?: number
 }
 
 /**

@@ -127,6 +127,48 @@ export async function POST(req: NextRequest) {
           .eq('id', payment.id);
       }
     }
+    
+    // אם התשלום הצליח והוא עבור הצגה - יוצרים registration
+    if (isSuccess && payment.metadata?.event_id) {
+      console.log('🎭 Creating show registration for successful payment...');
+      
+      const { event_id, ticket_type } = payment.metadata;
+      
+      const { data: registration, error: regError } = await supabase
+        .from('registrations')
+        .insert({
+          event_id: event_id,
+          user_id: payment.user_id,
+          status: 'confirmed',
+          is_paid: true,
+          payment_id: payment.id,
+          tickets_count: 1,
+          ticket_type: ticket_type || 'regular',
+          qr_code: `SHOW-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          registered_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (regError) {
+        console.error('❌ Error creating registration:', regError);
+      } else {
+        console.log('✅ Registration created:', registration.id);
+        
+        // עדכון התשלום עם מזהה הרישום
+        await supabase
+          .from('payments')
+          .update({
+            item_id: registration.id,
+            item_type: 'show',
+            metadata: {
+              ...payment.metadata,
+              registration_id: registration.id
+            }
+          })
+          .eq('id', payment.id);
+      }
+    }
 
     console.log('✅ PayPlus callback processed successfully');
     

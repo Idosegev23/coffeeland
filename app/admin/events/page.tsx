@@ -22,7 +22,7 @@ interface Event {
   id: string;
   title: string;
   description: string;
-  type: 'class' | 'workshop' | 'event';
+  type: 'class' | 'workshop' | 'event' | 'show';
   start_at: string;
   end_at: string;
   is_recurring: boolean;
@@ -33,6 +33,11 @@ interface Event {
   price?: number;
   status: string;
   synced_to_google: boolean;
+  is_featured?: boolean;
+  cancellation_deadline_hours?: number;
+  banner_image_url?: string;
+  price_show_only?: number;
+  price_show_and_playground?: number;
   registrations?: Array<{
     id: string;
     user: {
@@ -87,14 +92,21 @@ export default function AdminEventsPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'class' as 'class' | 'workshop' | 'event',
+    type: 'class' as 'class' | 'workshop' | 'event' | 'show',
     start_at: '',
     end_at: '',
     is_recurring: false,
     recurrence_pattern: '',
     capacity: '',
     price: '',
+    is_featured: false,
+    cancellation_deadline_hours: 24,
+    banner_image_url: '',
+    price_show_only: '',
+    price_show_and_playground: '',
   });
+  
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [createMode, setCreateMode] = useState<CreateMode>('single');
 
@@ -238,6 +250,11 @@ export default function AdminEventsPage() {
           ...(occurrences ? { occurrences, is_recurring: true, recurrence_pattern: createMode } : {}),
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
+          is_featured: formData.is_featured || false,
+          cancellation_deadline_hours: formData.cancellation_deadline_hours || 24,
+          banner_image_url: formData.banner_image_url || null,
+          price_show_only: formData.price_show_only ? parseFloat(formData.price_show_only) : null,
+          price_show_and_playground: formData.price_show_and_playground ? parseFloat(formData.price_show_and_playground) : null,
           requires_registration: true
         })
       });
@@ -276,6 +293,11 @@ export default function AdminEventsPage() {
           recurrence_pattern: formData.recurrence_pattern || null,
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
+          is_featured: formData.is_featured || false,
+          cancellation_deadline_hours: formData.cancellation_deadline_hours || 24,
+          banner_image_url: formData.banner_image_url || null,
+          price_show_only: formData.price_show_only ? parseFloat(formData.price_show_only) : null,
+          price_show_and_playground: formData.price_show_and_playground ? parseFloat(formData.price_show_and_playground) : null,
           requires_registration: true
         })
       });
@@ -325,6 +347,11 @@ export default function AdminEventsPage() {
       recurrence_pattern: '',
       capacity: '',
       price: '',
+      is_featured: false,
+      cancellation_deadline_hours: 24,
+      banner_image_url: '',
+      price_show_only: '',
+      price_show_and_playground: '',
     });
     setCreateMode('single');
     setRepeatDate('');
@@ -363,6 +390,11 @@ export default function AdminEventsPage() {
       recurrence_pattern: event.recurrence_pattern || '',
       capacity: event.capacity?.toString() || '',
       price: event.price?.toString() || '',
+      is_featured: event.is_featured || false,
+      cancellation_deadline_hours: event.cancellation_deadline_hours || 24,
+      banner_image_url: event.banner_image_url || '',
+      price_show_only: event.price_show_only?.toString() || '',
+      price_show_and_playground: event.price_show_and_playground?.toString() || '',
     });
     setCreateMode('single');
     setShowCreateDialog(true);
@@ -433,12 +465,20 @@ export default function AdminEventsPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-xl font-bold text-primary">{event.title}</h3>
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        event.type === 'show' ? 'bg-pink-100 text-pink-700' :
                         event.type === 'class' ? 'bg-blue-100 text-blue-700' :
                         event.type === 'workshop' ? 'bg-purple-100 text-purple-700' :
                         'bg-green-100 text-green-700'
                       }`}>
-                        {event.type === 'class' ? 'חוג' : event.type === 'workshop' ? 'סדנה' : 'אירוע'}
+                        {event.type === 'show' ? 'הצגה' : 
+                         event.type === 'class' ? 'חוג' : 
+                         event.type === 'workshop' ? 'סדנה' : 'אירוע'}
                       </span>
+                      {event.is_featured && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
+                          ⭐ מומלץ
+                        </span>
+                      )}
                       {event.is_recurring && (
                         <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">
                           חוזר
@@ -589,13 +629,14 @@ export default function AdminEventsPage() {
                     value={formData.type}
                     onChange={e => setFormData({
                       ...formData,
-                      type: e.target.value as 'class' | 'workshop' | 'event'
+                      type: e.target.value as 'class' | 'workshop' | 'event' | 'show'
                     })}
                     className="w-full px-3 py-2 border rounded-md"
                   >
                     <option value="class">חוג</option>
                     <option value="workshop">סדנה</option>
                     <option value="event">אירוע</option>
+                    <option value="show">הצגה</option>
                   </select>
                 </div>
 
@@ -972,18 +1013,148 @@ export default function AdminEventsPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">מחיר (₪)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={e => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="מחיר ההרשמה"
-                  />
-                </div>
+                {formData.type !== 'show' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">מחיר (₪)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={e => setFormData({ ...formData, price: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-md"
+                      placeholder="מחיר ההרשמה"
+                    />
+                  </div>
+                )}
               </div>
+
+              {/* שדות מיוחדים להצגות */}
+              {formData.type === 'show' && (
+                <>
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="font-medium mb-3 text-pink-700">הגדרות הצגה</h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">תמונת באנר להצגה</label>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            
+                            setUploadingImage(true);
+                            
+                            try {
+                              // Create unique filename
+                              const fileExt = file.name.split('.').pop();
+                              const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                              
+                              // Upload to Supabase Storage
+                              const { data, error } = await supabase.storage
+                                .from('show-images')
+                                .upload(fileName, file);
+                              
+                              if (error) {
+                                console.error('Error uploading image:', error);
+                                alert('שגיאה בהעלאת התמונה');
+                                return;
+                              }
+                              
+                              // Get public URL
+                              const { data: { publicUrl } } = supabase.storage
+                                .from('show-images')
+                                .getPublicUrl(fileName);
+                              
+                              setFormData({...formData, banner_image_url: publicUrl});
+                            } catch (err) {
+                              console.error('Upload error:', err);
+                              alert('שגיאה בהעלאת התמונה');
+                            } finally {
+                              setUploadingImage(false);
+                            }
+                          }}
+                          className="w-full px-3 py-2 border rounded-md"
+                          disabled={uploadingImage}
+                        />
+                        {uploadingImage && <p className="text-sm text-gray-600 mt-1">מעלה תמונה...</p>}
+                        {formData.banner_image_url && (
+                          <div className="mt-2">
+                            <img 
+                              src={formData.banner_image_url} 
+                              alt="תצוגה מקדימה" 
+                              className="w-full h-48 object-cover rounded-md"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">מחיר כרטיס להצגה בלבד (₪)</label>
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            value={formData.price_show_only}
+                            onChange={(e) => setFormData({
+                              ...formData, 
+                              price_show_only: e.target.value
+                            })}
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="50"
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-1">מחיר כרטיס להצגה + כניסה לג׳ימבורי (₪)</label>
+                          <input 
+                            type="number" 
+                            step="0.01"
+                            value={formData.price_show_and_playground}
+                            onChange={(e) => setFormData({
+                              ...formData, 
+                              price_show_and_playground: e.target.value
+                            })}
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="80"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={formData.is_featured}
+                              onChange={(e) => setFormData({...formData, is_featured: e.target.checked})}
+                              className="ml-2"
+                            />
+                            <span className="text-sm font-medium">מסומן כבולט בדף הבית ⭐</span>
+                          </label>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-1">מועד אחרון לביטול (שעות לפני)</label>
+                          <input 
+                            type="number" 
+                            value={formData.cancellation_deadline_hours}
+                            onChange={(e) => setFormData({
+                              ...formData, 
+                              cancellation_deadline_hours: parseInt(e.target.value) || 24
+                            })}
+                            className="w-full px-3 py-2 border rounded-md"
+                            placeholder="24"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <DialogFooter>

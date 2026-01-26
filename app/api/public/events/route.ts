@@ -32,10 +32,11 @@ export async function GET(request: Request) {
     const from = searchParams.get('from')
     const to = searchParams.get('to')
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 100)
+    const featured = searchParams.get('is_featured')
 
     let query = service
       .from('events')
-      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status')
+      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground')
       .eq('status', status)
       .order('start_at', { ascending: true })
       .limit(limit)
@@ -43,6 +44,7 @@ export async function GET(request: Request) {
     if (type) query = query.eq('type', type)
     if (from) query = query.gte('start_at', from)
     if (to) query = query.lte('start_at', to)
+    if (featured === 'true') query = query.eq('is_featured', true)
 
     const { data: events, error } = await query
     if (error) throw error

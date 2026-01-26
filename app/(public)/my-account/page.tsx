@@ -82,6 +82,8 @@ export default function MyAccountPage() {
           id,
           status,
           registered_at,
+          qr_code,
+          ticket_type,
           event:events(
             id,
             title,
@@ -89,7 +91,9 @@ export default function MyAccountPage() {
             type,
             start_at,
             end_at,
-            price
+            price,
+            banner_image_url,
+            cancellation_deadline_hours
           )
         `)
         .eq('user_id', currentUser.id)
@@ -325,6 +329,145 @@ export default function MyAccountPage() {
                       <div className="bg-white p-3 rounded-lg border inline-block">
                         <QRCodeSVG value={r.qr_code} size={120} level="H" includeMargin={true} />
                         <div className="text-xs text-gray-500 mt-1 font-mono text-center">{r.qr_code}</div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
+        <Separator className="my-8" />
+
+        {/* הצגת כרטיסים להצגות */}
+        <h2 className="text-2xl font-semibold text-primary mb-4">הכרטיסים שלי להצגות</h2>
+        {registrations.filter((r: any) => {
+          const ev = Array.isArray(r.event) ? r.event[0] : r.event
+          return ev && ev.type === 'show'
+        }).length === 0 ? (
+          <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-8 text-center">
+            <p className="text-text-light/70 mb-4">אין לך כרטיסים להצגות</p>
+            <Button asChild>
+              <Link href="/shows">צפה בהצגות</Link>
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid gap-4 mb-8">
+            {registrations.filter((r: any) => {
+              const ev = Array.isArray(r.event) ? r.event[0] : r.event
+              return ev && ev.type === 'show'
+            }).map((ticket: any) => {
+              const event = Array.isArray(ticket.event) ? ticket.event[0] : ticket.event
+              if (!event) return null
+              
+              const showTime = new Date(event.start_at)
+              const now = new Date()
+              const hoursUntilShow = (showTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+              const deadline = event.cancellation_deadline_hours || 24
+              const canCancel = ticket.status === 'confirmed' && hoursUntilShow > deadline
+              
+              return (
+                <Card key={ticket.id} className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6">
+                  <div className="flex gap-4">
+                    {event.banner_image_url && (
+                      <div className="relative w-32 h-24 flex-shrink-0 rounded overflow-hidden">
+                        <Image 
+                          src={event.banner_image_url}
+                          alt={event.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-xl font-bold text-primary">{event.title}</h3>
+                        <span className="px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-xs font-medium">
+                          הצגה
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          ticket.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                          ticket.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {ticket.status === 'confirmed' ? 'מאושר' :
+                           ticket.status === 'cancelled' ? 'בוטל' : 'ממתין'}
+                        </span>
+                      </div>
+                      
+                      <div className="text-sm space-y-1 mb-3">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            {showTime.toLocaleDateString('he-IL', { 
+                              weekday: 'long',
+                              day: 'numeric', 
+                              month: 'long'
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>
+                            {showTime.toLocaleTimeString('he-IL', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {ticket.ticket_type === 'show_and_playground' 
+                            ? '✨ כרטיס להצגה + כניסה לג׳ימבורי' 
+                            : 'כרטיס להצגה בלבד'}
+                        </p>
+                      </div>
+                      
+                      {canCancel && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={async () => {
+                            if (!confirm('האם אתה בטוח שברצונך לבטל את הכרטיס? יינתן החזר כספי מלא.')) return
+                            
+                            try {
+                              const res = await fetch('/api/registrations/cancel', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ registration_id: ticket.id })
+                              })
+                              
+                              const data = await res.json()
+                              
+                              if (!res.ok) {
+                                alert('❌ ' + (data.error || 'שגיאה בביטול'))
+                                return
+                              }
+                              
+                              alert('✅ ' + data.message)
+                              loadData() // Reload data
+                            } catch (err) {
+                              console.error('Error cancelling ticket:', err)
+                              alert('❌ שגיאה בביטול הכרטיס')
+                            }
+                          }}
+                        >
+                          בטל כרטיס
+                        </Button>
+                      )}
+                      
+                      {!canCancel && ticket.status === 'confirmed' && hoursUntilShow <= deadline && (
+                        <p className="text-xs text-gray-500">
+                          לא ניתן לבטל - פחות מ-{deadline} שעות להצגה
+                        </p>
+                      )}
+                    </div>
+                    
+                    {ticket.qr_code && ticket.status === 'confirmed' && (
+                      <div className="bg-white p-3 rounded-lg border text-center flex-shrink-0">
+                        <QRCodeSVG value={ticket.qr_code} size={100} level="H" />
+                        <p className="text-xs text-gray-500 mt-1 font-mono">{ticket.qr_code.substring(0, 12)}...</p>
                       </div>
                     )}
                   </div>

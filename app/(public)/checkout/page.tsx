@@ -28,6 +28,7 @@ interface CartItem {
   price: number;
   entries: number;
   description?: string;
+  metadata?: { ticket_type?: string };
 }
 
 function CheckoutContent() {
@@ -109,6 +110,32 @@ function CheckoutContent() {
           entries: 1,
           description: event.description
         });
+      } else if (itemType === 'show') {
+        const ticketType = searchParams.get('ticket_type'); // 'show_only' or 'show_and_playground'
+        const price = searchParams.get('price');
+        
+        const { data: event, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', itemId)
+          .single();
+
+        if (error || !event) {
+          setError('לא נמצא האירוע המבוקש');
+          return;
+        }
+
+        setCartItem({
+          id: event.id,
+          name: event.title,
+          type: 'show',
+          price: parseFloat(price || '0'),
+          entries: 1,
+          description: ticketType === 'show_only' 
+            ? 'כרטיס להצגה בלבד'
+            : 'כרטיס להצגה + כניסה לג׳ימבורי',
+          metadata: { ticket_type: ticketType }
+        } as any);
       }
     } catch (err) {
       console.error('Error loading checkout:', err);
@@ -137,6 +164,8 @@ function CheckoutContent() {
           card_type_id: itemType === 'pass' ? cartItem.id : null,
           card_type_name: cartItem.name,
           entries_count: cartItem.entries,
+          event_id: itemType === 'show' ? cartItem.id : null,
+          ticket_type: (cartItem as any).metadata?.ticket_type,
           description: `רכישת ${cartItem.name}`,
           items: [{
             name: cartItem.name,
