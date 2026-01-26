@@ -13,7 +13,9 @@ import {
   Loader2,
   Shield,
   Calendar,
-  Ticket
+  Ticket,
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -36,16 +38,12 @@ function CheckoutContent() {
   const [cartItem, setCartItem] = useState<CartItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [step, setStep] = useState<'cart' | 'payment' | 'processing'>('cart');
+  const [step, setStep] = useState<'cart' | 'redirecting'>('cart');
   const [error, setError] = useState('');
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
 
-  // Form fields for demo payment
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [idNumber, setIdNumber] = useState('');
+  // Check for error from PayPlus redirect
+  const paymentError = searchParams.get('error');
 
   useEffect(() => {
     loadCheckoutData();
@@ -120,126 +118,51 @@ function CheckoutContent() {
     }
   };
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    return parts.length ? parts.join(' ') : value;
-  };
-
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
-
-  const validateForm = () => {
-    if (cardNumber.replace(/\s/g, '').length < 16) {
-      setError('מספר כרטיס לא תקין');
-      return false;
-    }
-    if (cardName.trim().length < 2) {
-      setError('נא להזין שם בעל הכרטיס');
-      return false;
-    }
-    if (expiryDate.length < 5) {
-      setError('תאריך תפוגה לא תקין');
-      return false;
-    }
-    if (cvv.length < 3) {
-      setError('CVV לא תקין');
-      return false;
-    }
-    if (idNumber.length < 9) {
-      setError('תעודת זהות לא תקינה');
-      return false;
-    }
-    return true;
-  };
-
   const handlePayment = async () => {
     setError('');
-    
-    if (!validateForm()) return;
-    
-    setStep('processing');
+    setStep('redirecting');
     setProcessing(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Create the pass in database
       if (!cartItem || !user) throw new Error('Missing data');
 
       const itemType = searchParams.get('type') || 'pass';
 
-      if (itemType === 'pass') {
-        // Calculate expiry
-        const expiryMonths = cartItem.entries >= 10 ? 6 : cartItem.entries >= 5 ? 3 : 2;
-        const expiryDate = new Date();
-        expiryDate.setMonth(expiryDate.getMonth() + expiryMonths);
-
-        // Create pass
-        const { error: passError } = await supabase
-          .from('passes')
-          .insert({
-            user_id: user.id,
-            card_type_id: cartItem.id,
-            type: cartItem.type,
-            total_entries: cartItem.entries,
-            remaining_entries: cartItem.entries,
-            expiry_date: expiryDate.toISOString(),
-            price_paid: cartItem.price,
-            status: 'active',
-          });
-
-        if (passError) throw passError;
-
-        // Create payment record
-        await supabase.from('payments').insert({
-          user_id: user.id,
+      // Call our PayPlus API to create payment link
+      const response = await fetch('/api/payments/payplus/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           amount: cartItem.price,
-          currency: 'ILS',
-          payment_type: 'online',
-          payment_method: 'credit_card',
-          item_type: 'pass',
-          item_id: cartItem.id,
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          metadata: {
-            card_last_four: cardNumber.slice(-4),
-            created_via: 'online_checkout'
-          }
-        });
-      } else if (itemType === 'event') {
-        // Create event registration
-        const { error: regError } = await supabase
-          .from('registrations')
-          .insert({
-            event_id: cartItem.id,
-            user_id: user.id,
-            status: 'confirmed',
-            is_paid: true,
-          });
+          card_type_id: itemType === 'pass' ? cartItem.id : null,
+          card_type_name: cartItem.name,
+          entries_count: cartItem.entries,
+          description: `רכישת ${cartItem.name}`,
+          items: [{
+            name: cartItem.name,
+            quantity: 1,
+            price: cartItem.price
+          }]
+        })
+      });
 
-        if (regError) throw regError;
+      const data = await response.json();
+
+      if (!response.ok || !data.payment_url) {
+        console.error('PayPlus error:', data);
+        throw new Error(data.error || data.details || 'שגיאה ביצירת קישור תשלום');
       }
 
-      // Redirect to success page
-      const successUrl = `/payment-success?type=${encodeURIComponent(cartItem.name)}&amount=${cartItem.price}&name=${encodeURIComponent(user.user_metadata?.full_name || '')}`;
-      router.push(successUrl);
+      console.log('✅ Redirecting to PayPlus:', data.payment_url);
+      
+      // Redirect to PayPlus payment page
+      window.location.href = data.payment_url;
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Payment error:', err);
-      setError(err.message || 'שגיאה בעיבוד התשלום');
-      setStep('payment');
+      const errorMessage = err instanceof Error ? err.message : 'שגיאה בעיבוד התשלום';
+      setError(errorMessage);
+      setStep('cart');
     } finally {
       setProcessing(false);
     }
@@ -288,33 +211,46 @@ function CheckoutContent() {
           </h1>
           <div className="flex items-center justify-center gap-2 text-text-light/60">
             <Lock className="w-4 h-4" />
-            <span className="text-sm">תשלום מאובטח עם ישראכרט</span>
+            <span className="text-sm">תשלום מאובטח עם PayPlus</span>
           </div>
         </div>
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-4 mb-8">
-          <div className={`flex items-center gap-2 ${step === 'cart' || step === 'payment' || step === 'processing' ? 'text-accent' : 'text-text-light/40'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'cart' || step === 'payment' || step === 'processing' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
+          <div className={`flex items-center gap-2 ${step === 'cart' || step === 'redirecting' ? 'text-accent' : 'text-text-light/40'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'cart' || step === 'redirecting' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
               <ShoppingCart className="w-4 h-4" />
             </div>
             <span className="hidden sm:inline font-medium">סל קניות</span>
           </div>
           <div className="w-8 h-0.5 bg-gray-300" />
-          <div className={`flex items-center gap-2 ${step === 'payment' || step === 'processing' ? 'text-accent' : 'text-text-light/40'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'payment' || step === 'processing' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
+          <div className={`flex items-center gap-2 ${step === 'redirecting' ? 'text-accent' : 'text-text-light/40'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'redirecting' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
               <CreditCard className="w-4 h-4" />
             </div>
             <span className="hidden sm:inline font-medium">תשלום</span>
           </div>
           <div className="w-8 h-0.5 bg-gray-300" />
-          <div className={`flex items-center gap-2 ${step === 'processing' ? 'text-accent' : 'text-text-light/40'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'processing' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
+          <div className="flex items-center gap-2 text-text-light/40">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-200">
               <CheckCircle2 className="w-4 h-4" />
             </div>
             <span className="hidden sm:inline font-medium">אישור</span>
           </div>
         </div>
+
+        {/* Payment Error Alert */}
+        {paymentError && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-red-800">התשלום לא הושלם</p>
+                <p className="text-sm text-red-600">אנא נסה שנית או פנה לתמיכה</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="max-w-4xl mx-auto grid lg:grid-cols-5 gap-8">
           {/* Cart Summary - Right Side */}
@@ -372,33 +308,40 @@ function CheckoutContent() {
                 <span className="text-sm text-green-700">תשלום מאובטח SSL</span>
               </div>
 
-              <div className="mt-4 flex justify-center">
-                <Image 
-                  src="/images/isracard-logo.png" 
-                  alt="Isracard" 
-                  width={80} 
-                  height={30}
-                  className="opacity-70"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+              {/* PayPlus Badge */}
+              <div className="mt-4 text-center">
+                <p className="text-xs text-text-light/50 mb-2">מופעל על ידי</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="font-bold text-primary">PayPlus</span>
+                  <Lock className="w-4 h-4 text-green-600" />
+                </div>
               </div>
             </Card>
           </div>
 
-          {/* Payment Form - Left Side */}
+          {/* Main Content - Left Side */}
           <div className="lg:col-span-3 order-1 lg:order-2">
-            {step === 'processing' ? (
+            {step === 'redirecting' ? (
               <Card className="p-8 text-center bg-white/80 backdrop-blur-sm">
                 <Loader2 className="w-16 h-16 animate-spin text-accent mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-primary mb-2">מעבד תשלום...</h2>
-                <p className="text-text-light/70">אנא המתן, אל תסגור את הדף</p>
+                <h2 className="text-2xl font-bold text-primary mb-2">מעביר לדף תשלום מאובטח...</h2>
+                <p className="text-text-light/70 mb-4">אנא המתן, אתה מועבר לדף התשלום של PayPlus</p>
+                <div className="flex items-center justify-center gap-2 text-sm text-text-light/50">
+                  <ExternalLink className="w-4 h-4" />
+                  <span>תשלום מאובטח מחוץ לאתר</span>
+                </div>
               </Card>
-            ) : step === 'cart' ? (
+            ) : (
               <Card className="p-6 bg-white/80 backdrop-blur-sm">
                 <h2 className="text-xl font-bold text-primary mb-6">אישור הזמנה</h2>
                 
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
                 {cartItem && (
                   <div className="bg-background-light rounded-xl p-4 mb-6">
                     <div className="flex items-center gap-4">
@@ -416,130 +359,48 @@ function CheckoutContent() {
                   </div>
                 )}
 
-                <div className="flex gap-4">
-                  <Button variant="outline" asChild className="flex-1">
-                    <Link href="/passes">
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                      חזרה
-                    </Link>
-                  </Button>
-                  <Button onClick={() => setStep('payment')} className="flex-1">
-                    המשך לתשלום
-                    <CreditCard className="w-4 h-4 mr-2" />
-                  </Button>
+                {/* Payment Info */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <CreditCard className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-blue-800 mb-1">תשלום מאובטח</h4>
+                      <p className="text-sm text-blue-700">
+                        בלחיצה על &quot;המשך לתשלום&quot; תועבר לדף תשלום מאובטח של PayPlus. 
+                        פרטי האשראי שלך לא נשמרים באתר שלנו.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </Card>
-            ) : (
-              <Card className="p-6 bg-white/80 backdrop-blur-sm">
-                <h2 className="text-xl font-bold text-primary mb-6 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  פרטי תשלום
-                </h2>
 
-                {error && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                    {error}
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {/* Card Number */}
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-1">
-                      מספר כרטיס אשראי
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                        maxLength={19}
-                        placeholder="1234 5678 9012 3456"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-left direction-ltr"
-                        dir="ltr"
-                      />
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    </div>
-                  </div>
-
-                  {/* Card Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-1">
-                      שם בעל הכרטיס
-                    </label>
-                    <input
-                      type="text"
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value)}
-                      placeholder="ישראל ישראלי"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Expiry & CVV */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-primary mb-1">
-                        תוקף
-                      </label>
-                      <input
-                        type="text"
-                        value={expiryDate}
-                        onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
-                        maxLength={5}
-                        placeholder="MM/YY"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-center"
-                        dir="ltr"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-primary mb-1">
-                        CVV
-                      </label>
-                      <input
-                        type="password"
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        maxLength={4}
-                        placeholder="***"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-center"
-                        dir="ltr"
-                      />
-                    </div>
-                  </div>
-
-                  {/* ID Number */}
-                  <div>
-                    <label className="block text-sm font-medium text-primary mb-1">
-                      תעודת זהות בעל הכרטיס
-                    </label>
-                    <input
-                      type="text"
-                      value={idNumber}
-                      onChange={(e) => setIdNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                      maxLength={9}
-                      placeholder="123456789"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-left"
-                      dir="ltr"
-                    />
+                {/* Accepted Cards */}
+                <div className="mb-6">
+                  <p className="text-sm text-text-light/60 mb-2 text-center">אמצעי תשלום נתמכים:</p>
+                  <div className="flex items-center justify-center gap-4 flex-wrap">
+                    <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium">Visa</div>
+                    <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium">Mastercard</div>
+                    <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium">American Express</div>
+                    <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium">Diners</div>
+                    <div className="px-3 py-1 bg-gray-100 rounded text-xs font-medium">Isracard</div>
                   </div>
                 </div>
 
                 {/* Terms */}
-                <div className="mt-6 p-3 bg-gray-50 rounded-lg text-xs text-text-light/70">
+                <div className="p-3 bg-gray-50 rounded-lg text-xs text-text-light/70 mb-6">
                   <p>
-                    בלחיצה על &quot;שלם עכשיו&quot; אני מאשר/ת שקראתי והסכמתי ל
+                    בלחיצה על &quot;המשך לתשלום&quot; אני מאשר/ת שקראתי והסכמתי ל
                     <Link href="/legal" className="text-accent hover:underline mx-1">תנאי השימוש</Link>
                     ו
                     <Link href="/legal#privacy" className="text-accent hover:underline mx-1">מדיניות הפרטיות</Link>
                   </p>
                 </div>
 
-                {/* Submit */}
-                <div className="mt-6 flex gap-4">
-                  <Button variant="outline" onClick={() => setStep('cart')} className="flex-1">
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                    חזרה
+                <div className="flex gap-4">
+                  <Button variant="outline" asChild className="flex-1">
+                    <Link href="/passes">
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                      חזרה
+                    </Link>
                   </Button>
                   <Button 
                     onClick={handlePayment} 
@@ -554,17 +415,10 @@ function CheckoutContent() {
                     ) : (
                       <>
                         <Lock className="w-4 h-4 mr-2" />
-                        שלם ₪{cartItem?.price}
+                        המשך לתשלום מאובטח
                       </>
                     )}
                   </Button>
-                </div>
-
-                {/* Demo Notice */}
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-                  <p className="text-sm text-yellow-800">
-                    🧪 <strong>מצב דמו</strong> - התשלום לא אמיתי. הזינו פרטים כלשהם להמשך.
-                  </p>
                 </div>
               </Card>
             )}
@@ -589,4 +443,3 @@ export default function CheckoutPage() {
     </Suspense>
   );
 }
-

@@ -3,30 +3,100 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Phone, Mail, Home, User, CreditCard, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Phone, Mail, Home, User, Loader2, ArrowLeft, Ticket, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
+interface PaymentDetails {
+  type?: string;
+  amount?: string;
+  name?: string;
+  status?: string;
+  passId?: string;
+}
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [transactionDetails, setTransactionDetails] = useState<{
-    type?: string;
-    amount?: string;
-    name?: string;
-  }>({});
+  const supabase = createClientComponentClient();
+  
+  const [transactionDetails, setTransactionDetails] = useState<PaymentDetails>({});
   const [countdown, setCountdown] = useState(8);
+  const [loading, setLoading] = useState(true);
+  const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
-    // Get transaction details from URL params if provided
-    const type = searchParams.get('type') || 'רכישה';
-    const amount = searchParams.get('amount') ?? undefined;
-    const name = searchParams.get('name') ?? undefined;
-    
-    setTransactionDetails({ type, amount, name });
+    loadPaymentDetails();
   }, [searchParams]);
+
+  const loadPaymentDetails = async () => {
+    try {
+      const paymentId = searchParams.get('payment_id');
+      const ref = searchParams.get('ref');
+
+      if (paymentId) {
+        // Fetch payment details from database
+        const { data: payment, error } = await supabase
+          .from('payments')
+          .select('*, metadata')
+          .eq('id', paymentId)
+          .single();
+
+        if (payment && !error) {
+          // Check if payment is still pending (PayPlus callback hasn't arrived yet)
+          if (payment.status === 'pending') {
+            setIsPending(true);
+            // Poll for updates
+            const pollInterval = setInterval(async () => {
+              const { data: updatedPayment } = await supabase
+                .from('payments')
+                .select('*, metadata')
+                .eq('id', paymentId)
+                .single();
+              
+              if (updatedPayment && updatedPayment.status !== 'pending') {
+                clearInterval(pollInterval);
+                setIsPending(false);
+                setTransactionDetails({
+                  type: updatedPayment.metadata?.card_type_name || 'רכישה',
+                  amount: updatedPayment.amount?.toString(),
+                  name: updatedPayment.notes || updatedPayment.metadata?.card_type_name,
+                  status: updatedPayment.status,
+                  passId: updatedPayment.metadata?.pass_id
+                });
+              }
+            }, 2000);
+            
+            // Stop polling after 30 seconds
+            setTimeout(() => clearInterval(pollInterval), 30000);
+          } else {
+            setTransactionDetails({
+              type: payment.metadata?.card_type_name || 'רכישה',
+              amount: payment.amount?.toString(),
+              name: payment.notes || payment.metadata?.card_type_name,
+              status: payment.status,
+              passId: payment.metadata?.pass_id
+            });
+          }
+        }
+      } else {
+        // Fallback to URL params
+        const type = searchParams.get('type') || 'רכישה';
+        const amount = searchParams.get('amount') ?? undefined;
+        const name = searchParams.get('name') ?? undefined;
+        setTransactionDetails({ type, amount, name });
+      }
+    } catch (err) {
+      console.error('Error loading payment details:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Auto-redirect to my-account after countdown
   useEffect(() => {
+    if (loading || isPending) return;
+    
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -39,7 +109,49 @@ function PaymentSuccessContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [router]);
+  }, [router, loading, isPending]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-green-500 mx-auto mb-4" />
+          <p className="text-gray-600">טוען פרטי עסקה...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <section className="py-12 sm:py-16 lg:py-20 min-h-screen bg-gradient-to-br from-yellow-50 via-white to-orange-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-lg mx-auto text-center">
+            <div className="mb-8">
+              <div className="w-24 h-24 mx-auto bg-yellow-100 rounded-full flex items-center justify-center">
+                <Loader2 className="w-16 h-16 text-yellow-500 animate-spin" />
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-3xl shadow-xl p-8 mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold text-yellow-600 mb-4">
+                מעבד תשלום...
+              </h1>
+              <p className="text-xl text-gray-700 mb-6">
+                אנא המתן, מאשרים את התשלום
+              </p>
+              <div className="bg-yellow-50 rounded-xl p-4 flex items-center justify-center gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600" />
+                <p className="text-yellow-700 text-sm">
+                  הדף יתעדכן אוטומטית כאשר התשלום יאושר
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-12 sm:py-16 lg:py-20 min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
@@ -86,6 +198,17 @@ function PaymentSuccessContent() {
                       <span className="text-gray-600">סכום</span>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Pass Created Notice */}
+            {transactionDetails.passId && (
+              <div className="bg-accent/10 rounded-xl p-4 mb-6 flex items-center gap-3">
+                <Ticket className="w-8 h-8 text-accent" />
+                <div className="text-right">
+                  <p className="font-medium text-primary">הכרטיסייה נוספה לחשבון!</p>
+                  <p className="text-sm text-text-light/70">תוכל לראות אותה באזור האישי</p>
                 </div>
               </div>
             )}
@@ -164,7 +287,7 @@ export default function PaymentSuccessPage() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <Loader2 className="w-12 h-12 animate-spin text-green-500 mx-auto mb-4" />
           <p className="text-gray-600">טוען...</p>
         </div>
       </div>
@@ -173,4 +296,3 @@ export default function PaymentSuccessPage() {
     </Suspense>
   );
 }
-
