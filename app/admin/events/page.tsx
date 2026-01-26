@@ -1171,16 +1171,27 @@ export default function AdminEventsPage() {
                               
                               if (error) {
                                 console.error('Error uploading image:', error);
-                                alert('שגיאה בהעלאת התמונה');
+                                alert('שגיאה בהעלאת התמונה: ' + error.message);
                                 return;
                               }
+                              
+                              console.log('Upload success:', data);
                               
                               // Get public URL
                               const { data: { publicUrl } } = supabase.storage
                                 .from('show-images')
                                 .getPublicUrl(fileName);
                               
+                              console.log('Generated URL:', publicUrl);
+                              
+                              // בדיקה שה-URL תקין
+                              if (!publicUrl || publicUrl.includes('undefined')) {
+                                alert('שגיאה ביצירת URL לתמונה');
+                                return;
+                              }
+                              
                               setFormData({...formData, banner_image_url: publicUrl});
+                              alert('✅ התמונה הועלתה בהצלחה!');
                             } catch (err) {
                               console.error('Upload error:', err);
                               alert('שגיאה בהעלאת התמונה');
