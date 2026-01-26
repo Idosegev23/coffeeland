@@ -31,6 +31,46 @@ function PaymentSuccessContent() {
 
   const loadPaymentDetails = async () => {
     try {
+      // Check if this is a PayPlus redirect (has status_code in URL)
+      const payplusStatusCode = searchParams.get('status_code');
+      const payplusAmount = searchParams.get('amount');
+      const payplusMoreInfo1 = searchParams.get('more_info_1'); // This is our payment_id
+      
+      // If PayPlus redirected us here with success status
+      if (payplusStatusCode === '000' && payplusMoreInfo1) {
+        console.log('✅ PayPlus success redirect detected');
+        
+        // Show success immediately based on PayPlus URL params
+        setTransactionDetails({
+          type: 'כרטיסייה',
+          amount: payplusAmount || undefined,
+          name: 'כרטיסייה',
+          status: 'completed'
+        });
+        
+        // Try to fetch from DB for more details (but don't wait)
+        supabase
+          .from('payments')
+          .select('*, metadata')
+          .eq('id', payplusMoreInfo1)
+          .single()
+          .then(({ data: payment }) => {
+            if (payment) {
+              setTransactionDetails({
+                type: payment.metadata?.card_type_name || 'כרטיסייה',
+                amount: payment.amount?.toString() || payplusAmount || undefined,
+                name: payment.notes || payment.metadata?.card_type_name || 'כרטיסייה',
+                status: payment.status || 'completed',
+                passId: payment.metadata?.pass_id
+              });
+            }
+          });
+        
+        setLoading(false);
+        return;
+      }
+
+      // Original flow for non-PayPlus redirects
       const paymentId = searchParams.get('payment_id');
       const ref = searchParams.get('ref');
 
