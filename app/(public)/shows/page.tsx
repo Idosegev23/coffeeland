@@ -98,7 +98,7 @@ export default function ShowsPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-primary mb-3">הצגות לילדים</h1>
           <p className="text-lg text-text-light/80 max-w-2xl mx-auto">
-            הצטרפו אלינו להצגות מרתקות ומהנות! מתאים לגילאי 3-8
+            הצטרפו אלינו להצגות מרתקות ומהנות! מתאים מגיל שנה ו-8 חודשים עד 3 שנים
           </p>
         </div>
 
