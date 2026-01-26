@@ -13,6 +13,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 const navigation = [
   { name: 'ראשי', href: '/' },
   { name: 'משחקייה', href: '/playground' },
+  { name: 'הצגות', href: '/shows' },
   { name: 'אירועים', href: '/events' },
   { name: 'סדנאות', href: '/workshops' },
   { name: 'תפריט', href: '/menu' },

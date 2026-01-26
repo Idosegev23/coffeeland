@@ -6,6 +6,7 @@ import { generateWhatsAppLink } from '@/lib/utils'
 const footerLinks = {
   main: [
     { name: 'משחקייה', href: '/playground' },
+    { name: 'הצגות', href: '/shows' },
     { name: 'אירועים וימי הולדת', href: '/events' },
     { name: 'סדנאות וחוגים', href: '/workshops' },
     { name: 'תפריט', href: '/menu' },

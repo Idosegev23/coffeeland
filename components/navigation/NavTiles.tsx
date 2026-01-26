@@ -23,25 +23,32 @@ const tiles: NavTile[] = [
     variant: 'light',
   },
   {
+    id: 'shows',
+    name: 'הצגות',
+    href: '/shows',
+    lottieFile: '/lottie/gallery.json',
+    variant: 'dark',
+  },
+  {
     id: 'events',
     name: 'אירועים וימי הולדת',
     href: '/events',
     lottieFile: '/lottie/birthday.json',
-    variant: 'dark',
+    variant: 'light',
   },
   {
     id: 'menu',
     name: 'תפריט',
     href: '/menu',
     lottieFile: '/lottie/coffee.json',
-    variant: 'light',
+    variant: 'dark',
   },
   {
     id: 'workshops',
     name: 'סדנאות',
     href: '/workshops',
     lottieFile: '/lottie/workshops.json',
-    variant: 'dark',
+    variant: 'light',
   },
 ]
 
@@ -132,15 +139,13 @@ export function NavTiles() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-100px' }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-6xl mx-auto place-items-center justify-center"
+          className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 max-w-7xl mx-auto place-items-center justify-center"
         >
           {tiles.map((tile, index) => {
             const isLight = tile.variant === 'light'
             
-            // החלפת סדר במובייל: תפריט (index 2) וסדנאות (index 3)
+            // ללא החלפת סדר במובייל - פשוט לפי הסדר
             let mobileOrder = ''
-            if (index === 2) mobileOrder = 'order-4 lg:order-none' // תפריט ירד למטה
-            if (index === 3) mobileOrder = 'order-3 lg:order-none' // סדנאות יעלה למעלה
 
             return (
               <motion.div 
