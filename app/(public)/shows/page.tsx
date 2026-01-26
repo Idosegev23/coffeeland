@@ -50,7 +50,7 @@ export default function ShowsPage() {
     try {
       const res = await fetch('/api/public/events?type=show&status=active');
       const data = await res.json();
-      setShows(data || []);
+      setShows(data.events || []);
     } catch (error) {
       console.error('Error loading shows:', error);
     } finally {

@@ -41,7 +41,7 @@ export default function FeaturedShows() {
         `/api/public/events?type=show&is_featured=true&status=active&from=${encodeURIComponent(now)}&limit=3`
       );
       const data = await res.json();
-      setShows(data || []);
+      setShows(data.events || []);
     } catch (error) {
       console.error('Error loading featured shows:', error);
     } finally {
