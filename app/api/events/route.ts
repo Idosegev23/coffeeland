@@ -42,11 +42,12 @@ export async function GET(request: Request) {
         *,
         instructor:instructors(id, name),
         room:rooms(id, name, capacity),
-        registrations(
+        registrations!left(
           id,
           status,
+          ticket_type,
           registered_at,
-          user:users(full_name, phone)
+          user:users(full_name, phone, email)
         )
       `)
       .eq('status', status)
@@ -125,7 +126,13 @@ export async function POST(request: Request) {
       max_age: body.max_age,
       price: body.price,
       requires_registration: body.requires_registration ?? true,
-      status: 'active'
+      status: 'active',
+      // שדות הצגות:
+      is_featured: body.is_featured ?? false,
+      cancellation_deadline_hours: body.cancellation_deadline_hours ?? 24,
+      banner_image_url: body.banner_image_url || null,
+      price_show_only: body.price_show_only || null,
+      price_show_and_playground: body.price_show_and_playground || null
     };
 
     const instructorName = body.instructor_name || null;

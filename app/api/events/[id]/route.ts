@@ -96,7 +96,10 @@ export async function PATCH(
       'title', 'description', 'type', 'start_at', 'end_at',
       'is_recurring', 'recurrence_pattern', 'recurrence_days', 'recurrence_end_date',
       'instructor_id', 'room_id', 'capacity', 'min_age', 'max_age',
-      'price', 'requires_registration', 'status'
+      'price', 'requires_registration', 'status',
+      // שדות הצגות:
+      'is_featured', 'cancellation_deadline_hours', 
+      'banner_image_url', 'price_show_only', 'price_show_and_playground'
     ];
 
     allowedFields.forEach(field => {

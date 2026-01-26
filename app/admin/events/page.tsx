@@ -43,8 +43,10 @@ interface Event {
     user: {
       full_name: string;
       phone: string;
+      email?: string;
     };
     status: string;
+    ticket_type?: string;
     registered_at: string;
   }>;
 }
@@ -400,6 +402,65 @@ export default function AdminEventsPage() {
     setShowCreateDialog(true);
   }, []);
 
+  // ייצוא רשימת משתתפים ל-CSV
+  const exportToCSV = useCallback((event: Event) => {
+    if (!event.registrations || event.registrations.length === 0) {
+      alert('אין נרשמים לייצוא');
+      return;
+    }
+
+    const headers = ['מספר', 'שם', 'טלפון', 'אימייל', 'סוג כרטיס', 'סטטוס', 'תאריך רישום'];
+    const rows = event.registrations.map((r, idx) => [
+      (idx + 1).toString(),
+      r.user?.full_name || 'לא ידוע',
+      r.user?.phone || '-',
+      r.user?.email || '-',
+      r.ticket_type === 'show_only' ? 'הצגה בלבד' :
+      r.ticket_type === 'show_and_playground' ? 'הצגה + משחקייה' :
+      r.ticket_type || 'רגיל',
+      r.status === 'confirmed' ? 'מאושר' :
+      r.status === 'pending' ? 'ממתין' :
+      r.status === 'cancelled' ? 'בוטל' : r.status,
+      new Date(r.registered_at).toLocaleDateString('he-IL')
+    ]);
+
+    const csv = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+
+    const bom = '\ufeff'; // UTF-8 BOM for Excel
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${event.title}_משתתפים.csv`;
+    link.click();
+  }, []);
+
+  // חישוב סטטיסטיקות לאירוע
+  const calculateEventStats = useCallback((event: Event) => {
+    const registrations = event.registrations || [];
+    const confirmedRegs = registrations.filter(r => r.status === 'confirmed');
+    const totalSold = confirmedRegs.length;
+    const availableSeats = event.capacity ? event.capacity - totalSold : null;
+
+    // חישוב הכנסות
+    let revenue = 0;
+    if (event.type === 'show') {
+      revenue = confirmedRegs.reduce((sum, r) => {
+        if (r.ticket_type === 'show_only') {
+          return sum + (event.price_show_only || 0);
+        } else if (r.ticket_type === 'show_and_playground') {
+          return sum + (event.price_show_and_playground || 0);
+        }
+        return sum;
+      }, 0);
+    } else {
+      revenue = confirmedRegs.reduce((sum, r) => sum + (event.price || 0), 0);
+    }
+
+    return { totalSold, availableSeats, revenue, confirmedRegs };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -455,7 +516,10 @@ export default function AdminEventsPage() {
               </Button>
             </div>
           ) : (
-            events.map(event => (
+            events.map(event => {
+              const stats = calculateEventStats(event);
+              
+              return (
               <div
                 key={event.id}
                 className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow"
@@ -488,6 +552,18 @@ export default function AdminEventsPage() {
                         <span className="text-green-600 text-xs flex items-center">
                           <Calendar size={12} className="ml-1" />
                           סונכרן ליומן
+                        </span>
+                      )}
+                      {/* אינדיקטור זמינות */}
+                      {stats.availableSeats !== null && (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          stats.availableSeats === 0 ? 'bg-red-100 text-red-700' :
+                          stats.availableSeats <= 5 ? 'bg-orange-100 text-orange-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {stats.availableSeats === 0 ? '❌ אזל' :
+                           stats.availableSeats <= 5 ? `⚠️ ${stats.availableSeats} נותרו` :
+                           `✓ ${stats.availableSeats} מקומות`}
                         </span>
                       )}
                     </div>
@@ -531,16 +607,36 @@ export default function AdminEventsPage() {
                           <p className="font-medium text-green-600">₪{event.price}</p>
                         </div>
                       )}
+                      {event.type === 'show' && event.price_show_only && (
+                        <div>
+                          <span className="text-gray-500">הצגה בלבד:</span>
+                          <p className="font-medium text-green-600">₪{event.price_show_only}</p>
+                        </div>
+                      )}
+                      {event.type === 'show' && event.price_show_and_playground && (
+                        <div>
+                          <span className="text-gray-500">הצגה + משחקייה:</span>
+                          <p className="font-medium text-green-600">₪{event.price_show_and_playground}</p>
+                        </div>
+                      )}
                       <div>
                         <span className="text-gray-500">רישום:</span>
                         <p className="font-medium text-blue-600">דרך האתר + תשלום</p>
                       </div>
-                      {event.registrations && event.registrations.length > 0 && (
+                      {/* כרטיסים נמכרו */}
+                      <div>
+                        <span className="text-gray-500">כרטיסים:</span>
+                        <p className="font-medium text-blue-600">
+                          {stats.totalSold}
+                          {event.capacity && ` / ${event.capacity}`}
+                        </p>
+                      </div>
+                      {/* הכנסות */}
+                      {stats.revenue > 0 && (
                         <div>
-                          <span className="text-gray-500">נרשמו:</span>
+                          <span className="text-gray-500">הכנסות:</span>
                           <p className="font-medium text-green-600">
-                            {event.registrations.length}
-                            {event.capacity && ` מתוך ${event.capacity}`}
+                            ₪{stats.revenue.toFixed(2)}
                           </p>
                         </div>
                       )}
@@ -579,7 +675,8 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
               </div>
-            ))
+            );
+            })
           )}
         </div>
 
@@ -1197,7 +1294,7 @@ export default function AdminEventsPage() {
 
         {/* Dialog - רשימת נרשמים */}
         <Dialog open={showRegistrationsDialog} onOpenChange={setShowRegistrationsDialog}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir="rtl">
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" dir="rtl">
             <DialogHeader>
               <DialogTitle>
                 רשימת נרשמים - {selectedEvent?.title}
@@ -1215,42 +1312,68 @@ export default function AdminEventsPage() {
                       <div>
                         <p className="text-sm text-gray-600">סך נרשמים</p>
                         <p className="text-2xl font-bold text-blue-600">
-                          {selectedEvent.registrations.length}
+                          {selectedEvent.registrations.filter(r => r.status === 'confirmed').length}
                         </p>
                       </div>
                       {selectedEvent.capacity && (
                         <div className="text-left">
                           <p className="text-sm text-gray-600">מקומות פנויים</p>
                           <p className="text-2xl font-bold text-green-600">
-                            {selectedEvent.capacity - selectedEvent.registrations.length}
+                            {selectedEvent.capacity - selectedEvent.registrations.filter(r => r.status === 'confirmed').length}
                           </p>
                         </div>
                       )}
+                      <div className="text-left">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => selectedEvent && exportToCSV(selectedEvent)}
+                          className="bg-green-50 hover:bg-green-100"
+                        >
+                          📥 ייצוא לאקסל
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-hidden overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-4 py-3 text-right text-sm font-semibold">#</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold">שם</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold">טלפון</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold">סטטוס</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold">תאריך רישום</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">#</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">שם</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">טלפון</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">אימייל</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">סוג כרטיס</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">סטטוס</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">תאריך רישום</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {selectedEvent.registrations.map((registration, index) => (
                           <tr key={registration.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-gray-600">{index + 1}</td>
-                            <td className="px-4 py-3 font-medium">
+                            <td className="px-3 py-3 text-gray-600">{index + 1}</td>
+                            <td className="px-3 py-3 font-medium">
                               {registration.user?.full_name || 'לא ידוע'}
                             </td>
-                            <td className="px-4 py-3 text-gray-600">
+                            <td className="px-3 py-3 text-gray-600 text-sm">
                               {registration.user?.phone || '-'}
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-3 py-3 text-gray-600 text-sm">
+                              {registration.user?.email || '-'}
+                            </td>
+                            <td className="px-3 py-3 text-sm">
+                              <span className={`inline-block px-2 py-1 rounded text-xs ${
+                                registration.ticket_type === 'show_only' ? 'bg-purple-100 text-purple-800' :
+                                registration.ticket_type === 'show_and_playground' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {registration.ticket_type === 'show_only' ? 'הצגה בלבד' :
+                                 registration.ticket_type === 'show_and_playground' ? 'הצגה + משחקייה' :
+                                 registration.ticket_type || 'רגיל'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3">
                               <span className={`inline-block px-2 py-1 rounded text-xs ${
                                 registration.status === 'confirmed'
                                   ? 'bg-green-100 text-green-800'
@@ -1264,7 +1387,7 @@ export default function AdminEventsPage() {
                                  registration.status}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-600">
+                            <td className="px-3 py-3 text-sm text-gray-600">
                               {new Date(registration.registered_at).toLocaleDateString('he-IL', {
                                 day: '2-digit',
                                 month: '2-digit',

@@ -50,7 +50,11 @@ export default function ShowsPage() {
 
   const loadShows = async () => {
     try {
-      const res = await fetch('/api/public/events?type=show&status=active');
+      const timestamp = Date.now(); // למניעת cache
+      const res = await fetch(
+        `/api/public/events?type=show&status=active&_t=${timestamp}`,
+        { cache: 'no-store' }
+      );
       const data = await res.json();
       setShows(data.events || []);
     } catch (error) {

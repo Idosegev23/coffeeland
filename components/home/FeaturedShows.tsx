@@ -37,8 +37,10 @@ export default function FeaturedShows() {
   const loadFeaturedShows = async () => {
     try {
       const now = new Date().toISOString();
+      const timestamp = Date.now(); // למניעת cache
       const res = await fetch(
-        `/api/public/events?type=show&is_featured=true&status=active&from=${encodeURIComponent(now)}&limit=3`
+        `/api/public/events?type=show&is_featured=true&status=active&from=${encodeURIComponent(now)}&limit=3&_t=${timestamp}`,
+        { cache: 'no-store' }
       );
       const data = await res.json();
       setShows(data.events || []);
