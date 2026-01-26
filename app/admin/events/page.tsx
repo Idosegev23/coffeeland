@@ -65,6 +65,36 @@ function combineDateAndTime(date: string, time: string) {
   return `${date}T${time}`;
 }
 
+/**
+ * ממיר datetime-local לזמן ישראל (UTC+2/UTC+3 בהתאם לשעון קיץ)
+ * הדפדפן מחזיר datetime-local בזמן מקומי, אבל כשנשלח ל-API צריך להוסיף timezone
+ */
+function convertLocalToIsraelTime(datetimeLocal: string): string {
+  if (!datetimeLocal) return datetimeLocal;
+  
+  // יצירת date object מה-datetime-local
+  const localDate = new Date(datetimeLocal);
+  
+  // המרה לזמן ישראל (זה יחשב אוטומטית קיץ/חורף)
+  const israelTimeString = localDate.toLocaleString('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  // המרה לפורמט ISO: YYYY-MM-DDTHH:mm:ss
+  const [datePart, timePart] = israelTimeString.split(', ');
+  const [month, day, year] = datePart.split('/');
+  const isoString = `${year}-${month}-${day}T${timePart}`;
+  
+  return isoString;
+}
+
 function addMinutesToDateTimeLocal(dt: string, minutes: number) {
   const d = new Date(dt);
   d.setMinutes(d.getMinutes() + minutes);
@@ -251,6 +281,9 @@ export default function AdminEventsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          // המרת זמנים לזמן ישראל
+          start_at: convertLocalToIsraelTime(formData.start_at),
+          end_at: convertLocalToIsraelTime(formData.end_at),
           // כאשר יוצרים סדרה - נשלח occurrences ונגדיר recurring לתצוגה
           ...(occurrences ? { occurrences, is_recurring: true, recurrence_pattern: createMode } : {}),
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
@@ -292,8 +325,8 @@ export default function AdminEventsPage() {
           title: formData.title,
           description: formData.description,
           type: formData.type,
-          start_at: formData.start_at,
-          end_at: formData.end_at,
+          start_at: convertLocalToIsraelTime(formData.start_at),
+          end_at: convertLocalToIsraelTime(formData.end_at),
           is_recurring: formData.is_recurring,
           recurrence_pattern: formData.recurrence_pattern || null,
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
