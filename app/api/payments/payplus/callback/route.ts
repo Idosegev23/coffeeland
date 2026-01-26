@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    console.log('📥 PayPlus Callback received:', JSON.stringify(body, null, 2));
+    console.log('📥 PayPlus Callback received at:', new Date().toISOString());
+    console.log('📥 Callback data:', JSON.stringify(body, null, 2));
 
     // אימות שהCallback מגיע מPayPlus
     if (!verifyPayPlusCallback(body)) {
@@ -94,7 +95,9 @@ export async function POST(req: NextRequest) {
         .insert({
           user_id: payment.user_id,
           card_type_id: card_type_id,
-          type: 'playground', // או לפי סוג הכרטיסייה
+          type: card_type_name?.toLowerCase().includes('workshop') ? 'workshop' : 
+                card_type_name?.toLowerCase().includes('playground') ? 'playground' : 
+                'playground', // ברירת מחדל
           total_entries: entries_count || 10,
           remaining_entries: entries_count || 10,
           expiry_date: expiryDate.toISOString(),
@@ -148,9 +151,11 @@ export async function POST(req: NextRequest) {
  * GET - לבדיקת זמינות ה-endpoint
  */
 export async function GET() {
+  console.log('✅ PayPlus Callback GET check at:', new Date().toISOString());
   return NextResponse.json({ 
     status: 'ok',
     endpoint: 'PayPlus Callback',
+    message: 'Endpoint is ready to receive webhooks',
     timestamp: new Date().toISOString()
   });
 }
