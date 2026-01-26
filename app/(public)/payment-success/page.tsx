@@ -86,7 +86,8 @@ function PaymentSuccessContent() {
           // Check if payment is still pending (PayPlus callback hasn't arrived yet)
           if (payment.status === 'pending') {
             setIsPending(true);
-            // Poll for updates
+            
+            // Poll for updates every 2 seconds
             const pollInterval = setInterval(async () => {
               const { data: updatedPayment } = await supabase
                 .from('payments')
@@ -106,6 +107,37 @@ function PaymentSuccessContent() {
                 });
               }
             }, 2000);
+            
+            // Fallback: After 10 seconds, check directly with PayPlus API
+            setTimeout(async () => {
+              try {
+                console.log('⏰ Fallback: Checking payment status directly with PayPlus...');
+                const verifyResponse = await fetch('/api/payments/verify-status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ payment_id: paymentId })
+                });
+                
+                if (verifyResponse.ok) {
+                  const verifyData = await verifyResponse.json();
+                  console.log('✅ Fallback verification result:', verifyData);
+                  
+                  if (verifyData.status === 'completed') {
+                    clearInterval(pollInterval);
+                    setIsPending(false);
+                    setTransactionDetails({
+                      type: verifyData.metadata?.card_type_name || 'רכישה',
+                      amount: verifyData.amount?.toString(),
+                      name: verifyData.metadata?.card_type_name || 'רכישה',
+                      status: 'completed',
+                      passId: verifyData.pass_id || verifyData.registration_id
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error('Fallback verification error:', error);
+              }
+            }, 10000);
             
             // Stop polling after 30 seconds
             setTimeout(() => clearInterval(pollInterval), 30000);
