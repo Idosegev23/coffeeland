@@ -66,17 +66,21 @@ function combineDateAndTime(date: string, time: string) {
 }
 
 /**
- * ממיר datetime-local לזמן ישראל (UTC+2/UTC+3 בהתאם לשעון קיץ)
- * הדפדפן מחזיר datetime-local בזמן מקומי, אבל כשנשלח ל-API צריך להוסיף timezone
+ * ממיר datetime-local שהוזן בישראל ל-ISO string ב-UTC
+ * הדפדפן מחזיר datetime-local כמו "2026-02-01T17:00" (זמן ישראל)
+ * אנחנו צריכים לשמור את זה כ-UTC במסד נתונים
  */
 function convertLocalToIsraelTime(datetimeLocal: string): string {
   if (!datetimeLocal) return datetimeLocal;
   
-  // יצירת date object מה-datetime-local
+  // הדפדפן שולח לנו datetime-local בפורמט YYYY-MM-DDTHH:mm
+  // אנחנו מניחים שזה זמן ישראל ורוצים להמיר ל-UTC
+  
+  // יצירת date object - JS מניח שזה זמן מקומי של הדפדפן
   const localDate = new Date(datetimeLocal);
   
-  // המרה לזמן ישראל (זה יחשב אוטומטית קיץ/חורף)
-  const israelTimeString = localDate.toLocaleString('en-US', {
+  // קבלת offset של ישראל (בדקות) - יטפל אוטומטית בקיץ/חורף
+  const israelFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Jerusalem',
     year: 'numeric',
     month: '2-digit',
@@ -87,12 +91,21 @@ function convertLocalToIsraelTime(datetimeLocal: string): string {
     hour12: false
   });
   
-  // המרה לפורמט ISO: YYYY-MM-DDTHH:mm:ss
-  const [datePart, timePart] = israelTimeString.split(', ');
-  const [month, day, year] = datePart.split('/');
-  const isoString = `${year}-${month}-${day}T${timePart}`;
+  // המרה ל-ISO string עם UTC timezone
+  // אנחנו רוצים שהשעה 17:00 בישראל תישמר כ-15:00 UTC (בחורף) או 14:00 UTC (בקיץ)
+  const parts = israelFormatter.formatToParts(localDate);
+  const year = parts.find(p => p.type === 'year')!.value;
+  const month = parts.find(p => p.type === 'month')!.value;
+  const day = parts.find(p => p.type === 'day')!.value;
+  const hour = parts.find(p => p.type === 'hour')!.value;
+  const minute = parts.find(p => p.type === 'minute')!.value;
   
-  return isoString;
+  // יצירת date בזמן ישראל
+  const israelDateString = `${year}-${month}-${day}T${hour}:${minute}:00`;
+  const israelDate = new Date(israelDateString);
+  
+  // המרה ל-UTC ISO string
+  return israelDate.toISOString();
 }
 
 function addMinutesToDateTimeLocal(dt: string, minutes: number) {
