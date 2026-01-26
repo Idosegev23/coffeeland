@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { generatePaymentLink, isPayPlusConfigured, getPayPlusConfig } from '@/lib/payplus';
+import { getServiceClient } from '@/lib/supabase';
 
 /**
  * יצירת קישור לדף תשלום PayPlus
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createRouteHandlerClient({ cookies });
+    const serviceClient = getServiceClient();
     
     // אימות משתמש
     const { data: { user } } = await supabase.auth.getUser();
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     // קבלת פרטי המשתמש
-    const { data: userData } = await supabase
+    const { data: userData } = await serviceClient
       .from('users')
       .select('full_name, email, phone')
       .eq('id', user.id)
@@ -54,8 +56,8 @@ export async function POST(req: NextRequest) {
     // יצירת מזהה ייחודי לעסקה (לשמירה בDB)
     const transactionRef = `TXN_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    // שמירת העסקה הממתינה בDB
-    const { data: pendingPayment, error: dbError } = await supabase
+    // שמירת העסקה הממתינה בDB (משתמשים ב-serviceClient כדי לעקוף RLS)
+    const { data: pendingPayment, error: dbError } = await serviceClient
       .from('payments')
       .insert({
         user_id: user.id,
@@ -108,7 +110,7 @@ export async function POST(req: NextRequest) {
       console.error('❌ PayPlus error:', paymentResponse);
       
       // עדכון סטטוס בDB
-      await supabase
+      await serviceClient
         .from('payments')
         .update({ status: 'failed', metadata: { ...pendingPayment.metadata, payplus_error: paymentResponse } })
         .eq('id', pendingPayment.id);
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
     }
 
     // עדכון הDB עם פרטי PayPlus
-    await supabase
+    await serviceClient
       .from('payments')
       .update({
         metadata: {
