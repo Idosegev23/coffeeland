@@ -7,6 +7,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
+
+// Supabase client
+const supabase = createClientComponentClient();
 import {
   Dialog,
   DialogContent,
@@ -15,7 +18,7 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
-import { Calendar, Plus, Edit, Trash2, Users, ArrowRight, UserCheck } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Users, ArrowRight, UserCheck, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 interface Event {
@@ -268,7 +271,7 @@ export default function AdminEventsPage() {
         setEvents([...events, ...data.events]);
         alert(`✅ נוצרו ${data.events.length} מופעים וסונכרנו (ככל האפשר) ליומן Google!`);
       } else {
-        setEvents([...events, data.event]);
+      setEvents([...events, data.event]);
         alert('✅ אירוע נוצר בהצלחה וסונכרן ליומן Google!');
       }
       setShowCreateDialog(false);
@@ -492,13 +495,26 @@ export default function AdminEventsPage() {
             </h1>
             <p className="text-gray-600">יצירה ועריכה של אירועים + סנכרון אוטומטי ליומן Google</p>
           </div>
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            className="bg-accent hover:bg-accent/90"
-          >
-            <Plus className="ml-2" size={20} />
-            אירוע חדש
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLoading(true);
+                loadEvents();
+              }}
+              disabled={loading}
+            >
+              <RefreshCw className={`ml-2 ${loading ? 'animate-spin' : ''}`} size={18} />
+              רענן
+            </Button>
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+              className="bg-accent hover:bg-accent/90"
+            >
+              <Plus className="ml-2" size={20} />
+              אירוע חדש
+            </Button>
+          </div>
         </div>
 
         {/* רשימת אירועים */}
@@ -624,7 +640,7 @@ export default function AdminEventsPage() {
                         <p className="font-medium text-blue-600">דרך האתר + תשלום</p>
                       </div>
                       {/* כרטיסים נמכרו */}
-                      <div>
+                        <div>
                         <span className="text-gray-500">כרטיסים:</span>
                         <p className="font-medium text-blue-600">
                           {stats.totalSold}
@@ -1075,27 +1091,27 @@ export default function AdminEventsPage() {
               )}
 
               {editingEvent && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">תאריך ושעת התחלה</label>
-                    <input
-                      type="datetime-local"
-                      value={formData.start_at}
-                      onChange={e => setFormData({ ...formData, start_at: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">תאריך ושעת סיום</label>
-                    <input
-                      type="datetime-local"
-                      value={formData.end_at}
-                      onChange={e => setFormData({ ...formData, end_at: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md"
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">תאריך ושעת התחלה</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.start_at}
+                    onChange={e => setFormData({ ...formData, start_at: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">תאריך ושעת סיום</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.end_at}
+                    onChange={e => setFormData({ ...formData, end_at: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+              </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
@@ -1111,17 +1127,17 @@ export default function AdminEventsPage() {
                 </div>
 
                 {formData.type !== 'show' && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">מחיר (₪)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={e => setFormData({ ...formData, price: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="מחיר ההרשמה"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">מחיר (₪)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={e => setFormData({ ...formData, price: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md"
+                    placeholder="מחיר ההרשמה"
+                  />
+                </div>
                 )}
               </div>
 

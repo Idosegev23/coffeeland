@@ -19,7 +19,14 @@ interface Slide {
   }
 }
 
-const slides: Slide[] = [
+interface FeaturedShow {
+  id: string
+  title: string
+  description: string
+  banner_image_url?: string
+}
+
+const defaultSlides: Slide[] = [
   {
     id: 'playground',
     title: 'ברוכים הבאים ל-CoffeeLand',
@@ -53,9 +60,48 @@ const slides: Slide[] = [
 ]
 
 export function HeroCarousel() {
+  const [slides, setSlides] = useState<Slide[]>(defaultSlides)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [direction, setDirection] = useState(0)
+
+  // טעינת הצגות מומלצות
+  useEffect(() => {
+    const loadFeaturedShows = async () => {
+      try {
+        const timestamp = Date.now();
+        const res = await fetch(
+          `/api/public/events?type=show&is_featured=true&status=active&_t=${timestamp}`,
+          { cache: 'no-store' }
+        );
+        const data = await res.json();
+        const shows: FeaturedShow[] = data.events || [];
+
+        // המרת הצגות ל-slides
+        const showSlides: Slide[] = shows
+          .filter((show) => show.banner_image_url) // רק הצגות עם תמונה
+          .map((show) => ({
+            id: `show-${show.id}`,
+            title: show.title,
+            description: show.description || 'הצגה מיוחדת לכל המשפחה',
+            image: show.banner_image_url!,
+            cta: {
+              text: 'לרכישת כרטיסים',
+              href: '/shows',
+            },
+          }));
+
+        // שילוב הצגות עם slides קיימים
+        if (showSlides.length > 0) {
+          setSlides([...defaultSlides, ...showSlides]);
+        }
+      } catch (error) {
+        console.error('Error loading featured shows for hero:', error);
+      }
+    };
+
+    loadFeaturedShows();
+  }, [])
 
   const nextSlide = useCallback(() => {
     setDirection(1)

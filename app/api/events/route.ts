@@ -112,20 +112,20 @@ export async function POST(request: Request) {
     const hasOccurrences = Array.isArray(occurrencesRaw) && occurrencesRaw.length > 0;
 
     const commonInsert = {
-      title: body.title,
-      description: body.description,
-      type: body.type,
-      is_recurring: body.is_recurring || false,
-      recurrence_pattern: body.recurrence_pattern,
-      recurrence_days: body.recurrence_days,
-      recurrence_end_date: body.recurrence_end_date,
-      instructor_id: body.instructor_id,
-      room_id: body.room_id,
-      capacity: body.capacity,
-      min_age: body.min_age,
-      max_age: body.max_age,
-      price: body.price,
-      requires_registration: body.requires_registration ?? true,
+        title: body.title,
+        description: body.description,
+        type: body.type,
+        is_recurring: body.is_recurring || false,
+        recurrence_pattern: body.recurrence_pattern,
+        recurrence_days: body.recurrence_days,
+        recurrence_end_date: body.recurrence_end_date,
+        instructor_id: body.instructor_id,
+        room_id: body.room_id,
+        capacity: body.capacity,
+        min_age: body.min_age,
+        max_age: body.max_age,
+        price: body.price,
+        requires_registration: body.requires_registration ?? true,
       status: 'active',
       // שדות הצגות:
       is_featured: body.is_featured ?? false,
@@ -146,52 +146,52 @@ export async function POST(request: Request) {
           ...commonInsert,
           start_at: body.start_at,
           end_at: body.end_at
-        })
-        .select()
-        .single();
+      })
+      .select()
+      .single();
 
-      if (insertError) throw insertError;
+    if (insertError) throw insertError;
 
-      // סנכרון ליומן גוגל (אסינכרוני - לא חוסם)
-      try {
-        const googleEventId = await upsertGoogleEvent({
-          title: event.title,
-          description: event.description,
-          start_at: event.start_at,
-          end_at: event.end_at,
-          location: roomName,
-          instructor_name: instructorName,
-          capacity: event.capacity,
-          registered_count: 0
-        });
-
-        // עדכון ה-event עם google_event_id
-        await supabase
-          .from('events')
-          .update({
-            google_event_id: googleEventId,
-            synced_to_google: true,
-            last_synced_at: new Date().toISOString()
-          })
-          .eq('id', event.id);
-
-        event.google_event_id = googleEventId;
-        event.synced_to_google = true;
-      } catch (googleError: any) {
-        console.error('Google Calendar sync failed:', googleError);
-        // לא נכשל את כל הבקשה בגלל שגיאת סנכרון
-      }
-
-      // רישום ב-audit log
-      await supabase.from('audit_log').insert({
-        admin_id: admin.id,
-        action: 'create_event',
-        entity_type: 'event',
-        entity_id: event.id,
-        details: { title: event.title, type: event.type }
+    // סנכרון ליומן גוגל (אסינכרוני - לא חוסם)
+    try {
+      const googleEventId = await upsertGoogleEvent({
+        title: event.title,
+        description: event.description,
+        start_at: event.start_at,
+        end_at: event.end_at,
+        location: roomName,
+        instructor_name: instructorName,
+        capacity: event.capacity,
+        registered_count: 0
       });
 
-      return NextResponse.json({ event });
+      // עדכון ה-event עם google_event_id
+      await supabase
+        .from('events')
+        .update({
+          google_event_id: googleEventId,
+          synced_to_google: true,
+          last_synced_at: new Date().toISOString()
+        })
+        .eq('id', event.id);
+
+      event.google_event_id = googleEventId;
+      event.synced_to_google = true;
+    } catch (googleError: any) {
+      console.error('Google Calendar sync failed:', googleError);
+      // לא נכשל את כל הבקשה בגלל שגיאת סנכרון
+    }
+
+    // רישום ב-audit log
+    await supabase.from('audit_log').insert({
+      admin_id: admin.id,
+      action: 'create_event',
+      entity_type: 'event',
+      entity_id: event.id,
+      details: { title: event.title, type: event.type }
+    });
+
+    return NextResponse.json({ event });
     }
 
     // ---- Batch create (סדרת מופעים) ----
