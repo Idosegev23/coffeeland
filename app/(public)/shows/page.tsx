@@ -19,6 +19,7 @@ interface Show {
   price_show_only: number;
   price_show_and_playground: number;
   reserved_seats_count?: number;
+  registrations_count?: number; // מספר כרטיסים שנמכרו
 }
 
 function formatDate(dateStr: string) {
@@ -75,8 +76,9 @@ export default function ShowsPage() {
   };
 
   const getAvailableSeats = (show: Show) => {
-    const reserved = show.reserved_seats_count || 0;
-    return show.capacity - reserved;
+    // להצגות: registrations_count = כרטיסים שנמכרו (confirmed)
+    const sold = show.registrations_count || 0;
+    return show.capacity - sold;
   };
 
   if (loading) {
