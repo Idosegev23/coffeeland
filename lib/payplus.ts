@@ -190,3 +190,44 @@ export function getPayPlusConfig() {
     hasPaymentPageUid: !!PAYMENT_PAGE_UID
   };
 }
+
+/**
+ * ממשק לבקשת זיכוי
+ */
+export interface RefundRequest {
+  transaction_uid: string;  // מזהה העסקה המקורית
+  amount: number;            // סכום לזיכוי (יכול להיות חלקי)
+  reason?: string;           // סיבת הזיכוי (אופציונלי)
+}
+
+/**
+ * ביצוע זיכוי דרך PayPlus API
+ */
+export async function processRefund(request: RefundRequest): Promise<PayPlusResponse> {
+  const url = `${BASE_URL}/Transactions/Refund`;
+  
+  const body = {
+    transaction_uid: request.transaction_uid,
+    refund_amount: request.amount,
+    reason: request.reason || 'Customer refund'
+  };
+
+  console.log('🔵 PayPlus Refund Request:', JSON.stringify(body, null, 2));
+  console.log('🔵 PayPlus Refund URL:', url);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(body)
+    });
+
+    const data: PayPlusResponse = await response.json();
+    console.log('🟢 PayPlus Refund Response:', JSON.stringify(data, null, 2));
+    
+    return data;
+  } catch (error) {
+    console.error('🔴 PayPlus Refund Error:', error);
+    throw error;
+  }
+}

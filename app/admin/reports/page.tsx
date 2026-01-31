@@ -15,7 +15,8 @@ import {
   DollarSign,
   ArrowRight,
   Coffee,
-  Package
+  Package,
+  RefreshCcw
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,6 +27,8 @@ interface ReportData {
   totalStamps: number;
   upcomingEvents: number;
   totalRegistrations: number;
+  totalRefunds: number;
+  totalRefundAmount: number;
   recentSales: Array<{
     id: string;
     amount: number;
@@ -186,6 +189,16 @@ export default function ReportsPage() {
             </div>
             <p className="text-purple-100 text-sm mb-1">כרטיסיות פעילות</p>
             <p className="text-3xl font-bold">{data.activeCards}</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between mb-2">
+              <RefreshCcw size={24} />
+              <TrendingUp size={20} className="rotate-180" />
+            </div>
+            <p className="text-pink-100 text-sm mb-1">זיכויים</p>
+            <p className="text-3xl font-bold">{data.totalRefunds || 0}</p>
+            <p className="text-pink-200 text-xs mt-1">סך: {formatCurrency(data.totalRefundAmount || 0)}</p>
           </div>
 
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-lg shadow-lg p-6">

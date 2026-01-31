@@ -167,6 +167,16 @@ export async function GET(request: Request) {
       })
     }
 
+    // 10) refunds statistics
+    const { data: refunds } = await service
+      .from('refunds')
+      .select('refund_amount')
+      .eq('status', 'completed')
+      .gte('created_at', startDate.toISOString())
+    
+    const totalRefunds = refunds?.length || 0
+    const totalRefundAmount = refunds?.reduce((sum, r: any) => sum + (r.refund_amount || 0), 0) || 0
+
     return NextResponse.json({
       totalCustomers: totalCustomers || 0,
       totalRevenue,
@@ -174,6 +184,8 @@ export async function GET(request: Request) {
       totalStamps,
       upcomingEvents: upcomingEvents || 0,
       totalRegistrations: totalRegistrations || 0,
+      totalRefunds,
+      totalRefundAmount,
       recentSales,
       popularCards,
       eventStats,

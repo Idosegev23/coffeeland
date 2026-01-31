@@ -26,6 +26,7 @@ export default function MyAccountPage() {
   const [usages, setUsages] = useState<any[]>([])
   const [registrations, setRegistrations] = useState<any[]>([])
   const [reservations, setReservations] = useState<any[]>([])
+  const [refunds, setRefunds] = useState<any[]>([])
 
   useEffect(() => {
     loadData()
@@ -109,6 +110,23 @@ export default function MyAccountPage() {
       } catch {
         setReservations([])
       }
+
+      // Load refunds
+      const { data: refundsData } = await supabase
+        .from('refunds')
+        .select(`
+          *,
+          payment:payments(
+            amount,
+            created_at,
+            item_type
+          )
+        `)
+        .eq('user_id', currentUser.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+
+      setRefunds(refundsData || [])
 
       setLoading(false)
     } catch (err) {
@@ -471,6 +489,68 @@ export default function MyAccountPage() {
                         <p className="text-xs text-gray-500 mt-1 font-mono">{ticket.qr_code.substring(0, 12)}...</p>
                       </div>
                     )}
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
+        <Separator className="my-8" />
+
+        {/* זיכויים שהתקבלו */}
+        <h2 className="text-2xl font-semibold text-primary mb-4">זיכויים שהתקבלו</h2>
+        {refunds.length === 0 ? (
+          <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-8 text-center">
+            <p className="text-text-light/70">אין זיכויים</p>
+          </Card>
+        ) : (
+          <div className="grid gap-4 mb-8">
+            {refunds.map((refund: any) => {
+              const payment = Array.isArray(refund.payment) ? refund.payment[0] : refund.payment
+              const getItemTypeLabel = (type: string) => {
+                const types: Record<string, string> = {
+                  show: 'הצגה',
+                  pass: 'כרטיסייה',
+                  event_registration: 'אירוע',
+                  other: 'אחר'
+                }
+                return types[type] || type
+              }
+
+              return (
+                <Card key={refund.id} className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6 bg-purple-50 border-purple-200">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">💸</span>
+                        <p className="font-bold text-xl text-purple-900">
+                          זיכוי: ₪{refund.refund_amount.toFixed(2)}
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-1 text-sm text-purple-700">
+                        <p>מתוך תשלום של: ₪{payment?.amount?.toFixed(2)}</p>
+                        <p>סוג: {getItemTypeLabel(payment?.item_type)}</p>
+                        <p>תאריך זיכוי: {new Date(refund.created_at).toLocaleDateString('he-IL', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}</p>
+                        {refund.reason && (
+                          <p className="mt-2 p-2 bg-white rounded text-purple-800 border border-purple-300">
+                            <strong>סיבה:</strong> {refund.reason}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-3 rounded-lg border-2 border-purple-300 flex-shrink-0">
+                      <div className="text-center">
+                        <p className="text-xs text-purple-600 font-semibold mb-1">סטטוס</p>
+                        <p className="text-lg font-bold text-green-600">✓ בוצע</p>
+                      </div>
+                    </div>
                   </div>
                 </Card>
               )
