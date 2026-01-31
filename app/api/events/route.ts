@@ -47,7 +47,9 @@ export async function GET(request: Request) {
           status,
           ticket_type,
           registered_at,
-          user:users(full_name, phone, email)
+          payment_id,
+          user:users(full_name, phone, email),
+          payment:payments(id, amount, status, created_at, payment_method)
         )
       `)
       .eq('status', status)

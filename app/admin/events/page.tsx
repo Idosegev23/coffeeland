@@ -51,6 +51,14 @@ interface Event {
     status: string;
     ticket_type?: string;
     registered_at: string;
+    payment_id?: string;
+    payment?: {
+      id: string;
+      amount: number;
+      status: string;
+      created_at: string;
+      payment_method?: string;
+    };
   }>;
 }
 
@@ -458,7 +466,7 @@ export default function AdminEventsPage() {
       return;
     }
 
-    const headers = ['מספר', 'שם', 'טלפון', 'אימייל', 'סוג כרטיס', 'סטטוס', 'תאריך רישום'];
+    const headers = ['מספר', 'שם', 'טלפון', 'אימייל', 'סוג כרטיס', 'סכום', 'סטטוס תשלום', 'סטטוס רישום', 'תאריך רישום', 'תאריך תשלום'];
     const rows = event.registrations.map((r, idx) => [
       (idx + 1).toString(),
       r.user?.full_name || 'לא ידוע',
@@ -467,10 +475,19 @@ export default function AdminEventsPage() {
       r.ticket_type === 'show_only' ? 'הצגה בלבד' :
       r.ticket_type === 'show_and_playground' ? 'הצגה + משחקייה' :
       r.ticket_type || 'רגיל',
+      r.payment ? `₪${r.payment.amount}` : '-',
+      r.payment ? (
+        r.payment.status === 'completed' ? 'שולם' :
+        r.payment.status === 'pending' ? 'ממתין' :
+        r.payment.status === 'refunded' ? 'זוכה' :
+        r.payment.status === 'failed' ? 'נכשל' :
+        r.payment.status
+      ) : (r.payment_id ? 'אין נתונים' : 'ללא תשלום'),
       r.status === 'confirmed' ? 'מאושר' :
       r.status === 'pending' ? 'ממתין' :
       r.status === 'cancelled' ? 'בוטל' : r.status,
-      new Date(r.registered_at).toLocaleDateString('he-IL')
+      new Date(r.registered_at).toLocaleDateString('he-IL'),
+      r.payment?.created_at ? new Date(r.payment.created_at).toLocaleDateString('he-IL') : '-'
     ]);
 
     const csv = [headers, ...rows]
@@ -1380,22 +1397,31 @@ export default function AdminEventsPage() {
             <div className="py-4">
               {selectedEvent?.registrations && selectedEvent.registrations.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex justify-between items-center">
+                  <div className="bg-gradient-to-l from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
+                    <div className="grid grid-cols-4 gap-4 items-center">
                       <div>
-                        <p className="text-sm text-gray-600">סך נרשמים</p>
+                        <p className="text-sm text-gray-600 mb-1">סך נרשמים</p>
                         <p className="text-2xl font-bold text-blue-600">
                           {selectedEvent.registrations.filter(r => r.status === 'confirmed').length}
                         </p>
                       </div>
                       {selectedEvent.capacity && (
-                        <div className="text-left">
-                          <p className="text-sm text-gray-600">מקומות פנויים</p>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">מקומות פנויים</p>
                           <p className="text-2xl font-bold text-green-600">
                             {selectedEvent.capacity - selectedEvent.registrations.filter(r => r.status === 'confirmed').length}
                           </p>
                         </div>
                       )}
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">סה"כ הכנסות</p>
+                        <p className="text-2xl font-bold text-[#4C2C21]">
+                          ₪{selectedEvent.registrations
+                            .filter(r => r.status === 'confirmed' && r.payment)
+                            .reduce((sum, r) => sum + (r.payment?.amount || 0), 0)
+                            .toFixed(2)}
+                        </p>
+                      </div>
                       <div className="text-left">
                         <Button
                           variant="outline"
@@ -1418,7 +1444,9 @@ export default function AdminEventsPage() {
                           <th className="px-3 py-3 text-right text-sm font-semibold">טלפון</th>
                           <th className="px-3 py-3 text-right text-sm font-semibold">אימייל</th>
                           <th className="px-3 py-3 text-right text-sm font-semibold">סוג כרטיס</th>
-                          <th className="px-3 py-3 text-right text-sm font-semibold">סטטוס</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">סכום</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">סטטוס תשלום</th>
+                          <th className="px-3 py-3 text-right text-sm font-semibold">סטטוס רישום</th>
                           <th className="px-3 py-3 text-right text-sm font-semibold">תאריך רישום</th>
                         </tr>
                       </thead>
@@ -1445,6 +1473,37 @@ export default function AdminEventsPage() {
                                  registration.ticket_type === 'show_and_playground' ? 'הצגה + משחקייה' :
                                  registration.ticket_type || 'רגיל'}
                               </span>
+                            </td>
+                            <td className="px-3 py-3 text-sm font-semibold text-[#4C2C21]">
+                              {registration.payment ? `₪${registration.payment.amount}` : 
+                               registration.payment_id ? '₪-' : '-'}
+                            </td>
+                            <td className="px-3 py-3">
+                              {registration.payment ? (
+                                <span className={`inline-block px-2 py-1 rounded text-xs ${
+                                  registration.payment.status === 'completed'
+                                    ? 'bg-green-100 text-green-800'
+                                    : registration.payment.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : registration.payment.status === 'refunded'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {registration.payment.status === 'completed' ? '✓ שולם' : 
+                                   registration.payment.status === 'pending' ? '⏳ ממתין' : 
+                                   registration.payment.status === 'refunded' ? '↩️ זוכה' :
+                                   registration.payment.status === 'failed' ? '✗ נכשל' :
+                                   registration.payment.status}
+                                </span>
+                              ) : registration.payment_id ? (
+                                <span className="inline-block px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                                  אין נתונים
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                                  ללא תשלום
+                                </span>
+                              )}
                             </td>
                             <td className="px-3 py-3">
                               <span className={`inline-block px-2 py-1 rounded text-xs ${
