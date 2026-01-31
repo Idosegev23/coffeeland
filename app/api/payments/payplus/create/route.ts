@@ -43,11 +43,49 @@ export async function POST(req: NextRequest) {
       card_type_id,
       card_type_name,
       entries_count,
-      return_url 
+      return_url,
+      event_id,
+      ticket_type
     } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+    }
+
+    // 🔥 בדיקת קיבולת להצגות/אירועים
+    if (event_id) {
+      const { data: event, error: eventError } = await serviceClient
+        .from('events')
+        .select('id, title, capacity, type')
+        .eq('id', event_id)
+        .single();
+
+      if (eventError || !event) {
+        return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      }
+
+      // ספירת כרטיסים מאושרים
+      const { count: confirmedCount } = await serviceClient
+        .from('registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', event_id)
+        .eq('status', 'confirmed');
+
+      const availableSeats = event.capacity - (confirmedCount || 0);
+
+      if (availableSeats <= 0) {
+        return NextResponse.json({ 
+          error: 'sold_out',
+          message: `אזל המלאי! ההצגה "${event.title}" מלאה.`,
+          details: {
+            capacity: event.capacity,
+            sold: confirmedCount,
+            available: 0
+          }
+        }, { status: 409 }); // 409 Conflict
+      }
+
+      console.log(`✅ Capacity check passed for ${event.title}: ${availableSeats} seats available`);
     }
 
     // URL-ים לחזרה
@@ -72,7 +110,9 @@ export async function POST(req: NextRequest) {
           card_type_id,
           card_type_name,
           entries_count,
-          items
+          items,
+          event_id,
+          ticket_type
         }
       })
       .select()
