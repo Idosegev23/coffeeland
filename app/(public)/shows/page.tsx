@@ -100,10 +100,18 @@ export default function ShowsPage() {
     return new Date(show.start_at) < new Date();
   };
 
+  const isShowFull = (show: Show) => {
+    // אם הסטטוס הוא 'full' - המכירה נעצרה ידנית
+    if (show.status === 'full') return true;
+    // אחרת בדיקה לפי מקומות
+    const seats = getAvailableSeats(show);
+    return seats <= 0;
+  };
+
   const renderShowCard = (show: Show, isPast = false) => {
     const seats = getAvailableSeats(show);
-    const soldOut = seats <= 0;
-    const almostSoldOut = seats <= 10 && seats > 0;
+    const soldOut = isShowFull(show);
+    const almostSoldOut = seats <= 10 && seats > 0 && !soldOut;
     const past = isPast || isShowPast(show);
 
     return (
@@ -191,11 +199,11 @@ export default function ShowsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-accent flex-shrink-0" />
-              <span>
+              <span className={soldOut && !past ? 'font-bold text-error' : ''}>
                 {past ? (
                   `${show.registrations_count || 0} השתתפו`
                 ) : soldOut ? (
-                  'אזל המלאי'
+                  '⛔ אזל המלאי - מכירה נעצרה'
                 ) : (
                   `${seats} מקומות זמינים מתוך ${show.capacity}`
                 )}
@@ -217,7 +225,7 @@ export default function ShowsPage() {
           <Button 
             onClick={() => setSelectedShow(show)}
             disabled={soldOut || past}
-            className="w-full bg-accent hover:bg-accent/90"
+            className={`w-full ${soldOut && !past ? 'bg-error hover:bg-error/90 cursor-not-allowed' : 'bg-accent hover:bg-accent/90'}`}
             size="lg"
           >
             {past ? (
@@ -226,7 +234,9 @@ export default function ShowsPage() {
                 הצגה הסתיימה
               </>
             ) : soldOut ? (
-              'אזל המלאי'
+              <>
+                ⛔ אזל המלאי
+              </>
             ) : (
               <>
                 <Ticket className="w-4 h-4 ml-2" />
