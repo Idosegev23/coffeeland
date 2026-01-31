@@ -142,9 +142,7 @@ export async function POST(req: NextRequest) {
           status: 'confirmed',
           is_paid: true,
           payment_id: payment.id,
-          tickets_count: 1,
           ticket_type: ticket_type || 'regular',
-          qr_code: `SHOW-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           registered_at: new Date().toISOString()
         })
         .select()

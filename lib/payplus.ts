@@ -21,10 +21,7 @@ const PAYMENT_PAGE_UID = process.env.PAYPLUS_PAYMENT_PAGE_UID || '';
 // כותרות לכל בקשה
 const getHeaders = () => ({
   'Content-Type': 'application/json',
-  'Authorization': JSON.stringify({
-    api_key: API_KEY,
-    secret_key: SECRET_KEY
-  })
+  'Authorization': `{"api_key":"${API_KEY}","secret_key":"${SECRET_KEY}"}`
 });
 
 // סוגי עסקאות
