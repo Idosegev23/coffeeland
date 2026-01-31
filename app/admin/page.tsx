@@ -9,7 +9,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Scan, Users, Ticket, Coffee, Calendar, ShoppingCart, CreditCard, List, RefreshCcw } from 'lucide-react'
+import { Scan, Users, Ticket, Coffee, Calendar, ShoppingCart, CreditCard, List, RefreshCcw, Theater } from 'lucide-react'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -237,6 +237,22 @@ export default function AdminDashboardPage() {
                 <div className="text-right">
                   <div className="font-semibold">חוגים וסדנאות</div>
                   <div className="text-xs opacity-70">ניהול אירועים + Google Calendar</div>
+                </div>
+              </Link>
+            </Button>
+
+            {/* ניהול הצגות */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start"
+              asChild
+            >
+              <Link href="/admin/shows" className="gap-4">
+                <Theater className="w-8 h-8 text-purple-600" />
+                <div className="text-right">
+                  <div className="font-semibold">ניהול הצגות</div>
+                  <div className="text-xs opacity-70">סטטוס מכירה, רישומים והכנסות</div>
                 </div>
               </Link>
             </Button>

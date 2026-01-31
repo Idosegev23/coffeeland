@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const type = searchParams.get('type'); // 'class', 'workshop', 'event'
-    const status = searchParams.get('status') || 'active';
+    const status = searchParams.get('status'); // אם לא מצוין - מחזיר הכל
     const from = searchParams.get('from'); // תאריך התחלה
     const to = searchParams.get('to'); // תאריך סיום
 
@@ -52,8 +52,13 @@ export async function GET(request: Request) {
           payment:payments(id, amount, status, created_at, payment_method)
         )
       `)
-      .eq('status', status)
+      .neq('status', 'cancelled') // מחזיר הכל חוץ ממבוטל
       .order('start_at', { ascending: true });
+
+    // אם מבקשים סטטוס ספציפי
+    if (status) {
+      query = query.eq('status', status);
+    }
 
     if (type) {
       query = query.eq('type', type);

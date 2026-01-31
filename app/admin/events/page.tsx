@@ -200,7 +200,8 @@ export default function AdminEventsPage() {
 
   const loadEvents = async () => {
     try {
-      const res = await fetch('/api/events?status=active');
+      // לא מסנן לפי status כדי לראות את כל האירועים (כולל full)
+      const res = await fetch('/api/events');
       const data = await res.json();
       setEvents(data.events || []);
     } catch (error) {
@@ -1452,7 +1453,7 @@ export default function AdminEventsPage() {
                         </div>
                       )}
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">סה"כ הכנסות</p>
+                        <p className="text-sm text-gray-600 mb-1">סה&quot;כ הכנסות</p>
                         <p className="text-2xl font-bold text-[#4C2C21]">
                           ₪{selectedEvent.registrations
                             .filter(r => r.status === 'confirmed' && r.payment)
