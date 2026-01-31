@@ -5,7 +5,8 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
-import { CreditCard, Search, Filter, RefreshCw, AlertCircle, CheckCircle, XCircle, ExternalLink, Info, Database } from 'lucide-react';
+import { CreditCard, Search, Filter, RefreshCw, AlertCircle, CheckCircle, XCircle, ExternalLink, Info, Database, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 interface Payment {
   id: string;
@@ -275,6 +276,18 @@ export default function RefundsPage() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Header */}
         <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button 
+              asChild 
+              variant="outline" 
+              className="gap-2"
+            >
+              <Link href="/admin">
+                <ArrowRight className="w-4 h-4" />
+                חזרה לפאנל ניהול
+              </Link>
+            </Button>
+          </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">
             ניהול זיכויים
           </h1>
