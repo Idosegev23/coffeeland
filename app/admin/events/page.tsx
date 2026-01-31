@@ -378,6 +378,34 @@ export default function AdminEventsPage() {
     }
   };
 
+  const handleToggleSales = async (event: Event) => {
+    const newStatus = event.status === 'full' ? 'active' : 'full';
+    const action = newStatus === 'full' ? 'עצירת' : 'פתיחת';
+    
+    if (!confirm(`האם אתה בטוח שברצונך ${action} מכירה עבור "${event.title}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/events/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!res.ok) throw new Error('Failed to update status');
+
+      // עדכון מקומי
+      setEvents(events.map(e => 
+        e.id === event.id ? { ...e, status: newStatus } : e
+      ));
+
+      alert(newStatus === 'full' 
+        ? '⛔ המכירה נעצרה בהצלחה!' 
+        : '✅ המכירה נפתחה בהצלחה!');
+    } catch (error: any) {
+      alert('❌ שגיאה: ' + error.message);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('האם למחוק את האירוע? (יימחק גם מיומן Google)')) return;
 
@@ -734,6 +762,16 @@ export default function AdminEventsPage() {
                       >
                         <UserCheck size={16} className="ml-1" />
                         נרשמים ({event.registrations.length})
+                      </Button>
+                    )}
+                    {(event.type === 'show' || event.type === 'event') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleSales(event)}
+                        className={event.status === 'full' ? 'border-red-500 text-red-600' : 'border-green-500 text-green-600'}
+                      >
+                        {event.status === 'full' ? '✓ פתח מכירה' : '⛔ עצור מכירה'}
                       </Button>
                     )}
                     <Button
