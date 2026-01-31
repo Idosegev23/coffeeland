@@ -294,18 +294,34 @@ function CheckoutContent() {
                 <div className="border-b border-gray-200 pb-4 mb-4">
                   <div className="flex items-start gap-4">
                     <div className="w-16 h-16 bg-accent/20 rounded-xl flex items-center justify-center">
-                      {cartItem.type === 'event' ? (
+                      {cartItem.type === 'show' ? (
+                        <span className="text-3xl">🎭</span>
+                      ) : cartItem.type === 'event' ? (
                         <Calendar className="w-8 h-8 text-accent" />
                       ) : (
                         <Ticket className="w-8 h-8 text-accent" />
                       )}
                     </div>
                     <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-0.5 rounded">
+                          {cartItem.type === 'show' ? 'הצגה' : cartItem.type === 'event' ? 'אירוע' : 'כרטיסייה'}
+                        </span>
+                      </div>
                       <h3 className="font-semibold text-primary">{cartItem.name}</h3>
-                      {cartItem.entries > 1 && (
+                      {cartItem.type === 'show' && cartItem.description && (
+                        <p className="text-sm text-text-light/70 mt-1">
+                          {cartItem.description === 'כרטיס להצגה בלבד' ? (
+                            <>🎭 כרטיס להצגה בלבד</>
+                          ) : (
+                            <>🎭 כרטיס להצגה + 🎪 כניסה לגימבורי</>
+                          )}
+                        </p>
+                      )}
+                      {cartItem.entries > 1 && cartItem.type !== 'show' && (
                         <p className="text-sm text-text-light/70">{cartItem.entries} כניסות</p>
                       )}
-                      {cartItem.description && (
+                      {cartItem.description && cartItem.type !== 'show' && (
                         <p className="text-xs text-text-light/60 mt-1 line-clamp-2">{cartItem.description}</p>
                       )}
                     </div>
@@ -375,12 +391,27 @@ function CheckoutContent() {
                   <div className="bg-background-light rounded-xl p-4 mb-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-accent/20 rounded-lg flex items-center justify-center">
-                        <Ticket className="w-6 h-6 text-accent" />
+                        {cartItem.type === 'show' ? (
+                          <span className="text-2xl">🎭</span>
+                        ) : (
+                          <Ticket className="w-6 h-6 text-accent" />
+                        )}
                       </div>
                       <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-accent">
+                            {cartItem.type === 'show' ? 'הצגה' : cartItem.type === 'event' ? 'אירוע' : 'כרטיסייה'}
+                          </span>
+                        </div>
                         <h3 className="font-semibold">{cartItem.name}</h3>
                         <p className="text-sm text-text-light/70">
-                          {cartItem.entries > 1 ? `${cartItem.entries} כניסות` : 'כניסה אחת'}
+                          {cartItem.type === 'show' && cartItem.description ? (
+                            cartItem.description
+                          ) : cartItem.entries > 1 ? (
+                            `${cartItem.entries} כניסות`
+                          ) : (
+                            'כניסה אחת'
+                          )}
                         </p>
                       </div>
                       <div className="text-xl font-bold text-accent">₪{cartItem.price}</div>
