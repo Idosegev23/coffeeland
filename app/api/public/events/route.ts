@@ -29,23 +29,36 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
 
     const type = searchParams.get('type')
-    const status = searchParams.get('status') || 'active'
+    const status = searchParams.get('status') // אם אין - מחזיר הכל
     const from = searchParams.get('from')
     const to = searchParams.get('to')
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 100)
     const featured = searchParams.get('is_featured')
+    const includeHistory = searchParams.get('include_history') === 'true' // אם true - כולל גם אירועים שעברו
 
     let query = service
       .from('events')
       .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground')
-      .eq('status', status)
       .order('start_at', { ascending: true })
       .limit(limit)
+
+    // סינון לפי סטטוס - אם לא מצוין, מחזיר הכל חוץ מ-cancelled
+    if (status) {
+      query = query.eq('status', status)
+    } else {
+      query = query.neq('status', 'cancelled')
+    }
 
     if (type) query = query.eq('type', type)
     if (from) query = query.gte('start_at', from)
     if (to) query = query.lte('start_at', to)
     if (featured === 'true') query = query.eq('is_featured', true)
+    
+    // אם לא מבקשים היסטוריה, רק אירועים עתידיים
+    if (!includeHistory) {
+      const now = new Date().toISOString()
+      query = query.gte('start_at', now)
+    }
 
     const { data: events, error } = await query
     if (error) throw error

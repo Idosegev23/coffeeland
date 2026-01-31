@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Calendar, Clock, Users, Ticket, Star } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar, Clock, Users, Ticket, Star, History } from 'lucide-react';
 
 interface Show {
   id: string;
@@ -19,7 +20,8 @@ interface Show {
   price_show_only: number;
   price_show_and_playground: number;
   reserved_seats_count?: number;
-  registrations_count?: number; // מספר כרטיסים שנמכרו
+  registrations_count?: number;
+  status?: string;
 }
 
 function formatDate(dateStr: string) {
@@ -41,23 +43,37 @@ function formatTime(dateStr: string) {
 }
 
 export default function ShowsPage() {
-  const [shows, setShows] = useState<Show[]>([]);
+  const [upcomingShows, setUpcomingShows] = useState<Show[]>([]);
+  const [historicalShows, setHistoricalShows] = useState<Show[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadShows();
+    loadAllShows();
   }, []);
 
-  const loadShows = async () => {
+  const loadAllShows = async () => {
     try {
-      const timestamp = Date.now(); // למניעת cache
-      const res = await fetch(
-        `/api/public/events?type=show&status=active&_t=${timestamp}`,
+      const timestamp = Date.now();
+      
+      // הצגות עתידיות (כולל מלאות)
+      const upcomingRes = await fetch(
+        `/api/public/events?type=show&_t=${timestamp}`,
         { cache: 'no-store' }
       );
-      const data = await res.json();
-      setShows(data.events || []);
+      const upcomingData = await upcomingRes.json();
+      
+      // הצגות היסטוריות
+      const now = new Date();
+      const pastDate = new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString(); // 6 חודשים אחורה
+      const historyRes = await fetch(
+        `/api/public/events?type=show&include_history=true&to=${now.toISOString()}&from=${pastDate}&_t=${timestamp}`,
+        { cache: 'no-store' }
+      );
+      const historyData = await historyRes.json();
+      
+      setUpcomingShows(upcomingData.events || []);
+      setHistoricalShows(historyData.events || []);
     } catch (error) {
       console.error('Error loading shows:', error);
     } finally {
@@ -76,9 +92,151 @@ export default function ShowsPage() {
   };
 
   const getAvailableSeats = (show: Show) => {
-    // להצגות: registrations_count = כרטיסים שנמכרו (confirmed)
     const sold = show.registrations_count || 0;
     return show.capacity - sold;
+  };
+
+  const isShowPast = (show: Show) => {
+    return new Date(show.start_at) < new Date();
+  };
+
+  const renderShowCard = (show: Show, isPast = false) => {
+    const seats = getAvailableSeats(show);
+    const soldOut = seats <= 0;
+    const almostSoldOut = seats <= 10 && seats > 0;
+    const past = isPast || isShowPast(show);
+
+    return (
+      <Card 
+        key={show.id} 
+        className={`overflow-hidden hover:shadow-lg transition-shadow bg-white border rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none ${past ? 'opacity-75' : ''}`}
+      >
+        {show.banner_image_url ? (
+          <div className="relative w-full h-56 bg-background">
+            <Image 
+              src={show.banner_image_url} 
+              alt={show.title}
+              fill
+              className="object-cover"
+            />
+            {past && (
+              <div className="absolute inset-0 bg-primary/60 flex items-center justify-center">
+                <Badge className="text-base px-4 py-2 bg-text-light/80 text-white flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  הסתיים
+                </Badge>
+              </div>
+            )}
+            {soldOut && !past && (
+              <div className="absolute inset-0 bg-primary/80 flex items-center justify-center">
+                <Badge className="text-lg px-6 py-2 bg-error text-white">
+                  אזל המלאי
+                </Badge>
+              </div>
+            )}
+            {almostSoldOut && !soldOut && !past && (
+              <div className="absolute top-4 left-4 bg-error text-white px-3 py-1 rounded text-sm font-bold">
+                נותרו {seats} מקומות בלבד!
+              </div>
+            )}
+            {!past && (
+              <div className="absolute top-4 right-4 flex items-center gap-1 bg-accent text-white px-3 py-1 rounded text-sm font-bold">
+                <Star className="w-3 h-3 fill-current" />
+                מיוחד
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full h-56 bg-secondary/20 flex items-center justify-center relative">
+            <Ticket className="w-16 h-16 text-secondary/30" />
+            {past && (
+              <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
+                <Badge className="text-base px-4 py-2 bg-text-light/80 text-white flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  הסתיים
+                </Badge>
+              </div>
+            )}
+            {almostSoldOut && !soldOut && !past && (
+              <div className="absolute top-4 left-4 bg-error text-white px-3 py-1 rounded text-sm font-bold">
+                נותרו {seats} מקומות!
+              </div>
+            )}
+            {!past && (
+              <div className="absolute top-4 right-4 flex items-center gap-1 bg-accent text-white px-3 py-1 rounded text-sm font-bold">
+                <Star className="w-3 h-3 fill-current" />
+                מיוחד
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="p-5 space-y-4">
+          <h3 className="text-xl font-bold text-primary">{show.title}</h3>
+          
+          {show.description && (
+            <p className="text-sm text-text-light/70 line-clamp-2">
+              {show.description}
+            </p>
+          )}
+
+          <div className="space-y-2 text-sm text-text-light/80 bg-background rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-accent flex-shrink-0" />
+              <span>{formatDate(show.start_at)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-accent flex-shrink-0" />
+              <span>{formatTime(show.start_at)} - {formatTime(show.end_at)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-accent flex-shrink-0" />
+              <span>
+                {past ? (
+                  `${show.registrations_count || 0} השתתפו`
+                ) : soldOut ? (
+                  'אזל המלאי'
+                ) : (
+                  `${seats} מקומות זמינים מתוך ${show.capacity}`
+                )}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-text-light/70">כרטיס להצגה בלבד</span>
+              <span className="font-bold text-accent">₪{show.price_show_only}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-text-light/70">הצגה + גימבורי</span>
+              <span className="font-bold text-accent">₪{show.price_show_and_playground}</span>
+            </div>
+          </div>
+
+          <Button 
+            onClick={() => setSelectedShow(show)}
+            disabled={soldOut || past}
+            className="w-full bg-accent hover:bg-accent/90"
+            size="lg"
+          >
+            {past ? (
+              <>
+                <History className="w-4 h-4 ml-2" />
+                הצגה הסתיימה
+              </>
+            ) : soldOut ? (
+              'אזל המלאי'
+            ) : (
+              <>
+                <Ticket className="w-4 h-4 ml-2" />
+                קנה כרטיס
+              </>
+            )}
+          </Button>
+        </div>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -102,122 +260,49 @@ export default function ShowsPage() {
           </p>
         </div>
 
-        {shows.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="bg-white rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-sm p-12 max-w-md mx-auto">
-              <Ticket className="w-16 h-16 text-secondary mx-auto mb-4" />
-              <p className="text-xl font-bold text-primary mb-2">אין הצגות מתוכננות כרגע</p>
-              <p className="text-text-light/70">חזרו בקרוב לעדכונים!</p>
-            </div>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {shows.map((show) => {
-              const seats = getAvailableSeats(show);
-              const soldOut = seats <= 0;
-              const almostSoldOut = seats <= 10 && seats > 0;
+        <Tabs defaultValue="upcoming" className="w-full" dir="rtl">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
+            <TabsTrigger value="upcoming" className="text-base">
+              הצגות קרובות
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-base flex items-center gap-2">
+              <History className="w-4 h-4" />
+              ארכיון
+            </TabsTrigger>
+          </TabsList>
 
-              return (
-                <Card 
-                  key={show.id} 
-                  className="overflow-hidden hover:shadow-lg transition-shadow bg-white border rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none"
-                >
-                  {show.banner_image_url ? (
-                    <div className="relative w-full h-56 bg-background">
-                      <Image 
-                        src={show.banner_image_url} 
-                        alt={show.title}
-                        fill
-                        className="object-cover"
-                      />
-                      {soldOut && (
-                        <div className="absolute inset-0 bg-primary/80 flex items-center justify-center">
-                          <Badge className="text-lg px-6 py-2 bg-error text-white">
-                            אזל המלאי
-                          </Badge>
-                        </div>
-                      )}
-                      {almostSoldOut && !soldOut && (
-                        <div className="absolute top-4 left-4 bg-error text-white px-3 py-1 rounded text-sm font-bold">
-                          נותרו {seats} מקומות בלבד!
-                        </div>
-                      )}
-                      <div className="absolute top-4 right-4 flex items-center gap-1 bg-accent text-white px-3 py-1 rounded text-sm font-bold">
-                        <Star className="w-3 h-3 fill-current" />
-                        מיוחד
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full h-56 bg-secondary/20 flex items-center justify-center relative">
-                      <Ticket className="w-16 h-16 text-secondary/30" />
-                      {almostSoldOut && !soldOut && (
-                        <div className="absolute top-4 left-4 bg-error text-white px-3 py-1 rounded text-sm font-bold">
-                          נותרו {seats} מקומות!
-                        </div>
-                      )}
-                      <div className="absolute top-4 right-4 flex items-center gap-1 bg-accent text-white px-3 py-1 rounded text-sm font-bold">
-                        <Star className="w-3 h-3 fill-current" />
-                        מיוחד
-                      </div>
-                    </div>
-                  )}
+          <TabsContent value="upcoming">
+            {upcomingShows.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="bg-white rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-sm p-12 max-w-md mx-auto">
+                  <Ticket className="w-16 h-16 text-secondary mx-auto mb-4" />
+                  <p className="text-xl font-bold text-primary mb-2">אין הצגות מתוכננות כרגע</p>
+                  <p className="text-text-light/70">חזרו בקרוב לעדכונים!</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {upcomingShows.map((show) => renderShowCard(show, false))}
+              </div>
+            )}
+          </TabsContent>
 
-                  <div className="p-5 space-y-4">
-                    <h3 className="text-xl font-bold text-primary">{show.title}</h3>
-                    
-                    {show.description && (
-                      <p className="text-sm text-text-light/70 line-clamp-2">
-                        {show.description}
-                      </p>
-                    )}
-
-                    <div className="space-y-2 text-sm text-text-light/80 bg-background rounded-lg p-3">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-accent flex-shrink-0" />
-                        <span>{formatDate(show.start_at)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-accent flex-shrink-0" />
-                        <span>{formatTime(show.start_at)} - {formatTime(show.end_at)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-accent flex-shrink-0" />
-                        <span>{seats} מקומות זמינים מתוך {show.capacity}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t space-y-2">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-text-light/70">כרטיס להצגה בלבד</span>
-                        <span className="font-bold text-accent">₪{show.price_show_only}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-text-light/70">הצגה + גימבורי</span>
-                        <span className="font-bold text-accent">₪{show.price_show_and_playground}</span>
-                      </div>
-                    </div>
-
-                    <Button 
-                      onClick={() => setSelectedShow(show)}
-                      disabled={soldOut}
-                      className="w-full bg-accent hover:bg-accent/90"
-                      size="lg"
-                    >
-                      {soldOut ? (
-                        'אזל המלאי'
-                      ) : (
-                        <>
-                          <Ticket className="w-4 h-4 ml-2" />
-                          קנה כרטיס
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+          <TabsContent value="history">
+            {historicalShows.length === 0 ? (
+              <div className="text-center py-20">
+                <div className="bg-white rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-sm p-12 max-w-md mx-auto">
+                  <History className="w-16 h-16 text-secondary mx-auto mb-4" />
+                  <p className="text-xl font-bold text-primary mb-2">אין הצגות קודמות להצגה</p>
+                  <p className="text-text-light/70">זו תהיה ההצגה הראשונה שלנו!</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {historicalShows.map((show) => renderShowCard(show, true))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Ticket Type Selection Dialog */}

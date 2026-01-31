@@ -38,8 +38,9 @@ export default function FeaturedShows() {
     try {
       const now = new Date().toISOString();
       const timestamp = Date.now(); // למניעת cache
+      // מחזיר הצגות מומלצות עתידיות (כולל מלאות)
       const res = await fetch(
-        `/api/public/events?type=show&is_featured=true&status=active&from=${encodeURIComponent(now)}&limit=3&_t=${timestamp}`,
+        `/api/public/events?type=show&is_featured=true&from=${encodeURIComponent(now)}&limit=3&_t=${timestamp}`,
         { cache: 'no-store' }
       );
       const data = await res.json();
