@@ -136,9 +136,9 @@ export default function ShowsPage() {
               </div>
             )}
             {soldOut && !past && (
-              <div className="absolute inset-0 bg-primary/80 flex items-center justify-center">
-                <Badge className="text-lg px-6 py-2 bg-error text-white">
-                  אזל המלאי
+              <div className="absolute top-4 left-4">
+                <Badge className="text-lg px-6 py-3 bg-error text-white shadow-lg">
+                  ⛔ אזל המלאי
                 </Badge>
               </div>
             )}
@@ -203,7 +203,7 @@ export default function ShowsPage() {
                 {past ? (
                   `${show.registrations_count || 0} השתתפו`
                 ) : soldOut ? (
-                  '⛔ אזל המלאי - מכירה נעצרה'
+                  '⛔ אזל המלאי'
                 ) : (
                   `${seats} מקומות זמינים מתוך ${show.capacity}`
                 )}
