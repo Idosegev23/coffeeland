@@ -56,12 +56,24 @@ export async function POST(req: NextRequest) {
     if (event_id) {
       const { data: event, error: eventError } = await serviceClient
         .from('events')
-        .select('id, title, capacity, type')
+        .select('id, title, capacity, type, status')
         .eq('id', event_id)
         .single();
 
       if (eventError || !event) {
         return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      }
+
+      // 🚫 בדיקה אם המכירה נעצרה ידנית
+      if (event.status === 'full') {
+        return NextResponse.json({ 
+          error: 'sold_out',
+          message: `⛔ אזל המלאי! המכירה להצגה "${event.title}" נעצרה.`,
+          details: {
+            status: 'full',
+            reason: 'Sales stopped manually'
+          }
+        }, { status: 409 }); // 409 Conflict
       }
 
       // ספירת כרטיסים מאושרים
