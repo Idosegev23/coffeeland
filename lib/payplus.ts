@@ -87,6 +87,7 @@ export interface PayPlusResponse {
     qr_code_image?: string;
     customer_uid?: string;
     token_uid?: string;
+    transaction_uid?: string;
   };
 }
 
