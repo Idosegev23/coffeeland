@@ -26,8 +26,8 @@ export interface ReconciliationResult {
   success: boolean;
   totalInReport: number;
   matchedInSystem: number;
-  missingInSystem: number[];
-  extraInSystem: number[];
+  missingInSystem: string[];
+  extraInSystem: string[];
   statusMismatches: Array<{
     paymentId: string;
     transactionRef: string;
@@ -43,17 +43,16 @@ export interface ReconciliationResult {
  */
 export function parsePayPlusCSV(csvContent: string): PayPlusTransactionRow[] {
   try {
-    const result = Papa.parse(csvContent, {
+    const result = Papa.parse<PayPlusTransactionRow>(csvContent, {
       header: true,
-      skipEmptyLines: true,
-      encoding: 'UTF-8'
+      skipEmptyLines: true
     });
 
     if (result.errors && result.errors.length > 0) {
       console.error('CSV parsing errors:', result.errors);
     }
 
-    return result.data as PayPlusTransactionRow[];
+    return result.data || [];
   } catch (error) {
     console.error('Error parsing CSV:', error);
     return [];
@@ -96,7 +95,7 @@ export async function reconcileWithPayPlusReport(
 
     const { data: systemPayments, error: paymentsError } = await supabase
       .from('payments')
-      .select('id, status, metadata, amount, created_at, completed_at')
+      .select('id, status, metadata, amount, created_at, completed_at, user_id')
       .gte('created_at', `${uniqueDates[0]}T00:00:00`)
       .lte('created_at', `${uniqueDates[uniqueDates.length - 1]}T23:59:59`);
 
