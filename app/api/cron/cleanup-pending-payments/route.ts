@@ -5,7 +5,7 @@ import { getServiceClient } from '@/lib/supabase';
  * Cron job לניקוי תשלומים ממתינים ישנים (>15 דקות)
  * מונע מצב של "הזמנות רפאים" שתופסות קיבולת
  * 
- * Vercel Cron: */10 * * * * (כל 10 דקות)
+ * Vercel Cron: every 10 minutes
  */
 export async function GET(req: Request) {
   try {

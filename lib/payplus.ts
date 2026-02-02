@@ -215,25 +215,6 @@ export function calculateWebhookSignature(data: string, secret: string): string 
 }
 
 /**
- * בדיקת סטטוס עסקה (עם rate limiting)
- */
-export async function checkTransactionStatus(transactionUid: string): Promise<PayPlusResponse> {
-  return withRateLimit(async () => {
-    const url = `${BASE_URL}/Transactions/Check`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        transaction_uid: transactionUid
-      })
-    });
-
-    return response.json();
-  }, 'checkStatus');
-}
-
-/**
  * בדיקה האם PayPlus מוגדר כראוי
  */
 export function isPayPlusConfigured(): boolean {
