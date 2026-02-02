@@ -21,10 +21,14 @@ export async function POST(req: NextRequest) {
     console.log('📥 PayPlus Callback received at:', new Date().toISOString());
     console.log('📥 Callback data:', JSON.stringify(body, null, 2));
 
+    // PayPlus שולח את הנתונים בתוך transaction object
+    const transaction = body.transaction || {};
+    
     // יצירת idempotency key מהנתונים
-    const transactionUid = body.transaction_uid || '';
-    const pageRequestUid = body.page_request_uid || '';
-    const idempotencyKey = `${transactionUid}-${pageRequestUid}-${body.status_code}`;
+    const transactionUid = transaction.uid || '';
+    const pageRequestUid = transaction.payment_page_request_uid || '';
+    const statusCode = transaction.status_code || '';
+    const idempotencyKey = `${transactionUid}-${pageRequestUid}-${statusCode}`;
 
     // בדיקת idempotency - האם כבר עיבדנו את ה-webhook הזה?
     const { data: existingLog } = await supabase
@@ -65,7 +69,7 @@ export async function POST(req: NextRequest) {
           headers: headers,
           transaction_uid: transactionUid,
           page_request_uid: pageRequestUid,
-          payment_id: body.more_info_1 || null,
+          payment_id: transaction.more_info_1 || null,
           status: 'processing',
           idempotency_key: idempotencyKey
         })
@@ -97,18 +101,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
+    // PayPlus שולח את הנתונים בתוך transaction object (כבר הוגדר למעלה)
     const {
-      transaction_uid,
-      page_request_uid,
+      uid: transaction_uid,
+      payment_page_request_uid: page_request_uid,
       status_code,
-      approval_num,
-      voucher_num,
+      approval_number: approval_num,
+      voucher_number: voucher_num,
       more_info,    // מזהה העסקה שלנו (transactionRef)
       more_info_1,  // ID התשלום בDB
-      amount,
-      customer_uid,
-      token_uid
-    } = body;
+      amount
+    } = transaction;
+    
+    const data = body.data || {};
+    const {
+      customer_uid
+    } = data;
+    
+    const token_uid = data.token_uid || data.card_information?.token || null;
 
     // קבלת סטטוס העסקה
     // status_code: 000 = הצלחה, אחרים = כשלון

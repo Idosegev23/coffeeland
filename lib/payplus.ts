@@ -149,35 +149,42 @@ export async function generatePaymentLink(request: PaymentPageRequest): Promise<
 
 /**
  * אימות Callback מ-PayPlus
- * PayPlus שולח אימות דרך הפרמטרים של הבקשה
+ * PayPlus שולח את הנתונים בתוך אובייקט "transaction"
  */
-export function verifyPayPlusCallback(payload: Record<string, unknown>): boolean {
+export function verifyPayPlusCallback(payload: Record<string, any>): boolean {
   // בדיקות בסיסיות
   if (!payload) {
     console.error('🔴 PayPlus callback verification failed: empty payload');
     return false;
   }
 
-  // בדיקה שיש את השדות החובה
-  const requiredFields = ['transaction_uid', 'status_code', 'more_info_1'];
-  const missingFields = requiredFields.filter(field => !payload[field]);
+  // PayPlus שולח את הנתונים בתוך transaction object
+  const transaction = payload.transaction;
+  if (!transaction || typeof transaction !== 'object') {
+    console.error('🔴 PayPlus callback verification failed: missing transaction object');
+    return false;
+  }
+
+  // בדיקה שיש את השדות החובה בתוך transaction
+  const requiredFields = ['uid', 'status_code', 'more_info_1'];
+  const missingFields = requiredFields.filter(field => !transaction[field]);
   
   if (missingFields.length > 0) {
-    console.error('🔴 PayPlus callback verification failed: missing required fields:', missingFields);
+    console.error('🔴 PayPlus callback verification failed: missing required fields in transaction:', missingFields);
     return false;
   }
 
   // בדיקת תקינות status_code
-  const statusCode = payload.status_code;
+  const statusCode = transaction.status_code;
   if (typeof statusCode !== 'string' && typeof statusCode !== 'number') {
     console.error('🔴 PayPlus callback verification failed: invalid status_code type');
     return false;
   }
 
-  // בדיקת תקינות transaction_uid
-  const transactionUid = payload.transaction_uid;
+  // בדיקת תקינות uid (transaction_uid)
+  const transactionUid = transaction.uid;
   if (typeof transactionUid !== 'string' || transactionUid.length === 0) {
-    console.error('🔴 PayPlus callback verification failed: invalid transaction_uid');
+    console.error('🔴 PayPlus callback verification failed: invalid transaction uid');
     return false;
   }
 
@@ -186,7 +193,7 @@ export function verifyPayPlusCallback(payload: Record<string, unknown>): boolean
   const webhookSecret = process.env.PAYPLUS_WEBHOOK_SECRET;
   if (webhookSecret && payload.signature) {
     const signature = payload.signature as string;
-    const dataToSign = `${payload.transaction_uid}-${payload.status_code}-${payload.amount}`;
+    const dataToSign = `${transaction.uid}-${transaction.status_code}-${transaction.amount}`;
     
     // כאן צריך לחשב HMAC-SHA256 ולהשוות
     // לצורך הדוגמה, אני מדלג על זה כרגע
