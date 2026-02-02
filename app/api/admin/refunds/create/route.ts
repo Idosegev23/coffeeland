@@ -142,15 +142,22 @@ export async function POST(req: NextRequest) {
           })
           .eq('id', payment.id);
 
-        // ביטול registration/pass בהתאם
-        if (payment.item_type === 'show' && payment.item_id) {
-          await supabase
+        // ביטול registration/pass בהתאם לסוג התשלום
+        if (payment.item_type === 'event_registration' || payment.item_type === 'show') {
+          // מחיקת כל ה-registrations שקשורים לתשלום זה
+          const { data: deletedRegs, error: deleteError } = await supabase
             .from('registrations')
-            .update({ status: 'cancelled' })
-            .eq('id', payment.item_id);
+            .delete()
+            .eq('payment_id', payment.id)
+            .select();
           
-          console.log('✅ Registration cancelled:', payment.item_id);
+          if (!deleteError && deletedRegs) {
+            console.log(`✅ Deleted ${deletedRegs.length} registration(s) for payment ${payment.id}`);
+          } else if (deleteError) {
+            console.error('❌ Error deleting registrations:', deleteError);
+          }
         } else if (payment.item_type === 'pass' && payment.item_id) {
+          // סימון כרטיסייה כמזוכה
           await supabase
             .from('passes')
             .update({ status: 'refunded' })
