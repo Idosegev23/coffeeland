@@ -43,17 +43,17 @@ export interface ReconciliationResult {
  */
 export function parsePayPlusCSV(csvContent: string): PayPlusTransactionRow[] {
   try {
-    const result = Papa.parse<PayPlusTransactionRow>(csvContent, {
+    const result = Papa.parse(csvContent, {
       header: true,
       skipEmptyLines: true,
       encoding: 'UTF-8'
     });
 
-    if (result.errors.length > 0) {
+    if (result.errors && result.errors.length > 0) {
       console.error('CSV parsing errors:', result.errors);
     }
 
-    return result.data;
+    return result.data as PayPlusTransactionRow[];
   } catch (error) {
     console.error('Error parsing CSV:', error);
     return [];
