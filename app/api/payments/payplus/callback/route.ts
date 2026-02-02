@@ -211,43 +211,55 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // אם התשלום הצליח והוא עבור הצגה - יוצרים registration
+    // אם התשלום הצליח והוא עבור הצגה - יוצרים registration(s)
     if (isSuccess && payment.metadata?.event_id) {
-      console.log('🎭 Creating show registration for successful payment...');
+      console.log('🎭 Creating show registration(s) for successful payment...');
       
       const { event_id, ticket_type } = payment.metadata;
       
-      const { data: registration, error: regError } = await supabase
+      // קבלת הכמות מה-items של PayPlus
+      const items = body.transaction?.items || [];
+      const quantity = items.length > 0 ? items[0].quantity : 1;
+      
+      console.log(`🎟️ Creating ${quantity} registration(s) for event ${event_id}`);
+      
+      // יצירת מספר registrations לפי הכמות
+      const registrationsToInsert = Array.from({ length: quantity }, () => ({
+        event_id: event_id,
+        user_id: payment.user_id,
+        status: 'confirmed',
+        is_paid: true,
+        payment_id: payment.id,
+        ticket_type: ticket_type || 'regular',
+        registered_at: new Date().toISOString()
+      }));
+      
+      const { data: registrations, error: regError } = await supabase
         .from('registrations')
-        .insert({
-          event_id: event_id,
-          user_id: payment.user_id,
-          status: 'confirmed',
-          is_paid: true,
-          payment_id: payment.id,
-          ticket_type: ticket_type || 'regular',
-          registered_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+        .insert(registrationsToInsert)
+        .select();
 
       if (regError) {
-        console.error('❌ Error creating registration:', regError);
+        console.error('❌ Error creating registrations:', regError);
       } else {
-        console.log('✅ Registration created:', registration.id);
+        console.log(`✅ Created ${registrations?.length || 0} registration(s):`, registrations?.map(r => r.id));
         
-        // עדכון התשלום עם מזהה הרישום
-        await supabase
-          .from('payments')
-          .update({
-            item_id: registration.id,
-            item_type: 'show',
-            metadata: {
-              ...payment.metadata,
-              registration_id: registration.id
-            }
-          })
-          .eq('id', payment.id);
+        // עדכון התשלום עם מזהה הרישום הראשון (לצורך תאימות)
+        if (registrations && registrations.length > 0) {
+          await supabase
+            .from('payments')
+            .update({
+              item_id: registrations[0].id,
+              item_type: 'show',
+              metadata: {
+                ...payment.metadata,
+                registration_id: registrations[0].id,
+                registration_ids: registrations.map(r => r.id),
+                quantity: quantity
+              }
+            })
+            .eq('id', payment.id);
+        }
       }
     }
 

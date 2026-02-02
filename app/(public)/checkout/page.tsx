@@ -37,6 +37,7 @@ function CheckoutContent() {
   const supabase = createClientComponentClient();
 
   const [cartItem, setCartItem] = useState<CartItem | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [step, setStep] = useState<'cart' | 'redirecting'>('cart');
@@ -155,21 +156,24 @@ function CheckoutContent() {
 
       const itemType = searchParams.get('type') || 'pass';
 
+      // Calculate total amount
+      const totalAmount = cartItem.price * quantity;
+      
       // Call our PayPlus API to create payment link
       const response = await fetch('/api/payments/payplus/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: cartItem.price,
+          amount: totalAmount,
           card_type_id: itemType === 'pass' ? cartItem.id : null,
           card_type_name: cartItem.name,
-          entries_count: cartItem.entries,
+          entries_count: cartItem.entries * quantity,
           event_id: itemType === 'show' ? cartItem.id : null,
           ticket_type: (cartItem as any).metadata?.ticket_type,
-          description: `רכישת ${cartItem.name}`,
+          description: `רכישת ${quantity > 1 ? quantity + ' × ' : ''}${cartItem.name}`,
           items: [{
             name: cartItem.name,
-            quantity: 1,
+            quantity: quantity,
             price: cartItem.price
           }]
         })
@@ -326,13 +330,39 @@ function CheckoutContent() {
                       )}
                     </div>
                   </div>
+                  
+                  {/* Quantity Selector */}
+                  <div className="mt-4 flex items-center justify-between bg-background-light rounded-lg p-3">
+                    <span className="text-sm font-medium text-text-light">כמות:</span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-8 h-8 rounded-full bg-white border-2 border-accent/20 hover:border-accent flex items-center justify-center text-accent font-bold transition-all"
+                        disabled={quantity <= 1}
+                      >
+                        -
+                      </button>
+                      <span className="text-lg font-bold text-primary w-8 text-center">{quantity}</span>
+                      <button
+                        onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                        className="w-8 h-8 rounded-full bg-white border-2 border-accent/20 hover:border-accent flex items-center justify-center text-accent font-bold transition-all"
+                        disabled={quantity >= 10}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-text-light/70">סכום ביניים</span>
+                  <span className="text-text-light/70">מחיר ליחידה</span>
                   <span>₪{cartItem?.price}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-text-light/70">כמות</span>
+                  <span>×{quantity}</span>
                 </div>
                 <div className="flex justify-between text-green-600">
                   <span>כולל מע&quot;מ</span>
@@ -343,7 +373,7 @@ function CheckoutContent() {
               <div className="border-t border-gray-200 mt-4 pt-4">
                 <div className="flex justify-between text-lg font-bold">
                   <span className="text-primary">סה&quot;כ לתשלום</span>
-                  <span className="text-accent">₪{cartItem?.price}</span>
+                  <span className="text-accent">₪{cartItem ? (cartItem.price * quantity).toFixed(2) : 0}</span>
                 </div>
               </div>
 
@@ -402,19 +432,26 @@ function CheckoutContent() {
                           <span className="text-xs font-medium text-accent">
                             {cartItem.type === 'show' ? 'הצגה' : cartItem.type === 'event' ? 'אירוע' : 'כרטיסייה'}
                           </span>
+                          {quantity > 1 && (
+                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                              ×{quantity}
+                            </span>
+                          )}
                         </div>
                         <h3 className="font-semibold">{cartItem.name}</h3>
                         <p className="text-sm text-text-light/70">
                           {cartItem.type === 'show' && cartItem.description ? (
                             cartItem.description
                           ) : cartItem.entries > 1 ? (
-                            `${cartItem.entries} כניסות`
+                            `${cartItem.entries * quantity} כניסות`
+                          ) : quantity > 1 ? (
+                            `${quantity} כניסות`
                           ) : (
                             'כניסה אחת'
                           )}
                         </p>
                       </div>
-                      <div className="text-xl font-bold text-accent">₪{cartItem.price}</div>
+                      <div className="text-xl font-bold text-accent">₪{(cartItem.price * quantity).toFixed(2)}</div>
                     </div>
                   </div>
                 )}
