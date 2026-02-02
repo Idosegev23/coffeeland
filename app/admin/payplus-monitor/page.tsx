@@ -37,6 +37,9 @@ export default function PayPlusMonitorPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState<any>(null);
+  const [daysBack, setDaysBack] = useState(7);
 
   useEffect(() => {
     loadData();
@@ -95,6 +98,35 @@ export default function PayPlusMonitorPage() {
       alert(`שגיאה: ${error.message}`);
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function handleAutoReconcile(autoFix: boolean = false) {
+    setReconciling(true);
+    setReconcileResult(null);
+
+    try {
+      const res = await fetch('/api/admin/payplus/reconcile-auto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daysBack, autoFix })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setReconcileResult(data);
+        if (autoFix) {
+          alert(`✅ התאמה הושלמה עם תיקונים אוטומטיים!\nנבדקו: ${data.summary.totalInReport}\nתוקנו: ${data.summary.fixed} רשומות`);
+          loadData();
+        }
+      } else {
+        alert(`שגיאה: ${data.error}`);
+      }
+    } catch (error: any) {
+      alert(`שגיאה: ${error.message}`);
+    } finally {
+      setReconciling(false);
     }
   }
 
@@ -158,10 +190,11 @@ export default function PayPlusMonitorPage() {
 
         {/* טאבים */}
         <Tabs defaultValue="alerts" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="alerts">התראות</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
             <TabsTrigger value="syncs">סנכרונים</TabsTrigger>
+            <TabsTrigger value="csv">📊 התאמת CSV</TabsTrigger>
           </TabsList>
 
           {/* התראות */}
@@ -288,6 +321,119 @@ export default function PayPlusMonitorPage() {
                     </div>
                   ))
                 )}
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* Auto Reconciliation */}
+          <TabsContent value="csv">
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4">📊 התאמה אוטומטית עם PayPlus</h2>
+              <p className="text-gray-600 mb-6">
+                המערכת תתחבר ישירות ל-API של PayPlus, תמשוך את כל העסקאות ותשווה אותן עם מסד הנתונים
+              </p>
+
+              {/* הגדרות */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
+                  <label className="font-medium">טווח זמן:</label>
+                  <select 
+                    value={daysBack}
+                    onChange={(e) => setDaysBack(Number(e.target.value))}
+                    className="px-4 py-2 border rounded-md"
+                  >
+                    <option value={1}>יום אחרון</option>
+                    <option value={7}>שבוע אחרון</option>
+                    <option value={14}>14 ימים</option>
+                    <option value={30}>חודש אחרון</option>
+                  </select>
+                  <span className="text-sm text-gray-500">
+                    (המערכת תשוה את {daysBack} הימים האחרונים)
+                  </span>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={() => handleAutoReconcile(false)}
+                    disabled={reconciling}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    {reconciling ? 'מבצע בדיקה...' : '🔍 בדיקה בלבד'}
+                  </Button>
+                  <Button 
+                    onClick={() => handleAutoReconcile(true)}
+                    disabled={reconciling}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    {reconciling ? 'מתקן...' : '⚡ בדיקה + תיקון אוטומטי'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* תוצאות */}
+              {reconcileResult && (
+                <div className="mt-6 space-y-4">
+                  <div className="border-t pt-4">
+                    <h3 className="font-bold mb-3">תוצאות ההתאמה:</h3>
+                    
+                    {/* סטטיסטיקות */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-600">סה"כ בדוח PayPlus</div>
+                        <div className="text-2xl font-bold">{reconcileResult.summary.totalInReport}</div>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-600">נמצאו במערכת</div>
+                        <div className="text-2xl font-bold text-green-600">{reconcileResult.summary.matched}</div>
+                      </div>
+                      <div className="bg-yellow-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-600">אי התאמות</div>
+                        <div className="text-2xl font-bold text-yellow-600">{reconcileResult.summary.mismatches}</div>
+                      </div>
+                      <div className="bg-red-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-600">עודפות במערכת</div>
+                        <div className="text-2xl font-bold text-red-600">{reconcileResult.summary.extra}</div>
+                      </div>
+                      <div className="bg-purple-50 rounded-lg p-4">
+                        <div className="text-sm text-gray-600">חסרות במערכת</div>
+                        <div className="text-2xl font-bold text-purple-600">{reconcileResult.summary.missing}</div>
+                      </div>
+                      {reconcileResult.summary.fixed > 0 && (
+                        <div className="bg-emerald-50 rounded-lg p-4">
+                          <div className="text-sm text-gray-600">תוקנו</div>
+                          <div className="text-2xl font-bold text-emerald-600">{reconcileResult.summary.fixed}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* דוח מפורט */}
+                    {reconcileResult.report && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <pre className="text-xs whitespace-pre-wrap font-mono">
+                          {reconcileResult.report}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* הסבר */}
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold mb-2">💡 כיצד זה עובד?</h4>
+                <ul className="text-sm space-y-1 text-gray-700">
+                  <li>• המערכת מתחברת ישירות ל-API של PayPlus 🔌</li>
+                  <li>• מושכת את כל העסקאות מהתקופה שנבחרה 📥</li>
+                  <li>• משווה כל עסקה עם מסד הנתונים שלנו 🔍</li>
+                  <li>• <strong>בדיקה בלבד</strong> - רק מציג הבדלים ללא שינוי</li>
+                  <li>• <strong>תיקון אוטומטי</strong> - מתקן תשלומים שלא תואמים, מוסיף registrations חסרות, ומבטל תשלומים שלא ב-PayPlus</li>
+                </ul>
+                <div className="mt-3 pt-3 border-t border-blue-300">
+                  <p className="text-xs text-gray-600">
+                    💡 <strong>טיפ:</strong> הרץ את זה אחרי שרואה בעיות עם תשלומים, או קבע cron job יומי לסנכרון אוטומטי מלא
+                  </p>
+                </div>
               </div>
             </Card>
           </TabsContent>

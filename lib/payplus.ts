@@ -295,3 +295,351 @@ export async function processRefund(request: RefundRequest): Promise<PayPlusResp
     }
   }, 'refund');
 }
+
+/**
+ * בדיקת סטטוס עסקה
+ * https://docs.payplus.co.il/reference/transactions-view
+ */
+export async function checkTransactionStatus(transactionUid: string): Promise<PayPlusResponse> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/Transactions/View`;
+    
+    const body = {
+      transaction_uid: transactionUid
+    };
+
+    console.log('🔍 Checking transaction status:', transactionUid);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data: PayPlusResponse = await response.json();
+      console.log('✅ Transaction status:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error checking transaction status:', error);
+      throw error;
+    }
+  }, 'check-transaction');
+}
+
+/**
+ * אישור עסקה (J5)
+ * https://docs.payplus.co.il/reference/transactions-approval
+ */
+export async function approveTransaction(transactionUid: string): Promise<PayPlusResponse> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/Transactions/ApprovalTransaction`;
+    
+    const body = {
+      transaction_uid: transactionUid
+    };
+
+    console.log('✅ Approving transaction:', transactionUid);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data: PayPlusResponse = await response.json();
+      console.log('✅ Transaction approved:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error approving transaction:', error);
+      throw error;
+    }
+  }, 'approve-transaction');
+}
+
+/**
+ * ביטול עסקה
+ * https://docs.payplus.co.il/reference/transactions-cancel
+ */
+export async function cancelTransaction(transactionUid: string): Promise<PayPlusResponse> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/Transactions/CancelTransaction`;
+    
+    const body = {
+      transaction_uid: transactionUid
+    };
+
+    console.log('🚫 Cancelling transaction:', transactionUid);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data: PayPlusResponse = await response.json();
+      console.log('✅ Transaction cancelled:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error cancelling transaction:', error);
+      throw error;
+    }
+  }, 'cancel-transaction');
+}
+
+/**
+ * חיוב ישיר (J4) - לעסקאות ללא דף תשלום
+ * https://docs.payplus.co.il/reference/transactions-charge
+ */
+export interface DirectChargeRequest {
+  transaction_uid?: string;
+  amount: number;
+  currency_code?: string;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  credit_card_number: string;
+  credit_card_exp: string; // MMYY
+  cvv: string;
+  four_digits?: string;
+  more_info?: string;
+  more_info_1?: string;
+  charge_method?: number;
+}
+
+export async function directCharge(request: DirectChargeRequest): Promise<PayPlusResponse> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/Transactions/ChargeTransaction`;
+    
+    console.log('💳 Processing direct charge...');
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(request)
+      });
+
+      const data: PayPlusResponse = await response.json();
+      console.log('✅ Direct charge response:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Error processing direct charge:', error);
+      throw error;
+    }
+  }, 'direct-charge');
+}
+
+/**
+ * משיכת היסטוריית עסקאות מ-PayPlus
+ * https://docs.payplus.co.il/reference/transactions-history
+ */
+export interface TransactionsHistoryRequest {
+  from_date?: string; // YYYY-MM-DD
+  to_date?: string;   // YYYY-MM-DD
+  from_time?: string; // HH:MM:SS
+  to_time?: string;   // HH:MM:SS
+  page?: number;
+  page_size?: number;
+}
+
+export interface PayPlusTransaction {
+  transaction_uid: string;
+  number: string; // Transaction number
+  date: string;
+  time: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  amount: number;
+  currency: string;
+  status_code: string;
+  approval_number: string;
+  voucher_number: string;
+  transaction_type: string; // "Charge" or "Refund"
+  brand: string;
+  more_info: string;
+  more_info_1: string;
+  more_info_2: string;
+  more_info_3: string;
+  more_info_4: string;
+  more_info_5: string;
+}
+
+/**
+ * דוח עסקאות שאושרו
+ * https://docs.payplus.co.il/reference/transactions-approval-report
+ */
+export async function getApprovedTransactions(
+  request: TransactionsHistoryRequest = {}
+): Promise<{ success: boolean; transactions: PayPlusTransaction[]; error?: string }> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/TransactionReports/TransactionsApproval`;
+    
+    const toDate = request.to_date || new Date().toISOString().split('T')[0];
+    const fromDate = request.from_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const body = {
+      from_date: fromDate,
+      to_date: toDate,
+      page_number: request.page || 1,
+      page_size: request.page_size || 1000
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      
+      if (data.results?.status === 'success' && data.data?.items) {
+        return { success: true, transactions: data.data.items };
+      }
+      return { success: false, transactions: [], error: data.results?.description };
+    } catch (error) {
+      return { success: false, transactions: [], error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }, 'approved-transactions');
+}
+
+/**
+ * דוח עסקאות שנדחו/נכשלו
+ * https://docs.payplus.co.il/reference/rejected-transactions
+ */
+export async function getRejectedTransactions(
+  request: TransactionsHistoryRequest = {}
+): Promise<{ success: boolean; transactions: PayPlusTransaction[]; error?: string }> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/TransactionReports/RejectsTransactions`;
+    
+    const toDate = request.to_date || new Date().toISOString().split('T')[0];
+    const fromDate = request.from_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const body = {
+      from_date: fromDate,
+      to_date: toDate,
+      page_number: request.page || 1,
+      page_size: request.page_size || 1000
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      
+      if (data.results?.status === 'success' && data.data?.items) {
+        return { success: true, transactions: data.data.items };
+      }
+      return { success: false, transactions: [], error: data.results?.description };
+    } catch (error) {
+      return { success: false, transactions: [], error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }, 'rejected-transactions');
+}
+
+/**
+ * דוח עסקאות שבוטלו
+ * https://docs.payplus.co.il/reference/cancelled-transactions
+ */
+export async function getCancelledTransactions(
+  request: TransactionsHistoryRequest = {}
+): Promise<{ success: boolean; transactions: PayPlusTransaction[]; error?: string }> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/TransactionReports/CancelledTransactions`;
+    
+    const toDate = request.to_date || new Date().toISOString().split('T')[0];
+    const fromDate = request.from_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const body = {
+      from_date: fromDate,
+      to_date: toDate,
+      page_number: request.page || 1,
+      page_size: request.page_size || 1000
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      
+      if (data.results?.status === 'success' && data.data?.items) {
+        return { success: true, transactions: data.data.items };
+      }
+      return { success: false, transactions: [], error: data.results?.description };
+    } catch (error) {
+      return { success: false, transactions: [], error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }, 'cancelled-transactions');
+}
+
+export async function getTransactionsHistory(
+  request: TransactionsHistoryRequest = {}
+): Promise<{ success: boolean; transactions: PayPlusTransaction[]; error?: string }> {
+  return withRateLimit(async () => {
+    const url = `${BASE_URL}/Transactions/RefundsAccountingReport`;
+    
+    // ברירת מחדל: 30 ימים אחרונים
+    const toDate = request.to_date || new Date().toISOString().split('T')[0];
+    const fromDate = request.from_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const body = {
+      from_date: fromDate,
+      to_date: toDate,
+      from_time: request.from_time || '00:00:00',
+      to_time: request.to_time || '23:59:59',
+      page_number: request.page || 1,
+      page_size: request.page_size || 1000
+    };
+
+    console.log('📊 Fetching PayPlus transactions history:', body);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      
+      if (data.results?.status === 'success' && data.data?.items) {
+        console.log(`✅ Fetched ${data.data.items.length} transactions from PayPlus`);
+        return {
+          success: true,
+          transactions: data.data.items
+        };
+      } else {
+        console.error('❌ PayPlus transactions fetch failed:', data);
+        return {
+          success: false,
+          transactions: [],
+          error: data.results?.description || 'Unknown error'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error fetching PayPlus transactions:', error);
+      return {
+        success: false,
+        transactions: [],
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }, 'transactions-history');
+}
