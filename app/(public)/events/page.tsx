@@ -13,24 +13,9 @@ const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
 const eventTypes = [
   {
-    id: 'basic',
-    name: 'חבילה בסיסית',
-    price: '1,000 ₪',
-    duration: '2 שעות',
-    capacity: 'עד 20 ילדים',
-    description: 'החבילה המושלמת לחגיגה קטנה ואינטימית',
-    includes: [
-      'עד 20 ילדים (כל ילד נוסף 35 ₪)',
-      '7 פיצות',
-      'כוס ברד לכל ילד',
-      'כניסה לג׳ימבורי (משחקייה)',
-      'שהייה של 2 שעות במתחם',
-    ],
-  },
-  {
     id: 'standard',
     name: 'חבילה סטנדרטית',
-    price: '1,500 ₪',
+    price: '2,000 ₪',
     duration: '2 שעות',
     capacity: 'עד 20 ילדים + 20 מבוגרים',
     popular: true,
