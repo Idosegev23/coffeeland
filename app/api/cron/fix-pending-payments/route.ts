@@ -1,203 +1,134 @@
 import { NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
+import { syncPendingPayments, detectStuckPayments } from '@/lib/payplus-sync-service';
 
 /**
- * Cron Job - תיקון אוטומטי של תשלומים תקועים
+ * Cron Job - תיקון אוטומטי של תשלומים תקועים (Enhanced)
  * GET /api/cron/fix-pending-payments
  * 
  * רץ כל 15 דקות ומתקן תשלומים שנשארו pending
  * הוסף ב-Vercel Cron: 0,15,30,45 * * * *
+ * 
+ * עכשיו עם:
+ * - Logging מפורט ל-sync_logs
+ * - זיהוי תשלומים תקועים
+ * - יצירת alerts אוטומטית
  */
 export async function GET(req: Request) {
+  const startTime = Date.now();
+  const supabase = getServiceClient();
+
   try {
     // בדיקת authorization (רק Vercel Cron יכול לקרוא)
     const authHeader = req.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log('[CRON] ============================================');
+    console.log('[CRON] Starting enhanced pending payments fix');
+    console.log('[CRON] ============================================');
     
-    const supabase = getServiceClient();
+    // שלב 1: סנכרון תשלומים pending עם PayPlus
+    console.log('[CRON] Step 1: Syncing pending payments with PayPlus...');
     
-    // מציאת תשלומים pending מעל 15 דקות (סביר שהcallback לא יגיע)
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const syncResult = await syncPendingPayments({
+      maxAge: 72, // 72 שעות
+      limit: 100   // עד 100 תשלומים בכל run
+    });
+
+    console.log(`[CRON] Sync completed: ${syncResult.total_updated} updated, ${syncResult.total_failed} failed`);
+
+    // שלב 2: זיהוי תשלומים תקועים
+    console.log('[CRON] Step 2: Detecting stuck payments...');
     
-    const { data: pendingPayments, error } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('status', 'pending')
-      .lt('created_at', fifteenMinutesAgo);
-    
-    if (error) {
-      console.error('[CRON] Error fetching pending payments:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    
-    if (!pendingPayments || pendingPayments.length === 0) {
-      console.log('[CRON] No pending payments to fix');
-      return NextResponse.json({
-        success: true,
-        message: 'No pending payments',
-        count: 0,
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    console.log(`[CRON] Found ${pendingPayments.length} pending payments to fix`);
-    
-    let fixedCount = 0;
-    let errorCount = 0;
-    const results: any[] = [];
-    
-    for (const payment of pendingPayments) {
-      try {
-        // בדיקה אם זה תשלום להצגה
-        if (payment.metadata?.event_id) {
-          console.log(`[CRON] Fixing show payment: ${payment.id}`);
-          
-          // יצירת registration
-          const { data: registration, error: regError } = await supabase
-            .from('registrations')
-            .insert({
-              event_id: payment.metadata.event_id,
-              user_id: payment.user_id,
-              status: 'confirmed',
-              ticket_type: payment.metadata.ticket_type || 'show_only',
-              registered_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-          
-          if (regError) {
-            console.error(`[CRON] Error creating registration:`, regError);
-            errorCount++;
-            results.push({
-              payment_id: payment.id,
-              action: 'error',
-              error: regError.message
-            });
-            continue;
-          }
-          
-          // עדכון payment
-          await supabase
-            .from('payments')
-            .update({
-              status: 'completed',
-              completed_at: new Date().toISOString(),
-              metadata: {
-                ...payment.metadata,
-                registration_id: registration.id,
-                fixed_by_cron: true,
-                fixed_at: new Date().toISOString()
-              }
-            })
-            .eq('id', payment.id);
-          
-          fixedCount++;
-          results.push({
-            payment_id: payment.id,
-            action: 'fixed',
-            registration_id: registration.id,
-            amount: payment.amount
-          });
-          
-          console.log(`[CRON] ✅ Fixed payment ${payment.id} -> registration ${registration.id}`);
-        }
-        // בדיקה אם זה תשלום לכרטיסייה
-        else if (payment.metadata?.card_type_id) {
-          console.log(`[CRON] Fixing pass payment: ${payment.id}`);
-          
-          const expiryDate = new Date();
-          expiryDate.setMonth(expiryDate.getMonth() + 3);
-          
-          const { data: pass, error: passError } = await supabase
-            .from('passes')
-            .insert({
-              user_id: payment.user_id,
-              card_type_id: payment.metadata.card_type_id,
-              type: 'playground',
-              total_entries: payment.metadata.entries_count || 10,
-              remaining_entries: payment.metadata.entries_count || 10,
-              expiry_date: expiryDate.toISOString(),
-              price_paid: payment.amount,
-              status: 'active',
-              purchase_date: new Date().toISOString(),
-              payment_id: payment.id
-            })
-            .select()
-            .single();
-          
-          if (passError) {
-            console.error(`[CRON] Error creating pass:`, passError);
-            errorCount++;
-            results.push({
-              payment_id: payment.id,
-              action: 'error',
-              error: passError.message
-            });
-            continue;
-          }
-          
-          await supabase
-            .from('payments')
-            .update({
-              status: 'completed',
-              completed_at: new Date().toISOString(),
-              metadata: {
-                ...payment.metadata,
-                pass_id: pass.id,
-                fixed_by_cron: true,
-                fixed_at: new Date().toISOString()
-              }
-            })
-            .eq('id', payment.id);
-          
-          fixedCount++;
-          results.push({
-            payment_id: payment.id,
-            action: 'fixed',
-            pass_id: pass.id,
-            amount: payment.amount
-          });
-          
-          console.log(`[CRON] ✅ Fixed payment ${payment.id} -> pass ${pass.id}`);
-        }
-      } catch (err: any) {
-        console.error(`[CRON] Error processing payment ${payment.id}:`, err);
-        errorCount++;
-        results.push({
-          payment_id: payment.id,
-          action: 'error',
-          error: err.message
-        });
-      }
-    }
-    
+    const stuckResult = await detectStuckPayments();
+
+    console.log(`[CRON] Found ${stuckResult.stuck_count} stuck payments`);
+
+    // שלב 3: סיכום
+    const duration = Date.now() - startTime;
+
     const summary = {
       success: true,
       timestamp: new Date().toISOString(),
-      total_found: pendingPayments.length,
-      fixed: fixedCount,
-      errors: errorCount,
-      results
+      duration_ms: duration,
+      sync: {
+        total_checked: syncResult.total_checked,
+        updated: syncResult.total_updated,
+        failed: syncResult.total_failed,
+        skipped: syncResult.total_skipped,
+        sync_log_id: syncResult.sync_log_id
+      },
+      stuck_payments: {
+        count: stuckResult.stuck_count,
+        payments: stuckResult.payments.map(p => ({
+          id: p.id,
+          amount: p.amount,
+          created_at: p.created_at,
+          user: p.users
+        }))
+      }
     };
-    
-    console.log('[CRON] Summary:', JSON.stringify(summary, null, 2));
-    
-    // אם יש שגיאות - שלח התראה (אופציונלי)
-    if (errorCount > 0) {
-      console.warn(`[CRON] ⚠️ ${errorCount} payments failed to fix!`);
-      // כאן אפשר להוסיף שליחת אימייל/SMS לאדמין
+
+    console.log('[CRON] ============================================');
+    console.log('[CRON] Cron job completed successfully');
+    console.log(`[CRON] Duration: ${duration}ms`);
+    console.log(`[CRON] Updated: ${syncResult.total_updated} payments`);
+    console.log(`[CRON] Stuck: ${stuckResult.stuck_count} payments`);
+    console.log('[CRON] ============================================');
+
+    // יצירת alert אם יש הרבה כשלונות
+    if (syncResult.total_failed > 0 && syncResult.total_failed / syncResult.total_checked > 0.3) {
+      await supabase
+        .from('alerts')
+        .insert({
+          alert_type: 'sync_failed',
+          severity: 'error',
+          title: 'Cron Job: High Failure Rate',
+          message: `${syncResult.total_failed} out of ${syncResult.total_checked} payments failed to sync in cron job`,
+          details: {
+            sync_log_id: syncResult.sync_log_id,
+            failure_rate: (syncResult.total_failed / syncResult.total_checked * 100).toFixed(1) + '%'
+          },
+          sync_log_id: syncResult.sync_log_id
+        });
     }
-    
+
     return NextResponse.json(summary);
     
   } catch (error: any) {
+    const duration = Date.now() - startTime;
+    
+    console.error('[CRON] ============================================');
     console.error('[CRON] Fatal error:', error);
+    console.error(`[CRON] Duration before error: ${duration}ms`);
+    console.error('[CRON] ============================================');
+
+    // יצירת alert קריטי
+    try {
+      await supabase
+        .from('alerts')
+        .insert({
+          alert_type: 'sync_failed',
+          severity: 'critical',
+          title: 'Cron Job Failed',
+          message: `Cron job failed with error: ${error.message}`,
+          details: {
+            error: error.message,
+            stack: error.stack,
+            duration_ms: duration
+          }
+        });
+    } catch (alertError) {
+      console.error('[CRON] Failed to create alert:', alertError);
+    }
+
     return NextResponse.json({ 
       success: false,
       error: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      duration_ms: duration
     }, { status: 500 });
   }
 }

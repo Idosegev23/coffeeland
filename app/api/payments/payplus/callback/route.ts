@@ -3,21 +3,97 @@ import { getServiceClient } from '@/lib/supabase';
 import { verifyPayPlusCallback } from '@/lib/payplus';
 
 /**
- * Callback/Webhook מ-PayPlus
+ * Callback/Webhook מ-PayPlus - Enhanced Version
  * POST /api/payments/payplus/callback
  * 
  * PayPlus שולח לכאן עדכון על סטטוס התשלום
+ * כולל: Idempotency, Logging, Error Handling מחוזק
  */
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  const supabase = getServiceClient();
+  let webhookLogId: string | null = null;
+
   try {
     const body = await req.json();
+    const headers = Object.fromEntries(req.headers.entries());
     
     console.log('📥 PayPlus Callback received at:', new Date().toISOString());
     console.log('📥 Callback data:', JSON.stringify(body, null, 2));
 
+    // יצירת idempotency key מהנתונים
+    const transactionUid = body.transaction_uid || '';
+    const pageRequestUid = body.page_request_uid || '';
+    const idempotencyKey = `${transactionUid}-${pageRequestUid}-${body.status_code}`;
+
+    // בדיקת idempotency - האם כבר עיבדנו את ה-webhook הזה?
+    const { data: existingLog } = await supabase
+      .from('webhook_logs')
+      .select('id, status')
+      .eq('idempotency_key', idempotencyKey)
+      .single();
+
+    if (existingLog) {
+      console.log(`⚠️ Duplicate webhook detected: ${idempotencyKey}, existing status: ${existingLog.status}`);
+      
+      // אם כבר הצליח - מחזירים הצלחה מיידית
+      if (existingLog.status === 'completed') {
+        return NextResponse.json({ 
+          received: true, 
+          status: 'already_processed',
+          webhook_log_id: existingLog.id,
+          message: 'Webhook already processed successfully'
+        });
+      }
+      
+      // אם נכשל - ננסה שוב
+      webhookLogId = existingLog.id;
+      await supabase
+        .from('webhook_logs')
+        .update({ 
+          status: 'processing',
+          retry_count: supabase.rpc('increment', { x: 1, delta: 1 })
+        })
+        .eq('id', webhookLogId);
+    } else {
+      // יצירת רשומת webhook חדשה
+      const { data: newLog, error: logError } = await supabase
+        .from('webhook_logs')
+        .insert({
+          webhook_type: 'payplus_callback',
+          payload: body,
+          headers: headers,
+          transaction_uid: transactionUid,
+          page_request_uid: pageRequestUid,
+          payment_id: body.more_info_1 || null,
+          status: 'processing',
+          idempotency_key: idempotencyKey
+        })
+        .select('id')
+        .single();
+
+      if (logError) {
+        console.error('❌ Error creating webhook log:', logError);
+      } else {
+        webhookLogId = newLog.id;
+      }
+    }
+
     // אימות שהCallback מגיע מPayPlus
     if (!verifyPayPlusCallback(body)) {
       console.error('❌ Invalid PayPlus callback signature');
+      
+      if (webhookLogId) {
+        await supabase
+          .from('webhook_logs')
+          .update({ 
+            status: 'failed',
+            error_message: 'Invalid signature',
+            processed_at: new Date().toISOString()
+          })
+          .eq('id', webhookLogId);
+      }
+      
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
@@ -170,19 +246,67 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ PayPlus callback processed successfully');
     
+    // סימון webhook log בתור completed
+    if (webhookLogId) {
+      const duration = Date.now() - startTime;
+      await supabase
+        .from('webhook_logs')
+        .update({ 
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+          error_message: null
+        })
+        .eq('id', webhookLogId);
+      
+      console.log(`⏱️ Webhook processed in ${duration}ms`);
+    }
+    
     // PayPlus מצפה לתשובה 200
     return NextResponse.json({ 
       received: true,
       status: paymentStatus,
-      payment_id: payment.id
+      payment_id: payment.id,
+      webhook_log_id: webhookLogId,
+      processing_time_ms: Date.now() - startTime
     });
 
   } catch (error) {
     console.error('❌ Error processing PayPlus callback:', error);
-    // עדיין מחזירים 200 כדי שPayPlus לא ינסה שוב
+    
+    // סימון webhook log בתור failed
+    if (webhookLogId && supabase) {
+      const duration = Date.now() - startTime;
+      await supabase
+        .from('webhook_logs')
+        .update({ 
+          status: 'failed',
+          processed_at: new Date().toISOString(),
+          error_message: error instanceof Error ? error.message : 'Unknown error'
+        })
+        .eq('id', webhookLogId);
+      
+      // יצירת alert על כשלון webhook
+      await supabase
+        .from('alerts')
+        .insert({
+          alert_type: 'webhook_failed',
+          severity: 'error',
+          title: 'PayPlus Webhook Failed',
+          message: `Failed to process PayPlus webhook: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          details: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            webhook_log_id: webhookLogId,
+            processing_time_ms: duration
+          },
+          webhook_log_id: webhookLogId
+        });
+    }
+    
+    // עדיין מחזירים 200 כדי שPayPlus לא ינסה שוב (יש לנו retry logic משלנו)
     return NextResponse.json({ 
       received: true, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      webhook_log_id: webhookLogId
     });
   }
 }

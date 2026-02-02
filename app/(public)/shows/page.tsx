@@ -212,10 +212,12 @@ export default function ShowsPage() {
           </div>
 
           <div className="pt-3 border-t space-y-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-text-light/70">כרטיס להצגה בלבד</span>
-              <span className="font-bold text-accent">₪{show.price_show_only}</span>
-            </div>
+            {show.price_show_only > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-text-light/70">כרטיס להצגה בלבד</span>
+                <span className="font-bold text-accent">₪{show.price_show_only}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center text-sm">
               <span className="text-text-light/70">הצגה + גימבורי</span>
               <span className="font-bold text-accent">₪{show.price_show_and_playground}</span>
@@ -329,30 +331,34 @@ export default function ShowsPage() {
             </DialogHeader>
             
             <div className="space-y-4 pt-4">
-              <button
-                onClick={() => handleBuyTicket(selectedShow, 'show_only')}
-                className="w-full p-5 border-2 border-accent/30 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none hover:border-accent hover:bg-accent/5 transition-all text-right"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-lg mb-1 text-primary">כרטיס להצגה בלבד 🎭</p>
-                    <p className="text-sm text-text-light/70">כניסה למופע בלבד</p>
+              {selectedShow.price_show_only > 0 && (
+                <button
+                  onClick={() => handleBuyTicket(selectedShow, 'show_only')}
+                  className="w-full p-5 border-2 border-accent/30 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none hover:border-accent hover:bg-accent/5 transition-all text-right"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-lg mb-1 text-primary">כרטיס להצגה בלבד 🎭</p>
+                      <p className="text-sm text-text-light/70">כניסה למופע בלבד</p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-3xl font-bold text-accent">
+                        ₪{selectedShow?.price_show_only}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="text-3xl font-bold text-accent">
-                      ₪{selectedShow?.price_show_only}
-                    </p>
-                  </div>
-                </div>
-              </button>
+                </button>
+              )}
 
               <button
                 onClick={() => handleBuyTicket(selectedShow, 'show_and_playground')}
                 className="w-full p-5 border-2 border-accent rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none hover:bg-accent/5 transition-all text-right relative"
               >
-                <div className="absolute top-2 left-2 bg-secondary text-white text-xs px-2 py-1 rounded font-bold">
-                  מומלץ ⭐
-                </div>
+                {selectedShow.price_show_only > 0 && (
+                  <div className="absolute top-2 left-2 bg-secondary text-white text-xs px-2 py-1 rounded font-bold">
+                    מומלץ ⭐
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-bold text-lg mb-1 text-primary">הצגה + כניסה לגימבורי 🎪</p>

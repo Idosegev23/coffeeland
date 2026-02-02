@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/fix-pending-payments",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/webhooks/retry",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/admin/reconciliation",
+      "schedule": "0 2 * * *"
     }
   ]
 }

@@ -57,7 +57,7 @@ export default function AdminShowsPage() {
     start_time: '',
     end_time: '',
     capacity: 13,
-    price_show_only: 45,
+    price_show_only: 0, // 0 = לא להציג את האופציה
     price_show_and_playground: 70,
     is_featured: false,
     cancellation_deadline_hours: 24,
@@ -135,9 +135,18 @@ export default function AdminShowsPage() {
         setUploading(false);
       }
 
-      // 2. Prepare event data
-      const startDateTime = `${formData.start_date}T${formData.start_time}:00`;
-      const endDateTime = `${formData.start_date}T${formData.end_time}:00`;
+      // 2. Prepare event data with proper timezone handling for Israel (IST/IDT)
+      // שומרים את הזמן המקומי בדיוק כפי שהוא נרשם בטופס
+      // חישוב ה-timezone offset המדויק לתאריך הספציפי (מתחשב בשעון קיץ/חורף)
+      const tempDate = new Date(`${formData.start_date}T${formData.start_time}:00`);
+      const timezoneOffset = -tempDate.getTimezoneOffset(); // בדקות
+      const offsetHours = Math.floor(Math.abs(timezoneOffset) / 60);
+      const offsetMinutes = Math.abs(timezoneOffset) % 60;
+      const offsetSign = timezoneOffset >= 0 ? '+' : '-';
+      const timezoneString = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+      
+      const startDateTime = `${formData.start_date}T${formData.start_time}:00${timezoneString}`;
+      const endDateTime = `${formData.start_date}T${formData.end_time}:00${timezoneString}`;
 
       const eventData = {
         title: formData.title,
@@ -148,7 +157,7 @@ export default function AdminShowsPage() {
         capacity: formData.capacity,
         status: 'active',
         requires_registration: true,
-        price_show_only: formData.price_show_only,
+        price_show_only: formData.price_show_only || 0,
         price_show_and_playground: formData.price_show_and_playground,
         is_featured: formData.is_featured,
         cancellation_deadline_hours: formData.cancellation_deadline_hours,
@@ -173,7 +182,7 @@ export default function AdminShowsPage() {
         start_time: '',
         end_time: '',
         capacity: 13,
-        price_show_only: 45,
+        price_show_only: 0, // 0 = לא להציג את האופציה
         price_show_and_playground: 70,
         is_featured: false,
         cancellation_deadline_hours: 24,
@@ -376,14 +385,21 @@ export default function AdminShowsPage() {
 
                     {/* Prices */}
                     <div className="mb-4 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-text-light/70">🎭 הצגה בלבד</span>
-                        <span className="font-bold text-accent">₪{show.price_show_only}</span>
-                      </div>
+                      {show.price_show_only > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-text-light/70">🎭 הצגה בלבד</span>
+                          <span className="font-bold text-accent">₪{show.price_show_only}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-text-light/70">🎪 הצגה + גימבורי</span>
                         <span className="font-bold text-accent">₪{show.price_show_and_playground}</span>
                       </div>
+                      {show.price_show_only === 0 && (
+                        <p className="text-xs text-gray-500 italic">
+                          * רק הצגה + גימבורי זמין
+                        </p>
+                      )}
                     </div>
 
                     {/* Actions */}
@@ -493,14 +509,19 @@ export default function AdminShowsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">מחיר - הצגה בלבד (₪)</label>
+                    <label className="block text-sm font-medium mb-1">
+                      מחיר - הצגה בלבד (₪)
+                      <span className="text-xs text-gray-500 block mt-1">
+                        אם 0 - האופציה לא תוצג
+                      </span>
+                    </label>
                     <input
                       type="number"
-                      required
                       min="0"
                       value={formData.price_show_only}
-                      onChange={(e) => setFormData({ ...formData, price_show_only: parseFloat(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, price_show_only: parseFloat(e.target.value) || 0 })}
                       className="w-full border rounded p-2"
+                      placeholder="0 = לא להציג"
                     />
                   </div>
                   <div>

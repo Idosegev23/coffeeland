@@ -336,6 +336,22 @@ export default function AdminDashboardPage() {
                 </div>
               </Link>
             </Button>
+
+            {/* ניטור PayPlus */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start"
+              asChild
+            >
+              <Link href="/admin/payplus-monitor" className="gap-4">
+                <CreditCard className="w-8 h-8 text-cyan-600" />
+                <div className="text-right">
+                  <div className="font-semibold">ניטור PayPlus</div>
+                  <div className="text-xs opacity-70">מעקב אחר תשלומים והתראות</div>
+                </div>
+              </Link>
+            </Button>
           </div>
         </section>
       </div>
