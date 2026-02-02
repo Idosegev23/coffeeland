@@ -380,7 +380,7 @@ export default function PayPlusMonitorPage() {
                     {/* סטטיסטיקות */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                       <div className="bg-blue-50 rounded-lg p-4">
-                        <div className="text-sm text-gray-600">סה"כ בדוח PayPlus</div>
+                        <div className="text-sm text-gray-600">סה&quot;כ בדוח PayPlus</div>
                         <div className="text-2xl font-bold">{reconcileResult.summary.totalInReport}</div>
                       </div>
                       <div className="bg-green-50 rounded-lg p-4">

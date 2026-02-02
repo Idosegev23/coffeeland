@@ -144,7 +144,7 @@ export default function TransactionsPage() {
         {/* סטטיסטיקות */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card className="p-4">
-            <div className="text-sm text-gray-600">סה"כ עסקאות</div>
+            <div className="text-sm text-gray-600">סה&quot;כ עסקאות</div>
             <div className="text-2xl font-bold">{stats.total}</div>
           </Card>
           <Card className="p-4 border-green-200 bg-green-50">
@@ -160,7 +160,7 @@ export default function TransactionsPage() {
             <div className="text-2xl font-bold text-red-700">{stats.failed}</div>
           </Card>
           <Card className="p-4 border-blue-200 bg-blue-50">
-            <div className="text-sm text-blue-700">סה"כ הכנסות</div>
+            <div className="text-sm text-blue-700">סה&quot;כ הכנסות</div>
             <div className="text-2xl font-bold text-blue-700">
               ₪{stats.totalAmount.toLocaleString()}
             </div>
