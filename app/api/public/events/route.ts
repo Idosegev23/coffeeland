@@ -65,6 +65,13 @@ export async function GET(request: Request) {
 
     const enriched = []
     for (const ev of events || []) {
+      // סינון אירועי יום הולדת (פרטיים) - אלה לא צריכים להיות נגישים לציבור
+      if (ev.title?.includes('יום הולדת') || 
+          ev.title?.includes('יומולדת') || 
+          ev.title?.toLowerCase().includes('birthday')) {
+        continue // דלג על אירועי יום הולדת
+      }
+
       // ספירת רישומים מאושרים בלבד (לא מבוטלים)
       const { count } = await service
         .from('registrations')

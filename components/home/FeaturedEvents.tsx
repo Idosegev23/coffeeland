@@ -26,10 +26,16 @@ export function FeaturedEvents() {
       try {
         const nowIso = new Date().toISOString()
         const res = await fetch(
-          `/api/public/events?status=active&type=event&from=${encodeURIComponent(nowIso)}&limit=3`
+          `/api/public/events?status=active&type=event&from=${encodeURIComponent(nowIso)}&limit=10`
         )
         const json = await res.json()
-        setEvents(json.events || [])
+        // סינון אירועי יום הולדת (אירועים פרטיים)
+        const publicEvents = (json.events || []).filter((e: FeaturedEvent) => 
+          !e.title.includes('יום הולדת') && 
+          !e.title.includes('יומולדת') &&
+          !e.title.toLowerCase().includes('birthday')
+        ).slice(0, 3)
+        setEvents(publicEvents)
       } catch {
         setEvents([])
       } finally {
@@ -58,11 +64,10 @@ export function FeaturedEvents() {
         <div className="grid md:grid-cols-3 gap-4">
           {events.map((e) => {
             const date = new Date(e.start_at)
+            // הצגת קיבולת רק אם יש capacity מוגדר
             const capacityText =
-              e.capacity != null
+              e.capacity != null && e.capacity > 0
                 ? `${e.registrations_count || 0} מתוך ${e.capacity}`
-                : e.registrations_count != null
-                ? `${e.registrations_count} נרשמו`
                 : null
             return (
               <div
