@@ -156,6 +156,7 @@ export default function AdminEventsPage() {
     capacity: '',
     price: '',
     is_featured: false,
+    is_private: false,
     cancellation_deadline_hours: 24,
     banner_image_url: '',
     price_show_only: '',
@@ -311,6 +312,7 @@ export default function AdminEventsPage() {
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           is_featured: formData.is_featured || false,
+          is_private: formData.is_private || false,
           cancellation_deadline_hours: formData.cancellation_deadline_hours || 24,
           banner_image_url: formData.banner_image_url || null,
           price_show_only: formData.price_show_only ? parseFloat(formData.price_show_only) : null,
@@ -354,6 +356,7 @@ export default function AdminEventsPage() {
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           is_featured: formData.is_featured || false,
+          is_private: formData.is_private || false,
           cancellation_deadline_hours: formData.cancellation_deadline_hours || 24,
           banner_image_url: formData.banner_image_url || null,
           price_show_only: formData.price_show_only ? parseFloat(formData.price_show_only) : null,
@@ -436,6 +439,7 @@ export default function AdminEventsPage() {
       capacity: '',
       price: '',
       is_featured: false,
+      is_private: false,
       cancellation_deadline_hours: 24,
       banner_image_url: '',
       price_show_only: '',
@@ -479,6 +483,7 @@ export default function AdminEventsPage() {
       capacity: event.capacity?.toString() || '',
       price: event.price?.toString() || '',
       is_featured: event.is_featured || false,
+      is_private: (event as any).is_private || false,
       cancellation_deadline_hours: event.cancellation_deadline_hours || 24,
       banner_image_url: event.banner_image_url || '',
       price_show_only: event.price_show_only?.toString() || '',
@@ -1363,6 +1368,20 @@ export default function AdminEventsPage() {
                           </label>
                         </div>
 
+                        <div>
+                          <label className="flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={formData.is_private}
+                              onChange={(e) => setFormData({...formData, is_private: e.target.checked})}
+                              className="ml-2"
+                            />
+                            <span className="text-sm font-medium">אירוע פרטי 🔒 (לא יוצג לציבור)</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
                         <div>
                           <label className="block text-sm font-medium mb-1">מועד אחרון לביטול (שעות לפני)</label>
                           <input 

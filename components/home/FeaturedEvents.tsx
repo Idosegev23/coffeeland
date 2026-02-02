@@ -26,16 +26,11 @@ export function FeaturedEvents() {
       try {
         const nowIso = new Date().toISOString()
         const res = await fetch(
-          `/api/public/events?status=active&type=event&from=${encodeURIComponent(nowIso)}&limit=10`
+          `/api/public/events?status=active&type=event&from=${encodeURIComponent(nowIso)}&limit=3`
         )
         const json = await res.json()
-        // סינון אירועי יום הולדת (אירועים פרטיים)
-        const publicEvents = (json.events || []).filter((e: FeaturedEvent) => 
-          !e.title.includes('יום הולדת') && 
-          !e.title.includes('יומולדת') &&
-          !e.title.toLowerCase().includes('birthday')
-        ).slice(0, 3)
-        setEvents(publicEvents)
+        // ה-API כבר מסנן אירועים פרטיים, אז פשוט שומרים את כל התוצאות
+        setEvents(json.events || [])
       } catch {
         setEvents([])
       } finally {

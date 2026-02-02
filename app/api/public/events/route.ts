@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
     let query = service
       .from('events')
-      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground')
+      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground, is_private')
       .order('start_at', { ascending: true })
       .limit(limit)
 
@@ -48,6 +48,9 @@ export async function GET(request: Request) {
     } else {
       query = query.neq('status', 'cancelled')
     }
+
+    // סינון אירועים פרטיים - רק אירועים ציבוריים מוצגים ב-API הציבורי
+    query = query.eq('is_private', false)
 
     if (type) query = query.eq('type', type)
     if (from) query = query.gte('start_at', from)
@@ -65,13 +68,6 @@ export async function GET(request: Request) {
 
     const enriched = []
     for (const ev of events || []) {
-      // סינון אירועי יום הולדת (פרטיים) - אלה לא צריכים להיות נגישים לציבור
-      if (ev.title?.includes('יום הולדת') || 
-          ev.title?.includes('יומולדת') || 
-          ev.title?.toLowerCase().includes('birthday')) {
-        continue // דלג על אירועי יום הולדת
-      }
-
       // ספירת רישומים מאושרים בלבד (לא מבוטלים)
       const { count } = await service
         .from('registrations')
