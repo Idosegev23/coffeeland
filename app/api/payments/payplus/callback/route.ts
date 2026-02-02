@@ -117,9 +117,6 @@ export async function POST(req: NextRequest) {
 
     console.log(`💳 Payment ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${more_info_1}`);
 
-    // שימוש ב-Service Client לעדכון ללא RLS
-    const supabase = getServiceClient();
-
     // מציאת התשלום בDB
     const { data: payment, error: findError } = await supabase
       .from('payments')
