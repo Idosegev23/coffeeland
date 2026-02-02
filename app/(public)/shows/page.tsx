@@ -212,7 +212,7 @@ export default function ShowsPage() {
           </div>
 
           <div className="pt-3 border-t space-y-2">
-            {show.price_show_only > 0 && (
+            {(show.price_show_only ?? 0) > 0 && (
               <div className="flex justify-between items-center text-sm">
                 <span className="text-text-light/70">כרטיס להצגה בלבד</span>
                 <span className="font-bold text-accent">₪{show.price_show_only}</span>
@@ -331,7 +331,7 @@ export default function ShowsPage() {
             </DialogHeader>
             
             <div className="space-y-4 pt-4">
-              {selectedShow.price_show_only > 0 && (
+              {(selectedShow.price_show_only ?? 0) > 0 && (
                 <button
                   onClick={() => handleBuyTicket(selectedShow, 'show_only')}
                   className="w-full p-5 border-2 border-accent/30 rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none hover:border-accent hover:bg-accent/5 transition-all text-right"
@@ -354,7 +354,7 @@ export default function ShowsPage() {
                 onClick={() => handleBuyTicket(selectedShow, 'show_and_playground')}
                 className="w-full p-5 border-2 border-accent rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none hover:bg-accent/5 transition-all text-right relative"
               >
-                {selectedShow.price_show_only > 0 && (
+                {(selectedShow.price_show_only ?? 0) > 0 && (
                   <div className="absolute top-2 left-2 bg-secondary text-white text-xs px-2 py-1 rounded font-bold">
                     מומלץ ⭐
                   </div>

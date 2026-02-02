@@ -385,7 +385,7 @@ export default function AdminShowsPage() {
 
                     {/* Prices */}
                     <div className="mb-4 space-y-2 text-sm">
-                      {show.price_show_only > 0 && (
+                      {(show.price_show_only ?? 0) > 0 && (
                         <div className="flex justify-between">
                           <span className="text-text-light/70">🎭 הצגה בלבד</span>
                           <span className="font-bold text-accent">₪{show.price_show_only}</span>
@@ -395,7 +395,7 @@ export default function AdminShowsPage() {
                         <span className="text-text-light/70">🎪 הצגה + גימבורי</span>
                         <span className="font-bold text-accent">₪{show.price_show_and_playground}</span>
                       </div>
-                      {show.price_show_only === 0 && (
+                      {(show.price_show_only ?? 0) === 0 && (
                         <p className="text-xs text-gray-500 italic">
                           * רק הצגה + גימבורי זמין
                         </p>
