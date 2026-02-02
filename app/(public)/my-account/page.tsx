@@ -254,7 +254,11 @@ export default function MyAccountPage() {
                           event.type === 'workshop' ? 'bg-purple-100 text-purple-700' :
                           'bg-green-100 text-green-700'
                         }`}>
-                          {event.type === 'class' ? 'חוג' : event.type === 'workshop' ? 'סדנה' : 'אירוע'}
+                          {event.type === 'class' ? 'חוג' : 
+                           event.type === 'workshop' ? 'סדנה' : 
+                           event.type === 'birthday' ? 'יום הולדת' :
+                           event.type === 'private_event' ? 'אירוע פרטי' :
+                           'אירוע'}
                         </span>
                       </div>
                       {event.description && (
@@ -266,28 +270,37 @@ export default function MyAccountPage() {
                     </span>
                   </div>
 
-                  <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center text-gray-700">
-                      <Calendar size={16} className="ml-2 text-accent" />
-                      {new Date(event.start_at).toLocaleDateString('he-IL', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long'
-                      })}
-                    </div>
-
-                    <div className="flex items-center text-gray-700">
-                      <Clock size={16} className="ml-2 text-accent" />
-                      {new Date(event.start_at).toLocaleTimeString('he-IL', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-
-                    {event.price && (
+                  <div className="flex gap-4">
+                    <div className="grid sm:grid-cols-3 gap-4 text-sm flex-1">
                       <div className="flex items-center text-gray-700">
-                        <Ticket size={16} className="ml-2 text-accent" />
-                        ₪{event.price}
+                        <Calendar size={16} className="ml-2 text-accent" />
+                        {new Date(event.start_at).toLocaleDateString('he-IL', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long'
+                        })}
+                      </div>
+
+                      <div className="flex items-center text-gray-700">
+                        <Clock size={16} className="ml-2 text-accent" />
+                        {new Date(event.start_at).toLocaleTimeString('he-IL', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+
+                      {event.price && (
+                        <div className="flex items-center text-gray-700">
+                          <Ticket size={16} className="ml-2 text-accent" />
+                          ₪{event.price}
+                        </div>
+                      )}
+                    </div>
+
+                    {registration.qr_code && registration.status === 'confirmed' && !isPast && (
+                      <div className="bg-white p-2 rounded-lg border text-center flex-shrink-0">
+                        <QRCodeSVG value={registration.qr_code} size={80} level="H" />
+                        <p className="text-xs text-gray-500 mt-1 font-mono">{registration.qr_code.substring(0, 10)}...</p>
                       </div>
                     )}
                   </div>

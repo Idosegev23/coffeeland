@@ -225,15 +225,21 @@ export async function POST(req: NextRequest) {
       console.log(`🎟️ Creating ${quantity} registration(s) for event ${event_id}`);
       
       // יצירת מספר registrations לפי הכמות
-      const registrationsToInsert = Array.from({ length: quantity }, () => ({
-        event_id: event_id,
-        user_id: payment.user_id,
-        status: 'confirmed',
-        is_paid: true,
-        payment_id: payment.id,
-        ticket_type: ticket_type || 'regular',
-        registered_at: new Date().toISOString()
-      }));
+      const registrationsToInsert = Array.from({ length: quantity }, () => {
+        // יצירת QR code ייחודי לכל כרטיס
+        const qrCode = `TICKET-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        
+        return {
+          event_id: event_id,
+          user_id: payment.user_id,
+          status: 'confirmed',
+          is_paid: true,
+          payment_id: payment.id,
+          ticket_type: ticket_type || 'regular',
+          qr_code: qrCode,
+          registered_at: new Date().toISOString()
+        };
+      });
       
       const { data: registrations, error: regError } = await supabase
         .from('registrations')
