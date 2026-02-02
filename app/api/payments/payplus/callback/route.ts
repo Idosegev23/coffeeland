@@ -217,9 +217,10 @@ export async function POST(req: NextRequest) {
       
       const { event_id, ticket_type } = payment.metadata;
       
-      // קבלת הכמות מה-items של PayPlus
-      const items = body.transaction?.items || [];
-      const quantity = items.length > 0 ? items[0].quantity : 1;
+      // קבלת הכמות מה-metadata של התשלום (מהימן יותר) או מה-items של PayPlus
+      const quantity = payment.metadata?.quantity || 
+                      (body.transaction?.items?.[0]?.quantity) || 
+                      1;
       
       console.log(`🎟️ Creating ${quantity} registration(s) for event ${event_id}`);
       

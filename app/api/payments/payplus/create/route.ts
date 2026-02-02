@@ -45,12 +45,16 @@ export async function POST(req: NextRequest) {
       entries_count,
       return_url,
       event_id,
-      ticket_type
+      ticket_type,
+      quantity
     } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
     }
+
+    // חישוב כמות הכרטיסים (ברירת מחדל: 1)
+    const ticketQuantity = quantity || (items?.[0]?.quantity) || 1;
 
     // 🔥 בדיקת קיבולת להצגות/אירועים
     if (event_id) {
@@ -83,21 +87,36 @@ export async function POST(req: NextRequest) {
         .eq('event_id', event_id)
         .eq('status', 'confirmed');
 
-      const availableSeats = event.capacity - (confirmedCount || 0);
+      // ⏰ ספירת תשלומים ממתינים מה-15 דקות האחרונות (למניעת מירוץ על מקומות)
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const { count: pendingCount } = await serviceClient
+        .from('payments')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .gte('created_at', fifteenMinutesAgo)
+        .contains('metadata', { event_id: event_id });
 
-      if (availableSeats <= 0) {
+      const totalReserved = (confirmedCount || 0) + (pendingCount || 0);
+      const availableSeats = event.capacity - totalReserved;
+
+      // בדיקה שיש מספיק מקומות עבור הכמות המבוקשת
+      if (availableSeats < ticketQuantity) {
         return NextResponse.json({ 
           error: 'sold_out',
-          message: `אזל המלאי! ההצגה "${event.title}" מלאה.`,
+          message: availableSeats === 0 
+            ? `אזל המלאי! ההצגה "${event.title}" מלאה.`
+            : `נותרו רק ${availableSeats} מקומות, אבל ביקשת ${ticketQuantity} כרטיסים.`,
           details: {
             capacity: event.capacity,
-            sold: confirmedCount,
-            available: 0
+            confirmed: confirmedCount,
+            pending: pendingCount,
+            available: availableSeats,
+            requested: ticketQuantity
           }
         }, { status: 409 }); // 409 Conflict
       }
 
-      console.log(`✅ Capacity check passed for ${event.title}: ${availableSeats} seats available`);
+      console.log(`✅ Capacity check passed for ${event.title}: ${availableSeats} seats available (${confirmedCount} confirmed, ${pendingCount} pending), purchasing ${ticketQuantity} tickets`);
     }
 
     // URL-ים לחזרה
@@ -124,7 +143,8 @@ export async function POST(req: NextRequest) {
           entries_count,
           items,
           event_id,
-          ticket_type
+          ticket_type,
+          quantity: ticketQuantity
         }
       })
       .select()

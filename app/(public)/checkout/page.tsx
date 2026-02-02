@@ -165,6 +165,7 @@ function CheckoutContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: totalAmount,
+          quantity: quantity, // 🎟️ מספר הכרטיסים המבוקש
           card_type_id: itemType === 'pass' ? cartItem.id : null,
           card_type_name: cartItem.name,
           entries_count: cartItem.entries * quantity,
