@@ -55,7 +55,53 @@ export async function POST(request: Request) {
 
     console.log('✅ Admin verified:', adminData.id)
 
-    // Find user by QR code
+    // Try to find registration ticket first (TICKET-XXX format)
+    if (qrCode.startsWith('TICKET-')) {
+      console.log('🎫 Detected ticket QR code, searching registrations...')
+      
+      const { data: registration, error: regError } = await supabase
+        .from('registrations')
+        .select(`
+          id,
+          status,
+          ticket_type,
+          registered_at,
+          qr_code,
+          user:users!registrations_user_id_fkey(
+            id,
+            full_name,
+            email,
+            phone
+          ),
+          event:events(
+            id,
+            title,
+            type,
+            start_at,
+            end_at,
+            banner_image_url
+          )
+        `)
+        .eq('qr_code', qrCode)
+        .maybeSingle()
+
+      if (registration) {
+        console.log('✅ Found registration:', registration.id)
+        return NextResponse.json({
+          type: 'ticket',
+          registration: {
+            ...registration,
+            user: Array.isArray(registration.user) ? registration.user[0] : registration.user,
+            event: Array.isArray(registration.event) ? registration.event[0] : registration.event
+          }
+        })
+      }
+      
+      console.log('⚠️ Ticket not found in registrations')
+      return NextResponse.json({ error: 'כרטיס לא נמצא במערכת' }, { status: 404 })
+    }
+
+    // Find user by QR code (for regular user QR codes)
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, full_name, email, qr_code')
@@ -83,6 +129,7 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     return NextResponse.json({
+      type: 'user',
       user,
       passes: passes || [],
       loyaltyCard,

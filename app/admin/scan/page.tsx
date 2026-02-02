@@ -86,7 +86,15 @@ export default function AdminScanPage() {
 
       const data = await response.json()
       console.log('✅ Scan successful:', data)
-      if (mode === 'user') {
+      
+      // Handle different response types
+      if (data.type === 'ticket') {
+        // Show ticket modal instead of user modal
+        setScannedUser({
+          ...data,
+          isTicket: true
+        })
+      } else if (mode === 'user') {
         setScannedUser(data)
       } else {
         setScannedReservation(data.reservation)

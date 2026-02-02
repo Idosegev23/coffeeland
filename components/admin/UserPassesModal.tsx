@@ -29,6 +29,28 @@ interface UserData {
     total_stamps: number
     redeemed_coffees: number
   } | null
+  isTicket?: boolean
+  registration?: {
+    id: string
+    status: string
+    ticket_type: string
+    registered_at: string
+    qr_code: string
+    user: {
+      id: string
+      full_name: string
+      email: string
+      phone: string
+    }
+    event: {
+      id: string
+      title: string
+      type: string
+      start_at: string
+      end_at: string
+      banner_image_url?: string
+    }
+  }
 }
 
 interface UserPassesModalProps {
@@ -143,6 +165,128 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
     }
   }
 
+  // If this is a ticket scan, show ticket info
+  if (userData.isTicket && userData.registration) {
+    const reg = userData.registration
+    const event = reg.event
+    const user = reg.user
+    
+    return (
+      <AnimatePresence>
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-primary/50 backdrop-blur-sm z-50"
+            onClick={onClose}
+          />
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto pointer-events-auto"
+            >
+              <div className="bg-background-light rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none shadow-2xl p-6 relative">
+                <button
+                  onClick={onClose}
+                  className="absolute top-4 left-4 text-text-light/50 hover:text-text-light transition-colors z-10"
+                  aria-label="סגור"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+
+                <div className="text-center mb-6">
+                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-12 h-12 text-green-600" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-green-600 mb-2">
+                    כרטיס תקין! ✓
+                  </h2>
+                  <p className="text-sm text-text-light/70">סטטוס: {reg.status === 'confirmed' ? 'מאושר' : reg.status}</p>
+                </div>
+
+                {event.banner_image_url && (
+                  <div className="relative w-full h-48 rounded-xl overflow-hidden mb-4">
+                    <Image
+                      src={event.banner_image_url}
+                      alt={event.title}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+
+                <Card className="p-6 mb-4 bg-background">
+                  <h3 className="text-xl font-bold text-primary mb-4">🎭 {event.title}</h3>
+                  
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">סוג:</span>
+                      <span className="font-medium">
+                        {event.type === 'show' ? 'הצגה' : event.type === 'event' ? 'אירוע' : event.type}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">סוג כרטיס:</span>
+                      <span className="font-medium">
+                        {reg.ticket_type === 'show_and_playground' ? '🎭 הצגה + 🎪 משחקייה' : '🎭 הצגה בלבד'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">תאריך:</span>
+                      <span className="font-medium">
+                        {new Date(event.start_at).toLocaleDateString('he-IL', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long'
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">שעה:</span>
+                      <span className="font-medium">
+                        {new Date(event.start_at).toLocaleTimeString('he-IL', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <div className="border-t pt-3 mt-3">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-text-light/70">רוכש:</span>
+                        <span className="font-medium">{user.full_name}</span>
+                      </div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-text-light/70">טלפון:</span>
+                        <span className="font-medium">{user.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-light/70">QR:</span>
+                        <span className="font-mono text-xs">{reg.qr_code}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Button
+                  onClick={onClose}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  size="lg"
+                >
+                  סגור
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      </AnimatePresence>
+    )
+  }
+
+  // Regular user QR scan
   return (
     <AnimatePresence>
       <>
