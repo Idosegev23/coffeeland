@@ -43,6 +43,13 @@ function CheckoutContent() {
   const [step, setStep] = useState<'cart' | 'redirecting'>('cart');
   const [error, setError] = useState('');
   const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [couponData, setCouponData] = useState<any>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
 
   // Check for error from PayPlus redirect
   const paymentError = searchParams.get('error');
@@ -146,6 +153,51 @@ function CheckoutContent() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('אנא הזן קוד קופון');
+      return;
+    }
+
+    setCouponLoading(true);
+    setCouponError('');
+
+    try {
+      const itemType = searchParams.get('type') || 'pass';
+      const totalAmount = cartItem!.price * quantity;
+
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCode,
+          itemType: itemType,
+          amount: totalAmount
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
+        setCouponError(data.error || 'קוד קופון לא תקף');
+        setCouponApplied(false);
+        setCouponData(null);
+        return;
+      }
+
+      setCouponData(data);
+      setCouponApplied(true);
+      setCouponError('');
+      
+    } catch (err) {
+      console.error('Coupon validation error:', err);
+      setCouponError('שגיאה בבדיקת קוד קופון');
+      setCouponApplied(false);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
   const handlePayment = async () => {
     setError('');
     setStep('redirecting');
@@ -157,7 +209,38 @@ function CheckoutContent() {
       const itemType = searchParams.get('type') || 'pass';
 
       // Calculate total amount
-      const totalAmount = cartItem.price * quantity;
+      let totalAmount = cartItem.price * quantity;
+      let finalAmount = totalAmount;
+
+      // Apply coupon discount if available
+      if (couponApplied && couponData) {
+        finalAmount = couponData.final_amount;
+      }
+
+      // If final amount is 0 (free with coupon), use free payment endpoint
+      if (finalAmount === 0 && couponApplied) {
+        const response = await fetch('/api/payments/free', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_id: itemType === 'show' ? cartItem.id : null,
+            ticket_type: (cartItem as any).metadata?.ticket_type,
+            quantity: quantity,
+            coupon_code: couponCode,
+            original_amount: totalAmount
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'שגיאה ביצירת רכישה חינמית');
+        }
+
+        // Success! Redirect to my account
+        router.push('/my-account?purchase=success');
+        return;
+      }
       
       // Call our PayPlus API to create payment link
       const response = await fetch('/api/payments/payplus/create', {
@@ -371,10 +454,96 @@ function CheckoutContent() {
                 </div>
               </div>
 
+              {/* Coupon Code Section */}
               <div className="border-t border-gray-200 mt-4 pt-4">
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-text-light mb-2">
+                    יש לך קוד קופון? 🎫
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={(e) => {
+                        setCouponCode(e.target.value.toUpperCase());
+                        setCouponApplied(false);
+                        setCouponError('');
+                      }}
+                      placeholder="הזן קוד קופון"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-sm"
+                      disabled={couponLoading || couponApplied}
+                    />
+                    {!couponApplied ? (
+                      <Button
+                        size="sm"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading || !couponCode.trim()}
+                        className="whitespace-nowrap"
+                      >
+                        {couponLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'החל'
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setCouponApplied(false);
+                          setCouponData(null);
+                          setCouponCode('');
+                        }}
+                        className="whitespace-nowrap"
+                      >
+                        ביטול
+                      </Button>
+                    )}
+                  </div>
+                  {couponError && (
+                    <p className="text-xs text-red-600 mt-1">{couponError}</p>
+                  )}
+                  {couponApplied && couponData && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-xs text-green-700 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        {couponData.coupon.description || 'קוד קופון הופעל בהצלחה!'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 mt-4 pt-4">
+                {couponApplied && couponData && (
+                  <div className="space-y-2 text-sm mb-3">
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">סכום מקורי</span>
+                      <span className="line-through text-text-light/50">₪{cartItem ? (cartItem.price * quantity).toFixed(2) : 0}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600 font-medium">
+                      <span>הנחה ({couponData.coupon.code})</span>
+                      <span>-₪{couponData.discount_amount.toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold">
                   <span className="text-primary">סה&quot;כ לתשלום</span>
-                  <span className="text-accent">₪{cartItem ? (cartItem.price * quantity).toFixed(2) : 0}</span>
+                  <span className={`${couponApplied && couponData?.is_free ? 'text-green-600' : 'text-accent'}`}>
+                    {couponApplied && couponData ? (
+                      couponData.is_free ? (
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="w-5 h-5" />
+                          חינם! 🎉
+                        </span>
+                      ) : (
+                        `₪${couponData.final_amount.toFixed(2)}`
+                      )
+                    ) : (
+                      `₪${cartItem ? (cartItem.price * quantity).toFixed(2) : 0}`
+                    )}
+                  </span>
                 </div>
               </div>
 
@@ -460,14 +629,29 @@ function CheckoutContent() {
                 {/* Payment Info */}
                 <div className="bg-blue-50 rounded-xl p-4 mb-6">
                   <div className="flex items-start gap-3">
-                    <CreditCard className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-blue-800 mb-1">תשלום מאובטח</h4>
-                      <p className="text-sm text-blue-700">
-                        בלחיצה על &quot;המשך לתשלום&quot; תועבר לדף תשלום מאובטח של PayPlus. 
-                        פרטי האשראי שלך לא נשמרים באתר שלנו.
-                      </p>
-                    </div>
+                    {couponApplied && couponData?.is_free ? (
+                      <>
+                        <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-green-800 mb-1">רכישה חינמית 🎉</h4>
+                          <p className="text-sm text-green-700">
+                            בזכות קוד הקופון, הרכישה היא חינמית לחלוטין. 
+                            לא נדרש תשלום - לחץ על &quot;אישור רכישה&quot; כדי להשלים.
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-blue-800 mb-1">תשלום מאובטח</h4>
+                          <p className="text-sm text-blue-700">
+                            בלחיצה על &quot;המשך לתשלום&quot; תועבר לדף תשלום מאובטח של PayPlus. 
+                            פרטי האשראי שלך לא נשמרים באתר שלנו.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -508,7 +692,12 @@ function CheckoutContent() {
                     {processing ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        מעבד...
+                        {couponApplied && couponData?.is_free ? 'אישור רכישה...' : 'מעבד...'}
+                      </>
+                    ) : couponApplied && couponData?.is_free ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        אישור רכישה חינמית 🎉
                       </>
                     ) : (
                       <>
