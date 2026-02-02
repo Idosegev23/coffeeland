@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { getServiceClient } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 
 /**
@@ -9,6 +10,7 @@ import { cookies } from 'next/headers';
 export async function POST(req: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
+    const serviceClient = getServiceClient(); // עבור פעולות מנהל
     
     // בדיקת משתמש מחובר
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -107,8 +109,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // יצירת תשלום עם סטטוס completed
-    const { data: payment, error: paymentError } = await supabase
+    // יצירת תשלום עם סטטוס completed (using service client for permissions)
+    const { data: payment, error: paymentError } = await serviceClient
       .from('payments')
       .insert({
         user_id: user.id,
@@ -155,7 +157,7 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    const { data: registrations, error: regError } = await supabase
+    const { data: registrations, error: regError } = await serviceClient
       .from('registrations')
       .insert(registrationsToInsert)
       .select();
@@ -164,7 +166,7 @@ export async function POST(req: NextRequest) {
       console.error('Error creating registrations:', regError);
       
       // ביטול התשלום במקרה של שגיאה
-      await supabase
+      await serviceClient
         .from('payments')
         .update({ status: 'failed' })
         .eq('id', payment.id);
@@ -176,7 +178,7 @@ export async function POST(req: NextRequest) {
     }
 
     // עדכון התשלום עם פרטי הרישומים
-    await supabase
+    await serviceClient
       .from('payments')
       .update({
         item_id: registrations[0].id,
@@ -188,7 +190,7 @@ export async function POST(req: NextRequest) {
       .eq('id', payment.id);
 
     // רישום שימוש בקופון
-    await supabase
+    await serviceClient
       .from('coupon_usages')
       .insert({
         coupon_id: coupon.id,
@@ -198,7 +200,7 @@ export async function POST(req: NextRequest) {
       });
 
     // עדכון מספר השימושים בקופון
-    await supabase
+    await serviceClient
       .from('coupons')
       .update({ 
         used_count: (coupon.used_count || 0) + 1,
