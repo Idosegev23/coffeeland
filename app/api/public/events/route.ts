@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
     let query = service
       .from('events')
-      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground, is_private')
+      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground')
       .order('start_at', { ascending: true })
       .limit(limit)
 
@@ -50,7 +50,8 @@ export async function GET(request: Request) {
     }
 
     // סינון אירועים פרטיים - רק אירועים ציבוריים מוצגים ב-API הציבורי
-    query = query.eq('is_private', false)
+    // מסננים החוצה: private_event, birthday
+    query = query.not('type', 'in', '("private_event","birthday")')
 
     if (type) query = query.eq('type', type)
     if (from) query = query.gte('start_at', from)

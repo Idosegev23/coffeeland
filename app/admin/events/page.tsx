@@ -25,7 +25,7 @@ interface Event {
   id: string;
   title: string;
   description: string;
-  type: 'class' | 'workshop' | 'event' | 'show';
+  type: 'class' | 'workshop' | 'event' | 'show' | 'private_event' | 'birthday';
   start_at: string;
   end_at: string;
   is_recurring: boolean;
@@ -148,7 +148,7 @@ export default function AdminEventsPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'class' as 'class' | 'workshop' | 'event' | 'show',
+    type: 'event' as 'class' | 'workshop' | 'event' | 'show' | 'private_event' | 'birthday',
     start_at: '',
     end_at: '',
     is_recurring: false,
@@ -156,7 +156,6 @@ export default function AdminEventsPage() {
     capacity: '',
     price: '',
     is_featured: false,
-    is_private: false,
     cancellation_deadline_hours: 24,
     banner_image_url: '',
     price_show_only: '',
@@ -312,7 +311,6 @@ export default function AdminEventsPage() {
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           is_featured: formData.is_featured || false,
-          is_private: formData.is_private || false,
           cancellation_deadline_hours: formData.cancellation_deadline_hours || 24,
           banner_image_url: formData.banner_image_url || null,
           price_show_only: formData.price_show_only ? parseFloat(formData.price_show_only) : null,
@@ -356,7 +354,6 @@ export default function AdminEventsPage() {
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           is_featured: formData.is_featured || false,
-          is_private: formData.is_private || false,
           cancellation_deadline_hours: formData.cancellation_deadline_hours || 24,
           banner_image_url: formData.banner_image_url || null,
           price_show_only: formData.price_show_only ? parseFloat(formData.price_show_only) : null,
@@ -431,7 +428,7 @@ export default function AdminEventsPage() {
     setFormData({
       title: '',
       description: '',
-      type: 'class',
+      type: 'event',
       start_at: '',
       end_at: '',
       is_recurring: false,
@@ -439,7 +436,6 @@ export default function AdminEventsPage() {
       capacity: '',
       price: '',
       is_featured: false,
-      is_private: false,
       cancellation_deadline_hours: 24,
       banner_image_url: '',
       price_show_only: '',
@@ -483,7 +479,6 @@ export default function AdminEventsPage() {
       capacity: event.capacity?.toString() || '',
       price: event.price?.toString() || '',
       is_featured: event.is_featured || false,
-      is_private: (event as any).is_private || false,
       cancellation_deadline_hours: event.cancellation_deadline_hours || 24,
       banner_image_url: event.banner_image_url || '',
       price_show_only: event.price_show_only?.toString() || '',
@@ -645,11 +640,16 @@ export default function AdminEventsPage() {
                         event.type === 'show' ? 'bg-pink-100 text-pink-700' :
                         event.type === 'class' ? 'bg-blue-100 text-blue-700' :
                         event.type === 'workshop' ? 'bg-purple-100 text-purple-700' :
+                        event.type === 'birthday' ? 'bg-yellow-100 text-yellow-700' :
+                        event.type === 'private_event' ? 'bg-gray-100 text-gray-700' :
                         'bg-green-100 text-green-700'
                       }`}>
                         {event.type === 'show' ? 'הצגה' : 
                          event.type === 'class' ? 'חוג' : 
-                         event.type === 'workshop' ? 'סדנה' : 'אירוע'}
+                         event.type === 'workshop' ? 'סדנה' : 
+                         event.type === 'birthday' ? 'יום הולדת 🎂' :
+                         event.type === 'private_event' ? 'אירוע פרטי 🔒' :
+                         'אירוע ציבורי'}
                       </span>
                       {event.is_featured && (
                         <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
@@ -849,13 +849,15 @@ export default function AdminEventsPage() {
                     value={formData.type}
                     onChange={e => setFormData({
                       ...formData,
-                      type: e.target.value as 'class' | 'workshop' | 'event' | 'show'
+                      type: e.target.value as 'class' | 'workshop' | 'event' | 'show' | 'private_event' | 'birthday'
                     })}
                     className="w-full px-3 py-2 border rounded-md"
                   >
-                    <option value="class">חוג</option>
+                    <option value="event">אירוע ציבורי</option>
+                    <option value="private_event">אירוע פרטי 🔒</option>
+                    <option value="birthday">יום הולדת 🎂</option>
                     <option value="workshop">סדנה</option>
-                    <option value="event">אירוע</option>
+                    <option value="class">חוג</option>
                     <option value="show">הצגה</option>
                   </select>
                 </div>
@@ -1368,20 +1370,6 @@ export default function AdminEventsPage() {
                           </label>
                         </div>
 
-                        <div>
-                          <label className="flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={formData.is_private}
-                              onChange={(e) => setFormData({...formData, is_private: e.target.checked})}
-                              className="ml-2"
-                            />
-                            <span className="text-sm font-medium">אירוע פרטי 🔒 (לא יוצג לציבור)</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4">
                         <div>
                           <label className="block text-sm font-medium mb-1">מועד אחרון לביטול (שעות לפני)</label>
                           <input 
