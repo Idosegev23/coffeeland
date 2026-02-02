@@ -71,8 +71,8 @@ const invitations = [
 const features = [
   {
     lottie: '/lottie/birthday.json',
-    title: 'חבילות גמישות',
-    description: 'התאמה מושלמת לכל תקציב וסגנון',
+    title: 'חבילה מקיפה',
+    description: 'כל מה שצריך לחגיגה מושלמת במחיר אחד',
   },
   {
     lottie: '/lottie/fresh.json',
@@ -247,7 +247,7 @@ export default function EventsPage() {
         </div>
       </section>
 
-      {/* Event Types */}
+      {/* Event Package */}
       <section className="relative py-12 sm:py-16 bg-background-light overflow-hidden">
         {/* Decorations */}
         <div className="absolute inset-0 pointer-events-none opacity-12">
@@ -259,50 +259,48 @@ export default function EventsPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-primary mb-3">
-              סוגי אירועים
+              החבילה שלנו
             </h2>
             <p className="text-lg text-text-light/70">
-              כל אירוע מותאם במיוחד עבורכם - בחרו את הסגנון שמתאים לכם
+              חבילה מקיפה שכוללת את כל מה שצריך לחגיגה בלתי נשכחת
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto">
+          <div className="flex justify-center">
             {eventTypes.map((event) => (
               <Card
                 key={event.id}
-                className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none ${event.popular ? 'border-accent border-2 relative' : 'relative'}`}
+                className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none border-accent border-2 relative max-w-2xl w-full"
               >
-                {event.popular && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 bg-accent">
-                    הכי פופולרי
-                  </Badge>
-                )}
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 bg-accent">
+                  החבילה המושלמת
+                </Badge>
                 <CardHeader>
                   <CardTitle className="text-xl sm:text-2xl text-center">{event.name}</CardTitle>
-                  <p className="text-2xl sm:text-3xl font-bold text-accent text-center mt-2">
+                  <p className="text-3xl sm:text-4xl font-bold text-accent text-center mt-2">
                     {event.price}
                   </p>
-                  <p className="text-sm text-text-light/70 text-center italic mt-2">
+                  <p className="text-base text-text-light/70 text-center italic mt-2">
                     {event.description}
                   </p>
-                  <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-text-light/70 mt-3">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
+                  <div className="flex items-center justify-center gap-4 sm:gap-6 text-sm sm:text-base text-text-light/70 mt-4">
+                    <span className="flex items-center gap-2">
+                      <Clock className="w-5 h-5" />
                       {event.duration}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
+                    <span className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
                       {event.capacity}
                     </span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="font-semibold text-primary text-sm sm:text-base">כולל:</p>
-                    <ul className="space-y-2">
+                  <div className="space-y-3">
+                    <p className="font-semibold text-primary text-base sm:text-lg text-center">החבילה כוללת:</p>
+                    <ul className="space-y-3">
                       {event.includes.map((item, index) => (
-                        <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
-                          <span className="text-accent mt-0.5 text-base">✓</span>
+                        <li key={index} className="flex items-start gap-3 text-sm sm:text-base">
+                          <span className="text-accent mt-0.5 text-lg">✓</span>
                           <span>{item}</span>
                         </li>
                       ))}
