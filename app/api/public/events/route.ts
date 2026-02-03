@@ -38,9 +38,12 @@ export async function GET(request: Request) {
 
     let query = service
       .from('events')
-      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground')
+      .select('id, title, description, type, start_at, end_at, capacity, price, is_recurring, recurrence_pattern, status, is_featured, cancellation_deadline_hours, banner_image_url, price_show_only, price_show_and_playground, is_cancelled')
       .order('start_at', { ascending: true })
       .limit(limit)
+
+    // סינון אירועים מבוטלים - לא מציגים אירועים שבוטלו
+    query = query.or('is_cancelled.is.null,is_cancelled.eq.false')
 
     // סינון לפי סטטוס - אם לא מצוין, מחזיר הכל חוץ מ-cancelled
     if (status) {
