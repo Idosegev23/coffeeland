@@ -73,49 +73,6 @@ function combineDateAndTime(date: string, time: string) {
   return `${date}T${time}`;
 }
 
-/**
- * ממיר datetime-local שהוזן בישראל ל-ISO string ב-UTC
- * הדפדפן מחזיר datetime-local כמו "2026-02-01T17:00" (זמן ישראל)
- * אנחנו צריכים לשמור את זה כ-UTC במסד נתונים
- */
-function convertLocalToIsraelTime(datetimeLocal: string): string {
-  if (!datetimeLocal) return datetimeLocal;
-  
-  // הדפדפן שולח לנו datetime-local בפורמט YYYY-MM-DDTHH:mm
-  // אנחנו מניחים שזה זמן ישראל ורוצים להמיר ל-UTC
-  
-  // יצירת date object - JS מניח שזה זמן מקומי של הדפדפן
-  const localDate = new Date(datetimeLocal);
-  
-  // קבלת offset של ישראל (בדקות) - יטפל אוטומטית בקיץ/חורף
-  const israelFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Jerusalem',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-  
-  // המרה ל-ISO string עם UTC timezone
-  // אנחנו רוצים שהשעה 17:00 בישראל תישמר כ-15:00 UTC (בחורף) או 14:00 UTC (בקיץ)
-  const parts = israelFormatter.formatToParts(localDate);
-  const year = parts.find(p => p.type === 'year')!.value;
-  const month = parts.find(p => p.type === 'month')!.value;
-  const day = parts.find(p => p.type === 'day')!.value;
-  const hour = parts.find(p => p.type === 'hour')!.value;
-  const minute = parts.find(p => p.type === 'minute')!.value;
-  
-  // יצירת date בזמן ישראל
-  const israelDateString = `${year}-${month}-${day}T${hour}:${minute}:00`;
-  const israelDate = new Date(israelDateString);
-  
-  // המרה ל-UTC ISO string
-  return israelDate.toISOString();
-}
-
 function addMinutesToDateTimeLocal(dt: string, minutes: number) {
   const d = new Date(dt);
   d.setMinutes(d.getMinutes() + minutes);
@@ -304,8 +261,8 @@ export default function AdminEventsPage() {
         body: JSON.stringify({
           ...formData,
           // המרת זמנים לזמן ישראל
-          start_at: convertLocalToIsraelTime(formData.start_at),
-          end_at: convertLocalToIsraelTime(formData.end_at),
+          start_at: formData.start_at,
+          end_at: formData.end_at,
           // כאשר יוצרים סדרה - נשלח occurrences ונגדיר recurring לתצוגה
           ...(occurrences ? { occurrences, is_recurring: true, recurrence_pattern: createMode } : {}),
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
@@ -347,8 +304,8 @@ export default function AdminEventsPage() {
           title: formData.title,
           description: formData.description,
           type: formData.type,
-          start_at: convertLocalToIsraelTime(formData.start_at),
-          end_at: convertLocalToIsraelTime(formData.end_at),
+          start_at: formData.start_at,
+          end_at: formData.end_at,
           is_recurring: formData.is_recurring,
           recurrence_pattern: formData.recurrence_pattern || null,
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
