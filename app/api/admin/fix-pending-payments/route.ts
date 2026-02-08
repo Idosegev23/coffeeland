@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * API לתיקון תשלומים תקועים במצב pending
  * GET /api/admin/fix-pending-payments

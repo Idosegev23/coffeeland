@@ -73,6 +73,86 @@ function combineDateAndTime(date: string, time: string) {
   return `${date}T${time}`;
 }
 
+/**
+ * ממיר datetime-local ל-ISO string עם timezone של ישראל
+ * @param datetimeLocal - פורמט YYYY-MM-DDTHH:mm
+ * @returns ISO string עם timezone של ישראל (מתחשב בקיץ/חורף אוטומטית)
+ */
+function addIsraelTimezone(datetimeLocal: string): string {
+  if (!datetimeLocal) return datetimeLocal;
+  
+  // יצירת date object מהזמן הישראלי שהוזן
+  // אנחנו מניחים שהמשתמש הזין זמן ישראל
+  const [datePart, timePart] = datetimeLocal.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+  
+  // יצירת date object בזמן ישראל
+  const israelDate = new Date(year, month - 1, day, hour, minute, 0);
+  
+  // קבלת offset של ישראל (בדקות) - יטפל אוטומטית בקיץ/חורף
+  const israelFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZoneName: 'short'
+  });
+  
+  // בניית ISO string עם timezone של ישראל
+  // Supabase יטפל בהמרה ל-UTC בצורה נכונה
+  const parts = israelFormatter.formatToParts(israelDate);
+  const formattedYear = parts.find(p => p.type === 'year')!.value;
+  const formattedMonth = parts.find(p => p.type === 'month')!.value;
+  const formattedDay = parts.find(p => p.type === 'day')!.value;
+  const formattedHour = parts.find(p => p.type === 'hour')!.value;
+  const formattedMinute = parts.find(p => p.type === 'minute')!.value;
+  
+  // חישוב offset הנכון
+  const offsetMinutes = -israelDate.getTimezoneOffset();
+  const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+  const offsetMins = Math.abs(offsetMinutes) % 60;
+  const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+  const offset = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+  
+  return `${formattedYear}-${formattedMonth}-${formattedDay}T${formattedHour}:${formattedMinute}:00${offset}`;
+}
+
+/**
+ * ממיר ISO string לפורמט datetime-local בזמן ישראל
+ * @param isoString - ISO string מה-DB
+ * @returns פורמט YYYY-MM-DDTHH:mm בזמן ישראל
+ */
+function convertToIsraelLocalTime(isoString: string): string {
+  if (!isoString) return '';
+  
+  const date = new Date(isoString);
+  
+  // המרה לזמן ישראל
+  const israelFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  
+  const parts = israelFormatter.formatToParts(date);
+  const year = parts.find(p => p.type === 'year')!.value;
+  const month = parts.find(p => p.type === 'month')!.value;
+  const day = parts.find(p => p.type === 'day')!.value;
+  const hour = parts.find(p => p.type === 'hour')!.value;
+  const minute = parts.find(p => p.type === 'minute')!.value;
+  
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
 function addMinutesToDateTimeLocal(dt: string, minutes: number) {
   const d = new Date(dt);
   d.setMinutes(d.getMinutes() + minutes);
@@ -261,10 +341,17 @@ export default function AdminEventsPage() {
         body: JSON.stringify({
           ...formData,
           // המרת זמנים לזמן ישראל
-          start_at: formData.start_at,
-          end_at: formData.end_at,
+          start_at: addIsraelTimezone(formData.start_at),
+          end_at: addIsraelTimezone(formData.end_at),
           // כאשר יוצרים סדרה - נשלח occurrences ונגדיר recurring לתצוגה
-          ...(occurrences ? { occurrences, is_recurring: true, recurrence_pattern: createMode } : {}),
+          ...(occurrences ? { 
+            occurrences: occurrences.map(occ => ({
+              start_at: addIsraelTimezone(occ.start_at),
+              end_at: addIsraelTimezone(occ.end_at)
+            })), 
+            is_recurring: true, 
+            recurrence_pattern: createMode 
+          } : {}),
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
           is_featured: formData.is_featured || false,
@@ -304,8 +391,8 @@ export default function AdminEventsPage() {
           title: formData.title,
           description: formData.description,
           type: formData.type,
-          start_at: formData.start_at,
-          end_at: formData.end_at,
+          start_at: addIsraelTimezone(formData.start_at),
+          end_at: addIsraelTimezone(formData.end_at),
           is_recurring: formData.is_recurring,
           recurrence_pattern: formData.recurrence_pattern || null,
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
@@ -429,8 +516,8 @@ export default function AdminEventsPage() {
       title: event.title,
       description: event.description || '',
       type: event.type,
-      start_at: event.start_at.slice(0, 16),
-      end_at: event.end_at.slice(0, 16),
+      start_at: convertToIsraelLocalTime(event.start_at),
+      end_at: convertToIsraelLocalTime(event.end_at),
       is_recurring: event.is_recurring,
       recurrence_pattern: event.recurrence_pattern || '',
       capacity: event.capacity?.toString() || '',

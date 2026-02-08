@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Admin API - Webhook Logs
  * GET /api/admin/webhooks/logs

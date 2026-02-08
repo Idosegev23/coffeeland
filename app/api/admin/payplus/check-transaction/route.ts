@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkTransactionStatus } from '@/lib/payplus';
 import { getServiceClient } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * API לבדיקת סטטוס עסקה ב-PayPlus
  * GET /api/admin/payplus/check-transaction?uid=XXX
