@@ -87,16 +87,23 @@ export async function POST(req: NextRequest) {
         .eq('event_id', event_id)
         .eq('status', 'confirmed');
 
-      // ⏰ ספירת תשלומים ממתינים מה-15 דקות האחרונות (למניעת מירוץ על מקומות)
+      // ⏰ ספירת כרטיסים ממתינים מה-15 דקות האחרונות (למניעת מירוץ על מקומות)
+      // חשוב: מסכמים את metadata.quantity ולא סופרים שורות!
+      // שורה אחת יכולה לייצג מספר כרטיסים (למשל: תשלום אחד ל-5 כרטיסים)
       const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-      const { count: pendingCount } = await serviceClient
+      const { data: pendingPayments } = await serviceClient
         .from('payments')
-        .select('*', { count: 'exact', head: true })
+        .select('metadata')
         .eq('status', 'pending')
         .gte('created_at', fifteenMinutesAgo)
         .contains('metadata', { event_id: event_id });
 
-      const totalReserved = (confirmedCount || 0) + (pendingCount || 0);
+      const pendingCount = (pendingPayments || []).reduce(
+        (sum: number, p: any) => sum + (p.metadata?.quantity || 1),
+        0
+      );
+
+      const totalReserved = (confirmedCount || 0) + pendingCount;
       const availableSeats = event.capacity - totalReserved;
 
       // בדיקה שיש מספיק מקומות עבור הכמות המבוקשת

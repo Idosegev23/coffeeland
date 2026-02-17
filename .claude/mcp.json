@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@0.4.5"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_9af04c48ad3e586ad23dff72f8cf427ab9983360"
+      }
+    },
+    "render": {
+      "url": "https://mcp.render.com/mcp",
+      "headers": {
+        "Authorization": "Bearer rnd_6oTFrbLLUBNbFwtBSDac66tj7S7g"
+      }
+    },
+    "vercel": {
+      "url": "https://mcp.vercel.com"
+    },
+    "remotion-documentation": {
+      "command": "npx",
+      "args": ["@remotion/mcp@latest"]
+    }
+  }
+}
