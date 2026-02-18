@@ -20,6 +20,7 @@ type FeaturedEvent = {
 export function FeaturedEvents() {
   const [events, setEvents] = useState<FeaturedEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const run = async () => {
@@ -73,7 +74,25 @@ export function FeaturedEvents() {
                   <h3 className="text-lg font-bold text-primary">{e.title}</h3>
                 </div>
                 {e.description && (
-                  <p className="text-sm text-text-light/70 line-clamp-2 mb-4">{e.description}</p>
+                  <div className="mb-4">
+                    <p className={`text-sm text-text-light/70 ${expandedDescriptions.has(e.id) ? '' : 'line-clamp-2'}`}>{e.description}</p>
+                    {e.description.length > 80 && (
+                      <button
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          setExpandedDescriptions(prev => {
+                            const next = new Set(prev);
+                            if (next.has(e.id)) next.delete(e.id);
+                            else next.add(e.id);
+                            return next;
+                          });
+                        }}
+                        className="text-xs text-accent hover:underline mt-1"
+                      >
+                        {expandedDescriptions.has(e.id) ? 'הצג פחות' : 'קרא עוד...'}
+                      </button>
+                    )}
+                  </div>
                 )}
                 <div className="space-y-2 text-sm text-text-light/80 mb-4">
                   <div className="flex items-center gap-2">

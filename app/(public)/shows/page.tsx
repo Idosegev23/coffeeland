@@ -47,6 +47,7 @@ export default function ShowsPage() {
   const [historicalShows, setHistoricalShows] = useState<Show[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadAllShows();
@@ -183,9 +184,30 @@ export default function ShowsPage() {
           <h3 className="text-xl font-bold text-primary">{show.title}</h3>
           
           {show.description && (
-            <p className="text-sm text-text-light/70 line-clamp-2">
-              {show.description}
-            </p>
+            <div>
+              <p className={`text-sm text-text-light/70 ${expandedDescriptions.has(show.id) ? '' : 'line-clamp-2'}`}>
+                {show.description}
+              </p>
+              {show.description.length > 80 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedDescriptions(prev => {
+                      const next = new Set(prev);
+                      if (next.has(show.id)) {
+                        next.delete(show.id);
+                      } else {
+                        next.add(show.id);
+                      }
+                      return next;
+                    });
+                  }}
+                  className="text-xs text-accent hover:underline mt-1"
+                >
+                  {expandedDescriptions.has(show.id) ? 'הצג פחות' : 'קרא עוד...'}
+                </button>
+              )}
+            </div>
           )}
 
           <div className="space-y-2 text-sm text-text-light/80 bg-background rounded-lg p-3">

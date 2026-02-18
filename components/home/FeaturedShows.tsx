@@ -29,6 +29,7 @@ function formatDate(dateStr: string) {
 export default function FeaturedShows() {
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadFeaturedShows();
@@ -93,7 +94,25 @@ export default function FeaturedShows() {
                 </div>
                 
                 {show.description && (
-                  <p className="text-sm text-text-light/70 line-clamp-2 mb-4">{show.description}</p>
+                  <div className="mb-4">
+                    <p className={`text-sm text-text-light/70 ${expandedDescriptions.has(show.id) ? '' : 'line-clamp-2'}`}>{show.description}</p>
+                    {show.description.length > 80 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedDescriptions(prev => {
+                            const next = new Set(prev);
+                            if (next.has(show.id)) next.delete(show.id);
+                            else next.add(show.id);
+                            return next;
+                          });
+                        }}
+                        className="text-xs text-accent hover:underline mt-1"
+                      >
+                        {expandedDescriptions.has(show.id) ? 'הצג פחות' : 'קרא עוד...'}
+                      </button>
+                    )}
+                  </div>
                 )}
                 
                 <div className="flex items-center gap-2 text-sm text-text-light/80 mb-4">
