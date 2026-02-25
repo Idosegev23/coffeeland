@@ -214,8 +214,16 @@ export async function POST(req: NextRequest) {
     // אם התשלום הצליח והוא עבור הצגה - יוצרים registration(s)
     if (isSuccess && payment.metadata?.event_id) {
       console.log('🎭 Creating show registration(s) for successful payment...');
-      
+
       const { event_id, ticket_type } = payment.metadata;
+
+      // ניקוי רישומי pending ישנים של אותו משתמש לאותו אירוע - למניעת כפילויות
+      await supabase
+        .from('registrations')
+        .delete()
+        .eq('event_id', event_id)
+        .eq('user_id', payment.user_id)
+        .eq('is_paid', false);
       
       // קבלת הכמות מה-metadata של התשלום (מהימן יותר) או מה-items של PayPlus
       const quantity = payment.metadata?.quantity || 

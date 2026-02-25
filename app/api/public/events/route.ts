@@ -72,12 +72,13 @@ export async function GET(request: Request) {
 
     const enriched = []
     for (const ev of events || []) {
-      // ספירת רישומים מאושרים בלבד (לא מבוטלים)
+      // ספירת רישומים ששולמו בלבד (is_paid=true ולא מבוטלים)
       const { count } = await service
         .from('registrations')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', ev.id)
-        .eq('status', 'confirmed')
+        .eq('is_paid', true)
+        .neq('status', 'cancelled')
 
       // seats reserved via reservations (activities)
       let reserved_seats_count = 0

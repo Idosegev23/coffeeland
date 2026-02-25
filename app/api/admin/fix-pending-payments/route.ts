@@ -56,6 +56,15 @@ export async function GET(req: Request) {
           result.action = 'would_create_registration';
           result.reason = 'Show payment pending';
         } else {
+          // ניקוי רישומי pending ישנים למניעת כפילויות
+          await supabase
+            .from('registrations')
+            .delete()
+            .eq('event_id', payment.metadata.event_id)
+            .eq('user_id', payment.user_id)
+            .eq('is_paid', false);
+
+          const qrCode = `TICKET-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
           // יצירת registration
           const { data: registration, error: regError } = await supabase
             .from('registrations')
@@ -63,7 +72,10 @@ export async function GET(req: Request) {
               event_id: payment.metadata.event_id,
               user_id: payment.user_id,
               status: 'confirmed',
+              is_paid: true,
+              payment_id: payment.id,
               ticket_type: payment.metadata.ticket_type || 'show_only',
+              qr_code: qrCode,
               registered_at: new Date().toISOString()
             })
             .select()

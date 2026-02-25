@@ -82,12 +82,13 @@ export async function POST(req: NextRequest) {
         }, { status: 409 }); // 409 Conflict
       }
 
-      // ספירת כרטיסים מאושרים
+      // ספירת כרטיסים ששולמו (is_paid=true ולא מבוטלים)
       const { count: confirmedCount } = await serviceClient
         .from('registrations')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', event_id)
-        .eq('status', 'confirmed');
+        .eq('is_paid', true)
+        .neq('status', 'cancelled');
 
       // ⏰ ספירת כרטיסים ממתינים מה-15 דקות האחרונות (למניעת מירוץ על מקומות)
       // חשוב: מסכמים את metadata.quantity ולא סופרים שורות!

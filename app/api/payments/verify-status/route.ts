@@ -89,13 +89,25 @@ export async function POST(req: NextRequest) {
       
       // יצירת registration/pass בהתאם
       if (payment.metadata?.event_id) {
+        // ניקוי רישומי pending ישנים למניעת כפילויות
+        await supabase
+          .from('registrations')
+          .delete()
+          .eq('event_id', payment.metadata.event_id)
+          .eq('user_id', payment.user_id)
+          .eq('is_paid', false);
+
+        const qrCode = `TICKET-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         const { data: registration } = await supabase
           .from('registrations')
           .insert({
             event_id: payment.metadata.event_id,
             user_id: payment.user_id,
             status: 'confirmed',
+            is_paid: true,
+            payment_id: payment.id,
             ticket_type: payment.metadata.ticket_type || 'show_only',
+            qr_code: qrCode,
             registered_at: new Date().toISOString()
           })
           .select()

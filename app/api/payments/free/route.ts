@@ -80,12 +80,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // בדיקת קיבולת
+    // בדיקת קיבולת - סופרים רק רישומים ששולמו (is_paid=true ולא מבוטלים)
     const { data: confirmedRegs } = await supabase
       .from('registrations')
       .select('id', { count: 'exact', head: true })
       .eq('event_id', event_id)
-      .eq('status', 'confirmed');
+      .eq('is_paid', true)
+      .neq('status', 'cancelled');
 
     const { data: pendingPayments } = await supabase
       .from('payments')

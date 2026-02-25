@@ -127,7 +127,8 @@ function CheckoutContent() {
             .from('registrations')
             .select('*', { count: 'exact', head: true })
             .eq('event_id', itemId)
-            .in('status', ['pending', 'confirmed']);
+            .eq('is_paid', true)
+            .neq('status', 'cancelled');
 
           const available = Math.max(0, event.capacity - (count || 0));
           setAvailableSeats(available);
@@ -166,7 +167,8 @@ function CheckoutContent() {
             .from('registrations')
             .select('*', { count: 'exact', head: true })
             .eq('event_id', itemId)
-            .eq('status', 'confirmed');
+            .eq('is_paid', true)
+            .neq('status', 'cancelled');
 
           const available = Math.max(0, event.capacity - (count || 0));
           setAvailableSeats(available);
