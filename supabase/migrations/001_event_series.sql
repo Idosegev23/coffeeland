@@ -43,9 +43,12 @@ CREATE TABLE IF NOT EXISTS public.series_registrations (
   valid_from DATE,
   valid_until DATE,
   qr_code TEXT UNIQUE,
-  registered_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(series_id, user_id, COALESCE(child_id, '00000000-0000-0000-0000-000000000000'))
+  registered_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- אינדקס ייחודי: מונע רישום כפול לאותו משתמש+ילד באותה סדרה
+CREATE UNIQUE INDEX IF NOT EXISTS idx_series_registrations_unique
+  ON public.series_registrations(series_id, user_id, COALESCE(child_id, '00000000-0000-0000-0000-000000000000'::uuid));
 
 -- 4. טבלת session_attendance - נוכחות לכל מפגש
 CREATE TABLE IF NOT EXISTS public.session_attendance (
