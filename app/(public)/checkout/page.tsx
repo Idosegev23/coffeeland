@@ -38,6 +38,8 @@ function CheckoutContent() {
 
   const [cartItem, setCartItem] = useState<CartItem | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [maxQuantity, setMaxQuantity] = useState(10);
+  const [availableSeats, setAvailableSeats] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [step, setStep] = useState<'cart' | 'redirecting'>('cart');
@@ -118,6 +120,19 @@ function CheckoutContent() {
           entries: 1,
           description: event.description
         });
+
+        // Fetch available seats for events
+        if (event.capacity) {
+          const { count } = await supabase
+            .from('registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', itemId)
+            .in('status', ['pending', 'confirmed']);
+
+          const available = Math.max(0, event.capacity - (count || 0));
+          setAvailableSeats(available);
+          setMaxQuantity(Math.min(10, available));
+        }
       } else if (itemType === 'show') {
         const ticketType = searchParams.get('ticket_type'); // 'show_only' or 'show_and_playground'
         const price = searchParams.get('price');
@@ -139,11 +154,24 @@ function CheckoutContent() {
           type: 'show',
           price: parseFloat(price || '0'),
           entries: 1,
-          description: ticketType === 'show_only' 
+          description: ticketType === 'show_only'
             ? 'כרטיס להצגה בלבד'
             : 'כרטיס להצגה + כניסה לג׳ימבורי',
           metadata: { ticket_type: ticketType }
         } as any);
+
+        // Fetch available seats for shows
+        if (event.capacity) {
+          const { count } = await supabase
+            .from('registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', itemId)
+            .eq('status', 'confirmed');
+
+          const available = Math.max(0, event.capacity - (count || 0));
+          setAvailableSeats(available);
+          setMaxQuantity(Math.min(10, available));
+        }
       }
     } catch (err) {
       console.error('Error loading checkout:', err);
@@ -416,25 +444,32 @@ function CheckoutContent() {
                   </div>
                   
                   {/* Quantity Selector */}
-                  <div className="mt-4 flex items-center justify-between bg-background-light rounded-lg p-3">
-                    <span className="text-sm font-medium text-text-light">כמות:</span>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        className="w-8 h-8 rounded-full bg-white border-2 border-accent/20 hover:border-accent flex items-center justify-center text-accent font-bold transition-all"
-                        disabled={quantity <= 1}
-                      >
-                        -
-                      </button>
-                      <span className="text-lg font-bold text-primary w-8 text-center">{quantity}</span>
-                      <button
-                        onClick={() => setQuantity(Math.min(10, quantity + 1))}
-                        className="w-8 h-8 rounded-full bg-white border-2 border-accent/20 hover:border-accent flex items-center justify-center text-accent font-bold transition-all"
-                        disabled={quantity >= 10}
-                      >
-                        +
-                      </button>
+                  <div className="mt-4 bg-background-light rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-text-light">כמות:</span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                          className="w-8 h-8 rounded-full bg-white border-2 border-accent/20 hover:border-accent flex items-center justify-center text-accent font-bold transition-all"
+                          disabled={quantity <= 1}
+                        >
+                          -
+                        </button>
+                        <span className="text-lg font-bold text-primary w-8 text-center">{quantity}</span>
+                        <button
+                          onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
+                          className="w-8 h-8 rounded-full bg-white border-2 border-accent/20 hover:border-accent flex items-center justify-center text-accent font-bold transition-all"
+                          disabled={quantity >= maxQuantity}
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
+                    {availableSeats !== null && (
+                      <p className={`text-xs text-center ${availableSeats <= 5 ? 'text-red-500 font-medium' : 'text-text-light/60'}`}>
+                        {availableSeats === 0 ? 'אין מקומות פנויים' : `נותרו ${availableSeats} מקומות`}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -684,9 +719,9 @@ function CheckoutContent() {
                       חזרה
                     </Link>
                   </Button>
-                  <Button 
-                    onClick={handlePayment} 
-                    disabled={processing}
+                  <Button
+                    onClick={handlePayment}
+                    disabled={processing || availableSeats === 0}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
                     {processing ? (
