@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Filter, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,7 @@ const ageGroups = [
 ]
 
 export function ClassesView() {
+  const router = useRouter()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
@@ -61,6 +63,12 @@ export function ClassesView() {
   }, [])
 
   const handleEventClick = (event: CalendarEvent) => {
+    // אם זה כרטיס סדרה - ניווט לעמוד הסדרה
+    const seriesId = (event.meta as any)?.seriesId
+    if (seriesId) {
+      router.push(`/series/${seriesId}`)
+      return
+    }
     setSelectedEvent(event)
     setModalOpen(true)
   }

@@ -12,7 +12,7 @@ import { QRCodeDisplay } from '@/components/account/QRCodeDisplay'
 import { PassCard } from '@/components/account/PassCard'
 import { LoyaltyCard } from '@/components/account/LoyaltyCard'
 import { UsageHistory } from '@/components/account/UsageHistory'
-import { Plus, Ticket, Calendar, Clock } from 'lucide-react'
+import { Plus, Ticket, Calendar, Clock, BookOpen } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 
 export default function MyAccountPage() {
@@ -26,6 +26,7 @@ export default function MyAccountPage() {
   const [usages, setUsages] = useState<any[]>([])
   const [registrations, setRegistrations] = useState<any[]>([])
   const [reservations, setReservations] = useState<any[]>([])
+  const [seriesRegistrations, setSeriesRegistrations] = useState<any[]>([])
   const [refunds, setRefunds] = useState<any[]>([])
 
   useEffect(() => {
@@ -101,6 +102,33 @@ export default function MyAccountPage() {
         .order('registered_at', { ascending: false })
 
       setRegistrations(registrationsData || [])
+
+      // Load series registrations (חוגים וסדנאות)
+      const { data: seriesRegsData } = await supabase
+        .from('series_registrations')
+        .select(`
+          id,
+          status,
+          registered_at,
+          qr_code,
+          amount_paid,
+          valid_from,
+          valid_until,
+          payment_type,
+          series:event_series(
+            id,
+            title,
+            description,
+            type,
+            series_price,
+            total_sessions,
+            banner_image_url
+          )
+        `)
+        .eq('user_id', currentUser.id)
+        .order('registered_at', { ascending: false })
+
+      setSeriesRegistrations(seriesRegsData || [])
 
       // Load reservations (new)
       try {
@@ -310,6 +338,91 @@ export default function MyAccountPage() {
                       האירוע הסתיים
                     </div>
                   )}
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
+        <Separator className="my-8" />
+
+        {/* סקשן חוגים וסדנאות */}
+        <h2 className="text-2xl font-semibold text-primary mb-4 flex items-center gap-2">
+          <BookOpen className="w-6 h-6 text-accent" />
+          החוגים והסדנאות שלי
+        </h2>
+        {seriesRegistrations.length === 0 ? (
+          <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-8 text-center">
+            <p className="text-text-light/70 mb-4">אין רישומים לחוגים או סדנאות</p>
+            <Button asChild>
+              <Link href="/classes">לחוגים וסדנאות</Link>
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid gap-4 mb-8">
+            {seriesRegistrations.map((reg: any) => {
+              const series = Array.isArray(reg.series) ? reg.series[0] : reg.series
+              if (!series) return null
+              const isActive = reg.status === 'active'
+              const validUntil = reg.valid_until ? new Date(reg.valid_until) : null
+              const isExpired = validUntil && validUntil < new Date()
+
+              return (
+                <Card key={reg.id} className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6 ${!isActive || isExpired ? 'opacity-60' : ''}`}>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-bold text-primary">{series.title}</h3>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          series.type === 'class' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {series.type === 'class' ? 'חוג' : 'סדנה'}
+                        </span>
+                        {isActive && !isExpired && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                            פעיל
+                          </span>
+                        )}
+                        {isExpired && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                            הסתיים
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1 text-sm text-text-light/70">
+                        <div className="flex items-center gap-2">
+                          <BookOpen size={14} className="text-accent" />
+                          <span>{series.total_sessions} מפגשים</span>
+                        </div>
+                        {validUntil && (
+                          <div className="flex items-center gap-2">
+                            <Calendar size={14} className="text-accent" />
+                            <span>בתוקף עד: {validUntil.toLocaleDateString('he-IL')}</span>
+                          </div>
+                        )}
+                        {reg.amount_paid && (
+                          <div className="flex items-center gap-2">
+                            <Ticket size={14} className="text-accent" />
+                            <span>שולם: ₪{reg.amount_paid}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-3">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/series/${series.id}`}>פרטי הסדרה</Link>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {reg.qr_code && isActive && !isExpired && (
+                      <div className="bg-white p-2 rounded-lg border text-center flex-shrink-0">
+                        <QRCodeSVG value={reg.qr_code} size={80} />
+                        <p className="text-[10px] text-gray-400 mt-1">QR לכניסה</p>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               )
             })}

@@ -36,17 +36,19 @@ export async function POST(req: NextRequest) {
       .single();
 
     const body = await req.json();
-    const { 
-      amount, 
-      items, 
-      description, 
+    const {
+      amount,
+      items,
+      description,
       card_type_id,
       card_type_name,
       entries_count,
       return_url,
       event_id,
       ticket_type,
-      quantity
+      quantity,
+      series_id,
+      child_id,
     } = body;
 
     if (!amount || amount <= 0) {
@@ -126,6 +128,59 @@ export async function POST(req: NextRequest) {
       console.log(`✅ Capacity check passed for ${event.title}: ${availableSeats} seats available (${confirmedCount} confirmed, ${pendingCount} pending), purchasing ${ticketQuantity} tickets`);
     }
 
+    // 🔗 בדיקת קיבולת לסדרה
+    if (series_id) {
+      const { data: series, error: seriesError } = await serviceClient
+        .from('event_series')
+        .select('id, title, capacity, status')
+        .eq('id', series_id)
+        .single();
+
+      if (seriesError || !series) {
+        return NextResponse.json({ error: 'Series not found' }, { status: 404 });
+      }
+
+      if (series.status !== 'active') {
+        return NextResponse.json({
+          error: 'Series is not active',
+          message: `הסדרה "${series.title}" אינה פעילה כרגע.`,
+        }, { status: 409 });
+      }
+
+      if (series.capacity) {
+        const { count: activeRegs } = await serviceClient
+          .from('series_registrations')
+          .select('*', { count: 'exact', head: true })
+          .eq('series_id', series_id)
+          .eq('status', 'active');
+
+        const { data: pendingSeriesPayments } = await serviceClient
+          .from('payments')
+          .select('metadata')
+          .eq('status', 'pending')
+          .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
+          .contains('metadata', { series_id: series_id });
+
+        const pendingSeriesCount = (pendingSeriesPayments || []).length;
+        const totalSeriesReserved = (activeRegs || 0) + pendingSeriesCount;
+        const availableSpots = series.capacity - totalSeriesReserved;
+
+        if (availableSpots <= 0) {
+          return NextResponse.json({
+            error: 'sold_out',
+            message: `אין מקומות פנויים בסדרה "${series.title}".`,
+            details: {
+              capacity: series.capacity,
+              registered: activeRegs,
+              pending: pendingSeriesCount,
+            },
+          }, { status: 409 });
+        }
+
+        console.log(`✅ Series capacity check passed for ${series.title}: ${availableSpots} spots available`);
+      }
+    }
+
     // URL-ים לחזרה
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.headers.get('origin') || 'http://localhost:3000';
     
@@ -141,7 +196,7 @@ export async function POST(req: NextRequest) {
         payment_type: 'online',
         payment_method: 'credit_card',
         status: 'pending',
-        item_type: card_type_id ? 'pass' : 'other',
+        item_type: series_id ? 'series' : card_type_id ? 'pass' : 'other',
         notes: description || card_type_name,
         metadata: {
           transaction_ref: transactionRef,
@@ -151,7 +206,9 @@ export async function POST(req: NextRequest) {
           items,
           event_id,
           ticket_type,
-          quantity: ticketQuantity
+          quantity: ticketQuantity,
+          series_id: series_id || undefined,
+          child_id: child_id || undefined,
         }
       })
       .select()

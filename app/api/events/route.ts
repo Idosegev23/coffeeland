@@ -7,6 +7,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { upsertGoogleEvent, deleteGoogleEvent } from '@/lib/googleCalendar';
+import { getServiceClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -228,17 +229,54 @@ export async function POST(request: Request) {
       }
     }
 
+    // 🔗 אם create_as_series - יוצרים סדרה מקושרת
+    const createAsSeries = body.create_as_series === true;
+    let seriesId: string | null = null;
+    let seriesData: any = null;
+
+    if (createAsSeries && (body.type === 'class' || body.type === 'workshop')) {
+      const serviceClient = getServiceClient();
+      const { data: newSeries, error: seriesError } = await serviceClient
+        .from('event_series')
+        .insert({
+          title: body.title,
+          description: body.description,
+          type: body.type,
+          series_price: body.series_price || null,
+          per_session_price: body.per_session_price || body.price || null,
+          total_sessions: occurrences.length,
+          instructor_id: body.instructor_id || null,
+          room_id: body.room_id || null,
+          capacity: body.capacity || null,
+          min_age: body.min_age || null,
+          max_age: body.max_age || null,
+          banner_image_url: body.banner_image_url || null,
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (seriesError) throw seriesError;
+      seriesId = newSeries.id;
+      seriesData = newSeries;
+    }
+
     // ניצור שורות לכל מופע
-    const rows = occurrences
+    const sortedOccurrences = occurrences
       .slice()
-      .sort((a, b) => compareDateTimes(a.start_at, b.start_at))
-      .map((occ) => ({
+      .sort((a, b) => compareDateTimes(a.start_at, b.start_at));
+
+    const rows = sortedOccurrences
+      .map((occ, index) => ({
         ...commonInsert,
         // אם יצרו "סדרה" - ברירת מחדל לסמן כחוזר, גם אם לא נשלח
         is_recurring: body.is_recurring ?? true,
-        recurrence_pattern: body.recurrence_pattern ?? 'batch',
+        recurrence_pattern: createAsSeries ? 'series' : (body.recurrence_pattern ?? 'batch'),
         start_at: occ.start_at,
-        end_at: occ.end_at
+        end_at: occ.end_at,
+        // שדות סדרה
+        series_id: seriesId,
+        series_order: createAsSeries ? index + 1 : null,
       }));
 
     const { data: created, error: batchInsertError } = await supabase
@@ -253,8 +291,9 @@ export async function POST(request: Request) {
     for (const ev of created || []) {
       let updated = ev;
       try {
+        const seriesLabel = createAsSeries ? ` (מפגש ${ev.series_order}/${sortedOccurrences.length})` : '';
         const googleEventId = await upsertGoogleEvent({
-          title: ev.title,
+          title: `${ev.title}${seriesLabel}`,
           description: ev.description,
           start_at: ev.start_at,
           end_at: ev.end_at,
@@ -283,18 +322,24 @@ export async function POST(request: Request) {
     // audit log (אחד לכל batch)
     await supabase.from('audit_log').insert({
       admin_id: admin.id,
-      action: 'create_event_batch',
-      entity_type: 'event',
-      entity_id: updatedEvents[0]?.id || null,
+      action: createAsSeries ? 'create_series_batch' : 'create_event_batch',
+      entity_type: createAsSeries ? 'event_series' : 'event',
+      entity_id: seriesId || updatedEvents[0]?.id || null,
       details: {
         title: body.title,
         type: body.type,
         occurrences_count: updatedEvents.length,
-        recurrence_pattern: body.recurrence_pattern ?? 'batch'
+        recurrence_pattern: createAsSeries ? 'series' : (body.recurrence_pattern ?? 'batch'),
+        series_id: seriesId,
+        series_price: body.series_price,
+        per_session_price: body.per_session_price,
       }
     });
 
-    return NextResponse.json({ events: updatedEvents });
+    return NextResponse.json({
+      events: updatedEvents,
+      series: seriesData,
+    });
   } catch (error: any) {
     console.error('Error creating event:', error);
     return NextResponse.json(

@@ -41,6 +41,8 @@ interface Event {
   banner_image_url?: string;
   price_show_only?: number;
   price_show_and_playground?: number;
+  series_id?: string;
+  series_order?: number;
   registrations?: Array<{
     id: string;
     user: {
@@ -229,6 +231,11 @@ export default function AdminEventsPage() {
   const [selectedDatesStartTime, setSelectedDatesStartTime] = useState('10:00');
   const [selectedDatesDurationMinutes, setSelectedDatesDurationMinutes] = useState(120);
 
+  // Series mode (חוג/סדנה כסדרה מקושרת)
+  const [createAsSeries, setCreateAsSeries] = useState(false);
+  const [seriesPrice, setSeriesPrice] = useState('');
+  const [perSessionPrice, setPerSessionPrice] = useState('');
+
   const supabase = createClientComponentClient();
 
   useEffect(() => {
@@ -344,13 +351,13 @@ export default function AdminEventsPage() {
           start_at: addIsraelTimezone(formData.start_at),
           end_at: addIsraelTimezone(formData.end_at),
           // כאשר יוצרים סדרה - נשלח occurrences ונגדיר recurring לתצוגה
-          ...(occurrences ? { 
+          ...(occurrences ? {
             occurrences: occurrences.map(occ => ({
               start_at: addIsraelTimezone(occ.start_at),
               end_at: addIsraelTimezone(occ.end_at)
-            })), 
-            is_recurring: true, 
-            recurrence_pattern: createMode 
+            })),
+            is_recurring: true,
+            recurrence_pattern: createMode
           } : {}),
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           price: formData.price ? parseFloat(formData.price) : null,
@@ -359,14 +366,24 @@ export default function AdminEventsPage() {
           banner_image_url: formData.banner_image_url || null,
           price_show_only: formData.price_show_only ? parseFloat(formData.price_show_only) : null,
           price_show_and_playground: formData.price_show_and_playground ? parseFloat(formData.price_show_and_playground) : null,
-          requires_registration: true
+          requires_registration: true,
+          // שדות סדרה מקושרת
+          ...(createAsSeries && (formData.type === 'class' || formData.type === 'workshop') ? {
+            create_as_series: true,
+            series_price: seriesPrice ? parseFloat(seriesPrice) : null,
+            per_session_price: perSessionPrice ? parseFloat(perSessionPrice) : null,
+          } : {})
         })
       });
 
       if (!res.ok) throw new Error('Failed to create event');
 
       const data = await res.json();
-      if (data.events && Array.isArray(data.events)) {
+      if (data.series) {
+        // נוצרה סדרה מקושרת
+        setEvents([...events, ...(data.events || [])]);
+        alert(`✅ נוצרה סדרה "${formData.title}" עם ${data.events?.length || 0} מפגשים!`);
+      } else if (data.events && Array.isArray(data.events)) {
         setEvents([...events, ...data.events]);
         alert(`✅ נוצרו ${data.events.length} מופעים וסונכרנו (ככל האפשר) ליומן Google!`);
       } else {
@@ -508,6 +525,9 @@ export default function AdminEventsPage() {
     setSelectedDates([]);
     setSelectedDatesStartTime('10:00');
     setSelectedDatesDurationMinutes(120);
+    setCreateAsSeries(false);
+    setSeriesPrice('');
+    setPerSessionPrice('');
   };
 
   const handleEdit = useCallback((event: Event) => {
@@ -700,7 +720,12 @@ export default function AdminEventsPage() {
                           ⭐ מומלץ
                         </span>
                       )}
-                      {event.is_recurring && (
+                      {event.series_id && (
+                        <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
+                          סדרה {event.series_order ? `(${event.series_order})` : ''}
+                        </span>
+                      )}
+                      {event.is_recurring && !event.series_id && (
                         <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">
                           חוזר
                         </span>
@@ -1238,6 +1263,51 @@ export default function AdminEventsPage() {
                           </p>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* 🔗 יצירה כסדרה מקושרת - מוצג רק עבור חוגים/סדנאות במצב batch */}
+                  {(formData.type === 'class' || formData.type === 'workshop') && createMode !== 'single' && (
+                    <div className="mt-4 border-t pt-4">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={createAsSeries}
+                          onChange={(e) => setCreateAsSeries(e.target.checked)}
+                          className="w-5 h-5 rounded accent-accent"
+                        />
+                        <div>
+                          <span className="font-medium text-sm">צור כסדרה מקושרת</span>
+                          <p className="text-xs text-gray-500">הלקוח ישלם פעם אחת ויקבל גישה לכל המפגשים</p>
+                        </div>
+                      </label>
+
+                      {createAsSeries && (
+                        <div className="mt-3 grid grid-cols-2 gap-4 bg-blue-50 p-3 rounded-lg">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">מחיר לסדרה (₪)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={seriesPrice}
+                              onChange={(e) => setSeriesPrice(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                              placeholder="מחיר כולל לכל המפגשים"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">מחיר דרופ-אין (₪, אופציונלי)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={perSessionPrice}
+                              onChange={(e) => setPerSessionPrice(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md bg-white"
+                              placeholder="מחיר למפגש בודד"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

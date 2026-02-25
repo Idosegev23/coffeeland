@@ -172,6 +172,34 @@ function CheckoutContent() {
           setAvailableSeats(available);
           setMaxQuantity(Math.min(10, available));
         }
+      } else if (itemType === 'series') {
+        // טעינת נתוני סדרה (חוג/סדנה)
+        const res = await fetch(`/api/series/${itemId}`);
+        if (!res.ok) {
+          setError('לא נמצאה הסדרה המבוקשת');
+          return;
+        }
+        const data = await res.json();
+        const series = data.series;
+
+        setCartItem({
+          id: series.id,
+          name: series.title,
+          type: 'series',
+          price: series.series_price || 0,
+          entries: series.total_sessions || 0,
+          description: `${series.type === 'class' ? 'חוג' : 'סדנה'} - ${series.total_sessions} מפגשים`,
+        });
+
+        // בדיקת קיבולת
+        if (series.capacity) {
+          const available = Math.max(0, series.capacity - (series.active_registrations_count || 0));
+          setAvailableSeats(available);
+          setMaxQuantity(1); // סדרה = רישום אחד
+        } else {
+          setMaxQuantity(1);
+        }
+        setQuantity(1);
       }
     } catch (err) {
       console.error('Error loading checkout:', err);
@@ -276,12 +304,13 @@ function CheckoutContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: totalAmount,
-          quantity: quantity, // 🎟️ מספר הכרטיסים המבוקש
+          quantity: quantity,
           card_type_id: itemType === 'pass' ? cartItem.id : null,
           card_type_name: cartItem.name,
           entries_count: cartItem.entries * quantity,
           event_id: itemType === 'show' ? cartItem.id : null,
           ticket_type: (cartItem as any).metadata?.ticket_type,
+          series_id: itemType === 'series' ? cartItem.id : null,
           description: `רכישת ${quantity > 1 ? quantity + ' × ' : ''}${cartItem.name}`,
           items: [{
             name: cartItem.name,
