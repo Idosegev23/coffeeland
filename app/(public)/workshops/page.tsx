@@ -104,7 +104,7 @@ export default function WorkshopsPage() {
         {/* Decorations */}
         <div className="absolute inset-0 pointer-events-none opacity-15">
           <Image src="/coffebeans.svg" alt="" width={120} height={120} className="absolute top-10 left-10 rotate-45" />
-          <Image src="/coldshake.svg" alt="" width={150} height={150} className="absolute bottom-10 right-10 -rotate-12" />
+          <Image src="/coffebeans.svg" alt="" width={150} height={150} className="absolute bottom-10 right-10 -rotate-12" />
         </div>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -126,7 +126,7 @@ export default function WorkshopsPage() {
         <div className="absolute inset-0 pointer-events-none opacity-10">
           <Image src="/palmLeaf2.svg" alt="" width={200} height={200} className="absolute -top-10 right-20 rotate-45" />
           <Image src="/BananaLeaf1.svg" alt="" width={180} height={180} className="absolute bottom-10 -left-10 -rotate-12" />
-          <Image src="/coldshake2.svg" alt="" width={130} height={130} className="absolute top-1/2 right-10 rotate-6" />
+          <Image src="/coffebeans.svg" alt="" width={130} height={130} className="absolute top-1/2 right-10 rotate-6" />
         </div>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

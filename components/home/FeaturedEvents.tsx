@@ -97,7 +97,7 @@ export function FeaturedEvents() {
                 <div className="space-y-2 text-sm text-text-light/80 mb-4">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-accent" />
-                    <span>
+                    <span suppressHydrationWarning>
                       {date.toLocaleDateString('he-IL', {
                         weekday: 'long',
                         day: '2-digit',

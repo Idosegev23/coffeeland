@@ -73,7 +73,7 @@ export default function LoginPage() {
       <div className="absolute inset-0 pointer-events-none opacity-10 overflow-hidden">
         <Image src="/BananaLeaf1.svg" alt="" width={300} height={300} className="absolute -top-10 -left-10 rotate-12" />
         <Image src="/palmLeaf.svg" alt="" width={250} height={250} className="absolute bottom-10 -right-10 -rotate-12" />
-        <Image src="/coldshake.svg" alt="" width={150} height={150} className="absolute top-1/2 left-20 rotate-6" />
+        <Image src="/coffebeans.svg" alt="" width={150} height={150} className="absolute top-1/2 left-20 rotate-6" />
       </div>
 
       <div className="max-w-md w-full relative z-10">

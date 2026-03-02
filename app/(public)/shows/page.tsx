@@ -213,11 +213,11 @@ export default function ShowsPage() {
           <div className="space-y-2 text-sm text-text-light/80 bg-background rounded-lg p-3">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-accent flex-shrink-0" />
-              <span>{formatDate(show.start_at)}</span>
+              <span suppressHydrationWarning>{formatDate(show.start_at)}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-accent flex-shrink-0" />
-              <span>{formatTime(show.start_at)} - {formatTime(show.end_at)}</span>
+              <span suppressHydrationWarning>{formatTime(show.start_at)} - {formatTime(show.end_at)}</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-accent flex-shrink-0" />

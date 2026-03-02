@@ -148,7 +148,7 @@ export default function PassesPage() {
         <Image src="/BananaLeaf1.svg" alt="" width={400} height={400} className="absolute top-10 left-10 rotate-12" />
         <Image src="/palmLeaf.svg" alt="" width={350} height={350} className="absolute bottom-20 right-10 -rotate-12" />
         <Image src="/coffebeans.svg" alt="" width={180} height={180} className="absolute top-1/3 right-1/4 rotate-45" />
-        <Image src="/coldshake2.svg" alt="" width={200} height={200} className="absolute bottom-1/4 left-1/4 -rotate-6" />
+        <Image src="/coffebeans.svg" alt="" width={200} height={200} className="absolute bottom-1/4 left-1/4 -rotate-6" />
       </div>
 
       {/* Header */}

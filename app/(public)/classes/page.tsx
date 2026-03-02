@@ -205,7 +205,7 @@ export default function ClassesPage() {
                   </p>
 
                   <div className="space-y-2 text-sm mb-4">
-                    <div className="flex items-center text-gray-700">
+                    <div className="flex items-center text-gray-700" suppressHydrationWarning>
                       <Calendar size={16} className="ml-2 text-accent" />
                       {new Date(event.start_at).toLocaleDateString('he-IL', {
                         weekday: 'long',
@@ -214,7 +214,7 @@ export default function ClassesPage() {
                       })}
                     </div>
 
-                    <div className="flex items-center text-gray-700">
+                    <div className="flex items-center text-gray-700" suppressHydrationWarning>
                       <Clock size={16} className="ml-2 text-accent" />
                       {new Date(event.start_at).toLocaleTimeString('he-IL', {
                         hour: '2-digit',
@@ -286,7 +286,7 @@ export default function ClassesPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">תאריך ושעה</span>
                   </div>
-                  <p className="font-medium">
+                  <p className="font-medium" suppressHydrationWarning>
                     {new Date(selectedEvent.start_at).toLocaleDateString('he-IL', {
                       weekday: 'long',
                       day: 'numeric',

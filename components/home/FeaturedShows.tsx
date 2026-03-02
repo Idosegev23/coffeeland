@@ -117,7 +117,7 @@ export default function FeaturedShows() {
                 
                 <div className="flex items-center gap-2 text-sm text-text-light/80 mb-4">
                   <Calendar className="w-4 h-4 text-accent" />
-                  <span>{formatDate(show.start_at)}</span>
+                  <span suppressHydrationWarning>{formatDate(show.start_at)}</span>
                 </div>
                 
                 <div className="flex items-center justify-between">
