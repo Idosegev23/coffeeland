@@ -248,12 +248,14 @@ export interface RefundRequest {
  */
 export async function processRefund(request: RefundRequest): Promise<PayPlusResponse> {
   return withRateLimit(async () => {
-    const url = `${BASE_URL}/Transactions/Refund`;
-    
+    // RefundByTransactionUID - זיכוי לפי UID של עסקה (לא דורש פרטי כרטיס)
+    // https://docs.payplus.co.il/reference/post_transactions-refundbytransactionuid
+    const url = `${BASE_URL}/Transactions/RefundByTransactionUID`;
+
     const body = {
       transaction_uid: request.transaction_uid,
-      refund_amount: request.amount,
-      reason: request.reason || 'Customer refund'
+      amount: request.amount,
+      more_info: request.reason || 'Customer refund'
     };
 
     console.log('🔵 PayPlus Refund Request:', JSON.stringify(body, null, 2));
