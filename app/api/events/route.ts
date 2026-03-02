@@ -46,6 +46,7 @@ export async function GET(request: Request) {
         registrations!left(
           id,
           status,
+          is_paid,
           ticket_type,
           registered_at,
           payment_id,

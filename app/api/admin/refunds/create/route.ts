@@ -144,27 +144,39 @@ export async function POST(req: NextRequest) {
           })
           .eq('id', payment.id);
 
-        // ביטול registration/pass בהתאם לסוג התשלום
-        if (payment.item_type === 'event_registration' || payment.item_type === 'show') {
-          // מחיקת כל ה-registrations שקשורים לתשלום זה
-          const { data: deletedRegs, error: deleteError } = await supabase
+        // ביטול registrations שקשורות לתשלום זה (לפי payment_id)
+        const { data: cancelledRegs, error: regCancelError } = await supabase
+          .from('registrations')
+          .update({ status: 'cancelled', is_paid: false })
+          .eq('payment_id', payment.id)
+          .select();
+
+        if (!regCancelError && cancelledRegs && cancelledRegs.length > 0) {
+          console.log(`✅ Cancelled ${cancelledRegs.length} registration(s) for payment ${payment.id}`);
+        }
+
+        // גם לפי event_id מה-metadata (למקרה שה-payment_id לא תואם)
+        if (payment.metadata?.event_id) {
+          const { data: extraCancelled } = await supabase
             .from('registrations')
-            .delete()
+            .update({ status: 'cancelled', is_paid: false })
+            .eq('event_id', payment.metadata.event_id)
+            .eq('user_id', payment.user_id)
             .eq('payment_id', payment.id)
             .select();
-          
-          if (!deleteError && deletedRegs) {
-            console.log(`✅ Deleted ${deletedRegs.length} registration(s) for payment ${payment.id}`);
-          } else if (deleteError) {
-            console.error('❌ Error deleting registrations:', deleteError);
+
+          if (extraCancelled && extraCancelled.length > 0) {
+            console.log(`✅ Extra cancelled ${extraCancelled.length} registration(s) by event_id`);
           }
-        } else if (payment.item_type === 'pass' && payment.item_id) {
-          // סימון כרטיסייה כמזוכה
+        }
+
+        // סימון כרטיסייה כמזוכה
+        if (payment.metadata?.card_type_id && payment.item_id) {
           await supabase
             .from('passes')
             .update({ status: 'refunded' })
             .eq('id', payment.item_id);
-          
+
           console.log('✅ Pass marked as refunded:', payment.item_id);
         }
 
