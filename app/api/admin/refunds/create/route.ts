@@ -58,8 +58,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Refund amount exceeds payment amount' }, { status: 400 });
     }
 
-    if (!payment.transaction_uid) {
-      return NextResponse.json({ error: 'Payment has no transaction UID' }, { status: 400 });
+    // ה-transaction_uid מאוחסן ב-metadata (נשמר ע"י PayPlus callback)
+    const transactionUid = payment.metadata?.payplus_transaction_uid;
+    if (!transactionUid) {
+      return NextResponse.json({ error: 'Payment has no PayPlus transaction UID - cannot refund' }, { status: 400 });
     }
 
     // בדיקה אם כבר יש זיכוי בתהליך
@@ -104,7 +106,7 @@ export async function POST(req: NextRequest) {
     // ביצוע זיכוי ב-PayPlus
     try {
       const payplusResponse = await processRefund({
-        transaction_uid: payment.transaction_uid,
+        transaction_uid: transactionUid,
         amount: refund_amount,
         reason
       });
