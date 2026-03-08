@@ -116,76 +116,65 @@ export default function ShowsPage() {
     const past = isPast || isShowPast(show);
 
     return (
-      <Card 
-        key={show.id} 
-        className={`overflow-hidden hover:shadow-lg transition-shadow bg-white border rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none ${past ? 'opacity-75' : ''}`}
+      <div
+        key={show.id}
+        className={`group relative bg-background-light border-2 border-border rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none overflow-hidden transition-all duration-300 ${past ? 'opacity-70' : 'hover:shadow-lg hover:border-secondary/40 hover:-translate-y-1'}`}
       >
+        {/* Image */}
         {show.banner_image_url ? (
-          <div className="relative w-full h-56 bg-background">
-            <Image 
-              src={show.banner_image_url} 
+          <div className="relative w-full h-52 bg-background overflow-hidden">
+            <Image
+              src={show.banner_image_url}
               alt={show.title}
               fill
-              className="object-cover"
+              className={`object-cover transition-transform duration-500 ${past ? '' : 'group-hover:scale-105'}`}
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/70 via-transparent to-transparent" />
             {past && (
-              <div className="absolute inset-0 bg-primary/60 flex items-center justify-center">
-                <Badge className="text-base px-4 py-2 bg-text-light/80 text-white flex items-center gap-2">
+              <div className="absolute inset-0 bg-primary/50 flex items-center justify-center">
+                <span className="bg-background-light/90 text-primary font-bold px-5 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-sm flex items-center gap-2">
                   <History className="w-4 h-4" />
                   הסתיים
-                </Badge>
+                </span>
               </div>
             )}
             {soldOut && !past && (
               <div className="absolute top-4 left-4">
-                <Badge className="text-lg px-6 py-3 bg-error text-white shadow-lg">
-                  ⛔ אזל המלאי
-                </Badge>
+                <span className="bg-error/90 text-white font-bold px-4 py-2 rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-none text-sm shadow-md">
+                  אזל המלאי
+                </span>
               </div>
             )}
             {almostSoldOut && !soldOut && !past && (
-              <div className="absolute top-4 left-4 bg-error text-white px-3 py-1 rounded text-sm font-bold">
-                נותרו {seats} מקומות בלבד!
-              </div>
-            )}
-            {!past && (
-              <div className="absolute top-4 right-4 flex items-center gap-1 bg-accent text-white px-3 py-1 rounded text-sm font-bold">
-                <Star className="w-3 h-3 fill-current" />
-                מיוחד
+              <div className="absolute top-4 left-4">
+                <span className="bg-secondary text-white font-medium px-3 py-1.5 rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-none text-xs shadow-md">
+                  נותרו {seats} מקומות בלבד
+                </span>
               </div>
             )}
           </div>
         ) : (
-          <div className="w-full h-56 bg-secondary/20 flex items-center justify-center relative">
-            <Ticket className="w-16 h-16 text-secondary/30" />
+          <div className="relative w-full h-52 bg-gradient-to-br from-secondary/20 via-background to-accent/10 flex items-center justify-center overflow-hidden">
+            <Ticket className="w-20 h-20 text-secondary/20" />
             {past && (
               <div className="absolute inset-0 bg-primary/40 flex items-center justify-center">
-                <Badge className="text-base px-4 py-2 bg-text-light/80 text-white flex items-center gap-2">
+                <span className="bg-background-light/90 text-primary font-bold px-5 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-sm flex items-center gap-2">
                   <History className="w-4 h-4" />
                   הסתיים
-                </Badge>
-              </div>
-            )}
-            {almostSoldOut && !soldOut && !past && (
-              <div className="absolute top-4 left-4 bg-error text-white px-3 py-1 rounded text-sm font-bold">
-                נותרו {seats} מקומות!
-              </div>
-            )}
-            {!past && (
-              <div className="absolute top-4 right-4 flex items-center gap-1 bg-accent text-white px-3 py-1 rounded text-sm font-bold">
-                <Star className="w-3 h-3 fill-current" />
-                מיוחד
+                </span>
               </div>
             )}
           </div>
         )}
 
         <div className="p-5 space-y-4">
-          <h3 className="text-xl font-bold text-primary">{show.title}</h3>
-          
+          {/* Title */}
+          <h3 className="text-xl font-bold text-primary leading-snug">{show.title}</h3>
+
+          {/* Description */}
           {show.description && (
             <div>
-              <p className={`text-sm text-text-light/70 ${expandedDescriptions.has(show.id) ? '' : 'line-clamp-2'}`}>
+              <p className={`text-sm text-text-light/60 leading-relaxed ${expandedDescriptions.has(show.id) ? '' : 'line-clamp-2'}`}>
                 {show.description}
               </p>
               {show.description.length > 80 && (
@@ -194,15 +183,12 @@ export default function ShowsPage() {
                     e.stopPropagation();
                     setExpandedDescriptions(prev => {
                       const next = new Set(prev);
-                      if (next.has(show.id)) {
-                        next.delete(show.id);
-                      } else {
-                        next.add(show.id);
-                      }
+                      if (next.has(show.id)) next.delete(show.id);
+                      else next.add(show.id);
                       return next;
                     });
                   }}
-                  className="text-xs text-accent hover:underline mt-1"
+                  className="text-xs text-secondary font-medium hover:underline mt-1"
                 >
                   {expandedDescriptions.has(show.id) ? 'הצג פחות' : 'קרא עוד...'}
                 </button>
@@ -210,66 +196,70 @@ export default function ShowsPage() {
             </div>
           )}
 
-          <div className="space-y-2 text-sm text-text-light/80 bg-background rounded-lg p-3">
-            <div className="flex items-center gap-2">
+          {/* Details */}
+          <div className="bg-background rounded-xl p-3 space-y-2.5">
+            <div className="flex items-center gap-2.5 text-sm text-text-light/80">
               <Calendar className="w-4 h-4 text-accent flex-shrink-0" />
-              <span suppressHydrationWarning>{formatDate(show.start_at)}</span>
+              <span className="font-medium" suppressHydrationWarning>{formatDate(show.start_at)}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 text-sm text-text-light/80">
               <Clock className="w-4 h-4 text-accent flex-shrink-0" />
               <span suppressHydrationWarning>{formatTime(show.start_at)} - {formatTime(show.end_at)}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 text-sm text-text-light/80">
               <Users className="w-4 h-4 text-accent flex-shrink-0" />
               <span className={soldOut && !past ? 'font-bold text-error' : ''}>
-                {past ? (
-                  `${show.registrations_count || 0} השתתפו`
-                ) : soldOut ? (
-                  '⛔ אזל המלאי'
-                ) : (
-                  `${seats} מקומות זמינים מתוך ${show.capacity}`
-                )}
+                {past
+                  ? `${show.registrations_count || 0} השתתפו`
+                  : soldOut
+                    ? 'אזל המלאי'
+                    : `${seats} מקומות זמינים מתוך ${show.capacity}`}
               </span>
             </div>
           </div>
 
-          <div className="pt-3 border-t space-y-2">
+          {/* Pricing */}
+          <div className="space-y-1.5">
             {(show.price_show_only ?? 0) > 0 && (
               <div className="flex justify-between items-center text-sm">
-                <span className="text-text-light/70">כרטיס להצגה בלבד</span>
-                <span className="font-bold text-accent">₪{show.price_show_only}</span>
+                <span className="text-text-light/60">הצגה בלבד</span>
+                <span className="font-bold text-primary">₪{show.price_show_only}</span>
               </div>
             )}
             <div className="flex justify-between items-center text-sm">
-              <span className="text-text-light/70">הצגה + גימבורי</span>
-              <span className="font-bold text-accent">₪{show.price_show_and_playground}</span>
+              <span className="text-text-light/60">הצגה + גימבורי</span>
+              <span className="font-bold text-primary text-lg">₪{show.price_show_and_playground}</span>
             </div>
           </div>
 
-          <Button 
-            onClick={() => setSelectedShow(show)}
+          {/* CTA */}
+          <button
+            onClick={() => !past && !soldOut && setSelectedShow(show)}
             disabled={soldOut || past}
-            className={`w-full ${soldOut && !past ? 'bg-error hover:bg-error/90 cursor-not-allowed' : 'bg-accent hover:bg-accent/90'}`}
-            size="lg"
+            className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none font-medium text-sm transition-colors ${
+              past
+                ? 'bg-background text-text-light/40 cursor-default'
+                : soldOut
+                  ? 'bg-error/10 text-error cursor-not-allowed border border-error/20'
+                  : 'bg-primary text-primary-foreground hover:bg-secondary'
+            }`}
           >
             {past ? (
               <>
-                <History className="w-4 h-4 ml-2" />
+                <History className="w-4 h-4" />
                 הצגה הסתיימה
               </>
             ) : soldOut ? (
-              <>
-                ⛔ אזל המלאי
-              </>
+              'אזל המלאי'
             ) : (
               <>
-                <Ticket className="w-4 h-4 ml-2" />
-                קנה כרטיס
+                <Ticket className="w-4 h-4" />
+                רכישת כרטיס
               </>
             )}
-          </Button>
+          </button>
         </div>
-      </Card>
+      </div>
     );
   };
 

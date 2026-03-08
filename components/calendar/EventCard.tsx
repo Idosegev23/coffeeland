@@ -1,9 +1,7 @@
-import { Clock, Users, Award, MapPin, BookOpen } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Clock, Users, Award, MapPin, BookOpen, ArrowLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import type { CalendarEvent } from '@/types/calendar'
-import { formatTime, formatPrice } from '@/lib/utils'
+import { formatTime } from '@/lib/utils'
 
 interface EventCardProps {
   event: CalendarEvent
@@ -16,104 +14,109 @@ export function EventCard({ event, onSelect }: EventCardProps) {
   const meta = event.meta as any
   const isSeries = !!meta?.seriesId
 
-  const availabilityColors = {
-    free: 'success',
-    limited: 'warning',
-    full: 'error',
-  } as const
-
-  const availabilityLabels = {
-    free: 'זמין',
-    limited: 'מקומות אחרונים',
-    full: 'מלא',
-  }
+  const hebrewDay = new Date(event.start).toLocaleDateString('he-IL', { weekday: 'long' })
+  const hebrewDate = new Date(event.start).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' })
 
   return (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onSelect?.(event)}>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg">{event.title}</CardTitle>
-          <div className="flex gap-1 flex-shrink-0">
-            {isSeries && (
-              <Badge className="bg-indigo-100 text-indigo-700">
-                <BookOpen className="w-3 h-3 ml-1" />
-                סדרה
-              </Badge>
-            )}
-            {event.meta?.availability && (
-              <Badge variant={availabilityColors[event.meta.availability]}>
-                {availabilityLabels[event.meta.availability]}
-              </Badge>
+    <div
+      className="group relative bg-background-light border-2 border-border rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-secondary/40 hover:-translate-y-1"
+      onClick={() => onSelect?.(event)}
+    >
+      {/* Top accent strip */}
+      <div className="h-2 bg-gradient-to-l from-secondary via-accent to-primary" />
+
+      <div className="p-5 space-y-4">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold text-primary leading-snug mb-1">
+              {event.title}
+            </h3>
+            {event.description && (
+              <p className="text-sm text-text-light/60 line-clamp-2 leading-relaxed">
+                {event.description}
+              </p>
             )}
           </div>
+          {isSeries && (
+            <Badge className="bg-secondary/15 text-secondary border-secondary/30 border flex-shrink-0">
+              <BookOpen className="w-3 h-3 ml-1" />
+              סדרה
+            </Badge>
+          )}
         </div>
-        {event.description && (
-          <CardDescription className="line-clamp-2">{event.description}</CardDescription>
-        )}
-      </CardHeader>
 
-      <CardContent className="space-y-3">
         {/* Series info */}
         {isSeries && (
-          <div className="flex items-center gap-2 text-sm text-indigo-600 font-medium">
-            <BookOpen className="w-4 h-4 flex-shrink-0" />
-            <span>{meta.totalSessions} מפגשים ({meta.remainingSessions} נותרו)</span>
+          <div className="bg-secondary/8 rounded-xl px-4 py-3 border border-secondary/15">
+            <div className="flex items-center gap-2 text-sm font-medium text-secondary">
+              <BookOpen className="w-4 h-4" />
+              <span>{meta.totalSessions} מפגשים</span>
+              {meta.remainingSessions > 0 && (
+                <span className="text-text-light/50 font-normal">
+                  · {meta.remainingSessions} נותרו
+                </span>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Time */}
-        <div className="flex items-center gap-2 text-sm text-text-light/70">
-          <Clock className="w-4 h-4 flex-shrink-0" />
-          <span>
-            {isSeries ? `מפגש הבא: ${startTime} - ${endTime}` : `${startTime} - ${endTime}`}
-          </span>
-        </div>
-
-        {/* Coach/Instructor */}
-        {(event.meta?.coach || meta?.instructor) && (
-          <div className="flex items-center gap-2 text-sm text-text-light/70">
-            <Award className="w-4 h-4 flex-shrink-0" />
-            <span>{event.meta?.coach || meta?.instructor}</span>
-          </div>
-        )}
-
-        {/* Capacity */}
-        {event.meta?.capacity && (
-          <div className="flex items-center gap-2 text-sm text-text-light/70">
-            <Users className="w-4 h-4 flex-shrink-0" />
-            <span>עד {event.meta.capacity} משתתפים</span>
-          </div>
-        )}
-
-        {/* Location */}
-        {(event.meta?.location || meta?.room) && (
-          <div className="flex items-center gap-2 text-sm text-text-light/70">
-            <MapPin className="w-4 h-4 flex-shrink-0" />
-            <span>{event.meta?.location || meta?.room}</span>
-          </div>
-        )}
-
-        {/* Price & CTA */}
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          {event.meta?.price && (
-            <span className="text-lg font-semibold text-accent">
-              {formatPrice(event.meta.price)}
+        {/* Details */}
+        <div className="bg-background rounded-xl p-3 space-y-2.5">
+          <div className="flex items-center gap-2.5 text-sm text-text-light/80">
+            <Clock className="w-4 h-4 text-accent flex-shrink-0" />
+            <span suppressHydrationWarning>
+              {isSeries ? (
+                <>
+                  <span className="text-text-light/50">מפגש הבא: </span>
+                  <span className="font-medium">{hebrewDay}</span>
+                  {' · '}
+                  {startTime} - {endTime}
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">{hebrewDate}</span>
+                  {' · '}
+                  {startTime} - {endTime}
+                </>
+              )}
             </span>
+          </div>
+
+          {(event.meta?.coach || meta?.instructor) && (
+            <div className="flex items-center gap-2.5 text-sm text-text-light/80">
+              <Award className="w-4 h-4 text-accent flex-shrink-0" />
+              <span>{event.meta?.coach || meta?.instructor}</span>
+            </div>
           )}
-          <Button
-            size="sm"
-            variant={isSeries ? 'default' : 'outline'}
-            className={isSeries ? 'bg-accent hover:bg-accent/90' : ''}
-            onClick={(e) => {
-              e.stopPropagation()
-              onSelect?.(event)
-            }}
-          >
-            {isSeries ? 'הרשמה לסדרה' : 'פרטים נוספים'}
-          </Button>
+
+          {event.meta?.capacity && (
+            <div className="flex items-center gap-2.5 text-sm text-text-light/80">
+              <Users className="w-4 h-4 text-accent flex-shrink-0" />
+              <span>עד {event.meta.capacity} משתתפים</span>
+            </div>
+          )}
+
+          {(event.meta?.location || meta?.room) && (
+            <div className="flex items-center gap-2.5 text-sm text-text-light/80">
+              <MapPin className="w-4 h-4 text-accent flex-shrink-0" />
+              <span>{event.meta?.location || meta?.room}</span>
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+
+        {/* CTA */}
+        <button
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-primary text-primary-foreground font-medium text-sm transition-colors group-hover:bg-secondary"
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelect?.(event)
+          }}
+        >
+          {isSeries ? 'הרשמה לסדרה' : 'פרטים נוספים'}
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+        </button>
+      </div>
+    </div>
   )
 }
-
