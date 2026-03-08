@@ -42,14 +42,17 @@ export async function GET(request: Request) {
       .order('start_at', { ascending: true })
       .limit(limit)
 
-    // סינון אירועים מבוטלים - לא מציגים אירועים שבוטלו
-    query = query.or('is_cancelled.is.null,is_cancelled.eq.false')
+    // בארכיון - מציגים גם אירועים מבוטלים/שהסתיימו
+    if (!includeHistory) {
+      // סינון אירועים מבוטלים - לא מציגים אירועים שבוטלו
+      query = query.or('is_cancelled.is.null,is_cancelled.eq.false')
 
-    // סינון לפי סטטוס - אם לא מצוין, מחזיר הכל חוץ מ-cancelled
-    if (status) {
-      query = query.eq('status', status)
-    } else {
-      query = query.neq('status', 'cancelled')
+      // סינון לפי סטטוס - אם לא מצוין, מחזיר הכל חוץ מ-cancelled
+      if (status) {
+        query = query.eq('status', status)
+      } else {
+        query = query.neq('status', 'cancelled')
+      }
     }
 
     // סינון אירועים פרטיים - רק אירועים ציבוריים מוצגים ב-API הציבורי

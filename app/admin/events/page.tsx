@@ -469,7 +469,7 @@ export default function AdminEventsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('האם למחוק את האירוע? (יימחק גם מיומן Google)')) return;
+    if (!confirm('האם לבטל את האירוע? (יועבר לארכיון ויימחק מיומן Google)')) return;
 
     try {
       const res = await fetch(`/api/events/${id}`, {

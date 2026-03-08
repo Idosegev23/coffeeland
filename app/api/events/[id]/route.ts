@@ -201,10 +201,10 @@ export async function DELETE(
       }
     }
 
-    // מחיקה מ-Supabase
+    // ארכוב (soft delete) במקום מחיקה - שומר את האירוע והרישומים
     const { error } = await supabase
       .from('events')
-      .delete()
+      .update({ status: 'cancelled', is_cancelled: true })
       .eq('id', id);
 
     if (error) throw error;
@@ -215,7 +215,7 @@ export async function DELETE(
       action: 'delete_event',
       entity_type: 'event',
       entity_id: id,
-      details: { title: event?.title }
+      details: { title: event?.title, soft_delete: true }
     });
 
     return NextResponse.json({ success: true });
