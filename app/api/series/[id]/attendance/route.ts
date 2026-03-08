@@ -14,12 +14,12 @@ export const dynamic = 'force-dynamic';
 // GET - נוכחות כל הנרשמים
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const serviceClient = getServiceClient();
-    const seriesId = params.id;
+    const { id: seriesId } = await params;
 
     // בדיקת הרשאות (אדמין או המשתמש עצמו)
     const { data: { user } } = await supabase.auth.getUser();
@@ -96,11 +96,12 @@ export async function GET(
 // PATCH - סימון/עדכון נוכחות
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const serviceClient = getServiceClient();
+    const { id: seriesId } = await params;
 
     // בדיקת הרשאות אדמין
     const { data: { user } } = await supabase.auth.getUser();
@@ -131,7 +132,7 @@ export async function PATCH(
         .from('series_registrations')
         .select('id')
         .eq('qr_code', qr_code)
-        .eq('series_id', params.id)
+        .eq('series_id', seriesId)
         .single();
 
       if (!reg) {

@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import { Clock, Users, Award, MapPin, BookOpen, ArrowLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { CalendarEvent } from '@/types/calendar'
@@ -9,6 +12,7 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onSelect }: EventCardProps) {
+  const [expanded, setExpanded] = useState(false)
   const startTime = formatTime(new Date(event.start))
   const endTime = formatTime(new Date(event.end))
   const meta = event.meta as any
@@ -16,6 +20,8 @@ export function EventCard({ event, onSelect }: EventCardProps) {
 
   const hebrewDay = new Date(event.start).toLocaleDateString('he-IL', { weekday: 'long' })
   const hebrewDate = new Date(event.start).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' })
+
+  const descriptionLong = event.description && event.description.length > 80
 
   return (
     <div
@@ -33,9 +39,22 @@ export function EventCard({ event, onSelect }: EventCardProps) {
               {event.title}
             </h3>
             {event.description && (
-              <p className="text-sm text-text-light/60 line-clamp-2 leading-relaxed">
-                {event.description}
-              </p>
+              <div>
+                <p className={`text-sm text-text-light/60 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
+                  {event.description}
+                </p>
+                {descriptionLong && (
+                  <button
+                    className="text-sm text-secondary font-medium mt-1 hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setExpanded(!expanded)
+                    }}
+                  >
+                    {expanded ? 'הצג פחות' : 'קרא עוד'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
           {isSeries && (
@@ -52,11 +71,6 @@ export function EventCard({ event, onSelect }: EventCardProps) {
             <div className="flex items-center gap-2 text-sm font-medium text-secondary">
               <BookOpen className="w-4 h-4" />
               <span>{meta.totalSessions} מפגשים</span>
-              {meta.remainingSessions > 0 && (
-                <span className="text-text-light/50 font-normal">
-                  · {meta.remainingSessions} נותרו
-                </span>
-              )}
             </div>
           </div>
         )}

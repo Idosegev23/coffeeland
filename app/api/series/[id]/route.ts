@@ -15,11 +15,11 @@ export const dynamic = 'force-dynamic';
 // GET - פרטי סדרה
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const serviceClient = getServiceClient();
-    const seriesId = params.id;
+    const { id: seriesId } = await params;
 
     // פרטי הסדרה
     const { data: series, error: seriesError } = await serviceClient
@@ -80,11 +80,12 @@ export async function GET(
 // PATCH - עדכון סדרה
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const serviceClient = getServiceClient();
+    const { id: seriesId } = await params;
 
     // בדיקת הרשאות
     const { data: { user } } = await supabase.auth.getUser();
@@ -104,7 +105,6 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const seriesId = params.id;
 
     // עדכון רק שדות שנשלחו
     const updateFields: Record<string, any> = {};
@@ -168,11 +168,12 @@ export async function PATCH(
 // DELETE - מחיקת סדרה
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const serviceClient = getServiceClient();
+    const { id: seriesId } = await params;
 
     // בדיקת הרשאות
     const { data: { user } } = await supabase.auth.getUser();
@@ -190,8 +191,6 @@ export async function DELETE(
     if (!admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
-
-    const seriesId = params.id;
 
     // בדיקה שאין נרשמים פעילים
     const { count: activeRegs } = await serviceClient

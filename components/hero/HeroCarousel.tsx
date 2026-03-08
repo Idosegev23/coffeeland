@@ -106,12 +106,12 @@ export function HeroCarousel() {
   const nextSlide = useCallback(() => {
     setDirection(1)
     setCurrentIndex((prev) => (prev + 1) % slides.length)
-  }, [])
+  }, [slides.length])
 
   const prevSlide = useCallback(() => {
     setDirection(-1)
     setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length)
-  }, [])
+  }, [slides.length])
 
   const goToSlide = (index: number) => {
     setDirection(index > currentIndex ? 1 : -1)
@@ -131,8 +131,10 @@ export function HeroCarousel() {
 
   // Track slide views
   useEffect(() => {
-    analytics.heroSlideView(currentIndex, slides[currentIndex].id)
-  }, [currentIndex])
+    if (currentIndex < slides.length) {
+      analytics.heroSlideView(currentIndex, slides[currentIndex].id)
+    }
+  }, [currentIndex, slides])
 
   // Keyboard navigation
   useEffect(() => {
