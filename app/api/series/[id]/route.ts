@@ -33,7 +33,11 @@ export async function GET(
       .single();
 
     if (seriesError || !series) {
-      return NextResponse.json({ error: 'Series not found' }, { status: 404 });
+      console.error('Series lookup failed:', { seriesId, seriesError, series });
+      return NextResponse.json({
+        error: 'Series not found',
+        debug: { seriesId, dbError: seriesError?.message, code: seriesError?.code }
+      }, { status: 404 });
     }
 
     // כל האירועים בסדרה
