@@ -41,7 +41,7 @@ export function EventCard({ event, onSelect }: EventCardProps) {
           {isSeries && (
             <Badge className="bg-secondary/15 text-secondary border-secondary/30 border flex-shrink-0">
               <BookOpen className="w-3 h-3 ml-1" />
-              סדרה
+              סדנה
             </Badge>
           )}
         </div>
@@ -113,7 +113,7 @@ export function EventCard({ event, onSelect }: EventCardProps) {
             onSelect?.(event)
           }}
         >
-          {isSeries ? 'הרשמה לסדרה' : 'פרטים נוספים'}
+          {isSeries ? 'הרשמה לסדנה' : 'פרטים נוספים'}
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
         </button>
       </div>
