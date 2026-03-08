@@ -285,7 +285,14 @@ export async function POST(request: Request) {
       .insert(rows)
       .select();
 
-    if (batchInsertError) throw batchInsertError;
+    if (batchInsertError) {
+      // ניקוי סדרה שנוצרה אם הכנסת האירועים נכשלה
+      if (seriesId) {
+        const serviceClient = getServiceClient();
+        await serviceClient.from('event_series').delete().eq('id', seriesId);
+      }
+      throw batchInsertError;
+    }
 
     // סנכרון לגוגל לכל מופע (לא חוסם שגיאות בודדות)
     const updatedEvents: any[] = [];
