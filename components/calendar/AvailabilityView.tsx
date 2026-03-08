@@ -151,7 +151,7 @@ export function AvailabilityView() {
         </Button>
 
         <div className="text-center">
-          <h3 className="text-lg sm:text-xl font-bold text-primary">
+          <h3 className="text-lg sm:text-xl font-bold text-primary" suppressHydrationWarning>
             {getMonthYearText()}
           </h3>
           {!isCurrentMonth() && (
@@ -182,7 +182,7 @@ export function AvailabilityView() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Calendar className="w-12 h-12 text-text-light/30 mb-4" />
-            <p className="text-text-light/70 mb-2">אין זמינות ב{getMonthYearText()}</p>
+            <p className="text-text-light/70 mb-2" suppressHydrationWarning>אין זמינות ב{getMonthYearText()}</p>
             <p className="text-sm text-text-light/50">נסו חודש אחר או צרו קשר לבדיקת תאריכים</p>
           </CardContent>
         </Card>
@@ -211,7 +211,7 @@ export function AvailabilityView() {
                       <p className="text-2xl font-bold text-primary">
                         {startDate.getDate()}
                       </p>
-                      <p className="text-sm text-text-light/70">
+                      <p className="text-sm text-text-light/70" suppressHydrationWarning>
                         {formatDate(startDate, { month: 'long', weekday: 'long' })}
                       </p>
                     </div>
@@ -219,7 +219,7 @@ export function AvailabilityView() {
                   </div>
 
                   {/* Time */}
-                  <div className="text-sm text-text-light/80">
+                  <div className="text-sm text-text-light/80" suppressHydrationWarning>
                     {formatTime(startDate)} - {formatTime(endDate)}
                   </div>
 
