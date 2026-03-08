@@ -1,13 +1,32 @@
+'use client'
+
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { HeroCarousel } from '@/components/hero/HeroCarousel'
-import { NavTiles } from '@/components/navigation/NavTiles'
-import { MagicBento } from '@/components/gallery/MagicBento'
-import { CalendarTabs } from '@/components/calendar/CalendarTabs'
 import { FeaturedEvents } from '@/components/home/FeaturedEvents'
 import FeaturedShows from '@/components/home/FeaturedShows'
 import { FeaturedWorkshops } from '@/components/home/FeaturedWorkshops'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+
+const HeroCarousel = dynamic(
+  () => import('@/components/hero/HeroCarousel').then((m) => ({ default: m.HeroCarousel })),
+  { ssr: false }
+)
+
+const NavTiles = dynamic(
+  () => import('@/components/navigation/NavTiles').then((m) => ({ default: m.NavTiles })),
+  { ssr: false }
+)
+
+const MagicBento = dynamic(
+  () => import('@/components/gallery/MagicBento').then((m) => ({ default: m.MagicBento })),
+  { ssr: false }
+)
+
+const CalendarTabs = dynamic(
+  () => import('@/components/calendar/CalendarTabs').then((m) => ({ default: m.CalendarTabs })),
+  { ssr: false }
+)
 
 export default function HomePage() {
   return (
@@ -17,9 +36,9 @@ export default function HomePage() {
       <FeaturedShows />
       <FeaturedWorkshops />
       <NavTiles />
-      
+
       <Separator className="my-0" />
-      
+
       {/* Playground Gallery Section */}
       <section className="py-12 sm:py-16 lg:py-20" id="playground-gallery">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,7 +47,7 @@ export default function HomePage() {
               הציצו לתוך המשחקייה
             </h2>
           </div>
-          
+
           <MagicBento
             cards={[
               {
@@ -109,4 +128,3 @@ export default function HomePage() {
     </>
   )
 }
-
