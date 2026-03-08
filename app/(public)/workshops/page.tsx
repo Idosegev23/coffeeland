@@ -99,6 +99,21 @@ export default function WorkshopsPage() {
         </div>
       </section>
 
+      {/* Classes and Workshops - right after hero */}
+      <section className="py-12 sm:py-16 lg:py-20 bg-background-light" id="classes">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl sm:text-4xl font-bold text-primary mb-3">
+              הסדנאות שלנו
+            </h2>
+            <p className="text-lg text-text-light/70 max-w-2xl mx-auto">
+              צפו בסדנאות והחוגים המתקיימים אצלנו
+            </p>
+          </div>
+          <ClassesView />
+        </div>
+      </section>
+
       {/* Description */}
       <section className="relative py-12 sm:py-16 bg-background-light overflow-hidden">
         {/* Decorations */}
@@ -106,7 +121,7 @@ export default function WorkshopsPage() {
           <Image src="/coffebeans.svg" alt="" width={120} height={120} className="absolute top-10 left-10 rotate-45" />
           <Image src="/coffebeans.svg" alt="" width={150} height={150} className="absolute bottom-10 right-10 -rotate-12" />
         </div>
-        
+
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-4">
@@ -184,21 +199,6 @@ export default function WorkshopsPage() {
               </Card>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Classes and Workshops */}
-      <section className="py-12 sm:py-16 lg:py-20" id="classes">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl sm:text-4xl font-bold text-primary mb-3">
-              החוגים והסדנאות שלנו
-            </h2>
-            <p className="text-lg text-text-light/70 max-w-2xl mx-auto">
-              צפו בחוגים והסדנאות השבועיים המתקיימים אצלנו
-            </p>
-          </div>
-          <ClassesView />
         </div>
       </section>
 
