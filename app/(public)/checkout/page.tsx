@@ -443,6 +443,8 @@ function CheckoutContent() {
                     <div className="w-16 h-16 bg-accent/20 rounded-xl flex items-center justify-center">
                       {cartItem.type === 'show' ? (
                         <span className="text-3xl">🎭</span>
+                      ) : cartItem.type === 'series' ? (
+                        <span className="text-3xl">📚</span>
                       ) : cartItem.type === 'event' ? (
                         <Calendar className="w-8 h-8 text-accent" />
                       ) : (
@@ -452,7 +454,7 @@ function CheckoutContent() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-0.5 rounded">
-                          {cartItem.type === 'show' ? 'הצגה' : cartItem.type === 'event' ? 'אירוע' : 'כרטיסייה'}
+                          {cartItem.type === 'show' ? 'הצגה' : cartItem.type === 'series' ? 'סדנה' : cartItem.type === 'event' ? 'אירוע' : 'כרטיסייה'}
                         </span>
                       </div>
                       <h3 className="font-semibold text-primary">{cartItem.name}</h3>
@@ -659,6 +661,8 @@ function CheckoutContent() {
                       <div className="w-12 h-12 bg-accent/20 rounded-lg flex items-center justify-center">
                         {cartItem.type === 'show' ? (
                           <span className="text-2xl">🎭</span>
+                        ) : cartItem.type === 'series' ? (
+                          <span className="text-2xl">📚</span>
                         ) : (
                           <Ticket className="w-6 h-6 text-accent" />
                         )}
@@ -666,7 +670,7 @@ function CheckoutContent() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium text-accent">
-                            {cartItem.type === 'show' ? 'הצגה' : cartItem.type === 'event' ? 'אירוע' : 'כרטיסייה'}
+                            {cartItem.type === 'show' ? 'הצגה' : cartItem.type === 'series' ? 'סדנה' : cartItem.type === 'event' ? 'אירוע' : 'כרטיסייה'}
                           </span>
                           {quantity > 1 && (
                             <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
@@ -677,6 +681,8 @@ function CheckoutContent() {
                         <h3 className="font-semibold">{cartItem.name}</h3>
                         <p className="text-sm text-text-light/70">
                           {cartItem.type === 'show' && cartItem.description ? (
+                            cartItem.description
+                          ) : cartItem.type === 'series' && cartItem.description ? (
                             cartItem.description
                           ) : cartItem.entries > 1 ? (
                             `${cartItem.entries * quantity} כניסות`
