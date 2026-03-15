@@ -13,11 +13,34 @@ export default function LoginPage() {
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  
+  const [failedAttempts, setFailedAttempts] = useState(0)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   })
+
+  const handleResetPassword = async () => {
+    if (!formData.email) {
+      setError('יש להזין כתובת אימייל כדי לאפס את הסיסמה')
+      return
+    }
+    setResetLoading(true)
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (resetError) throw resetError
+      setResetSent(true)
+      setError('')
+    } catch (err: any) {
+      setError(err.message || 'שגיאה בשליחת מייל איפוס סיסמה')
+    } finally {
+      setResetLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,6 +84,7 @@ export default function LoginPage() {
       window.location.href = targetPath
     } catch (err: any) {
       console.error('❌ Login error:', err)
+      setFailedAttempts(prev => prev + 1)
       setError(err.message || 'שגיאה בהתחברות. נסו שוב.')
     } finally {
       setLoading(false)
@@ -125,6 +149,31 @@ export default function LoginPage() {
             {error && (
               <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
                 {error}
+              </div>
+            )}
+
+            {/* Reset Password - shows after 2 failed attempts */}
+            {failedAttempts >= 2 && !resetSent && (
+              <div className="p-4 bg-secondary/10 border-2 border-secondary/30 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-center space-y-2">
+                <p className="text-sm text-primary font-medium">
+                  נתקלת בבעיה? נסה לאפס את הסיסמה
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  disabled={resetLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-secondary text-text-dark text-sm font-medium rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-none hover:bg-secondary/90 transition-colors disabled:opacity-50"
+                >
+                  {resetLoading ? 'שולח...' : '🔑 שלח לי מייל לאיפוס סיסמה'}
+                </button>
+              </div>
+            )}
+
+            {/* Reset Password Success */}
+            {resetSent && (
+              <div className="p-4 bg-green-50 border-2 border-green-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-center space-y-1">
+                <p className="text-green-700 font-medium text-sm">✉️ מייל לאיפוס סיסמה נשלח!</p>
+                <p className="text-green-600 text-xs">בדקו את תיבת המייל שלכם (כולל ספאם)</p>
               </div>
             )}
 
