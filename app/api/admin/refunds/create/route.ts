@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment already refunded' }, { status: 400 });
     }
 
+    if (payment.amount === 0) {
+      return NextResponse.json({ error: 'Cannot refund a free payment' }, { status: 400 });
+    }
+
     if (refund_amount > payment.amount) {
       return NextResponse.json({ error: 'Refund amount exceeds payment amount' }, { status: 400 });
     }

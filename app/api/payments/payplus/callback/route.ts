@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const headers = Object.fromEntries(req.headers.entries());
     
     console.log('📥 PayPlus Callback received at:', new Date().toISOString());
-    console.log('📥 Callback data:', JSON.stringify(body, null, 2));
+    console.log('📥 Callback received:', { transaction_uid: body.transaction?.uid, status_code: body.transaction?.status_code, payment_id: body.transaction?.more_info_1 });
 
     // PayPlus שולח את הנתונים בתוך transaction object
     const transaction = body.transaction || {};
@@ -30,75 +30,52 @@ export async function POST(req: NextRequest) {
     const statusCode = transaction.status_code || '';
     const idempotencyKey = `${transactionUid}-${pageRequestUid}-${statusCode}`;
 
-    // בדיקת idempotency - האם כבר עיבדנו את ה-webhook הזה?
-    const { data: existingLog } = await supabase
+    // Upsert webhook log עם idempotency key (מונע race condition)
+    const { data: newLog, error: logError } = await supabase
       .from('webhook_logs')
-      .select('id, status')
-      .eq('idempotency_key', idempotencyKey)
+      .upsert({
+        webhook_type: 'payplus_callback',
+        payload: body,
+        headers: headers,
+        transaction_uid: transactionUid,
+        page_request_uid: pageRequestUid,
+        payment_id: transaction.more_info_1 || null,
+        status: 'processing',
+        idempotency_key: idempotencyKey
+      }, {
+        onConflict: 'idempotency_key',
+        ignoreDuplicates: false
+      })
+      .select('id, status, retry_count')
       .single();
 
-    if (existingLog) {
-      console.log(`⚠️ Duplicate webhook detected: ${idempotencyKey}, existing status: ${existingLog.status}`);
-      
-      // אם כבר הצליח - מחזירים הצלחה מיידית
-      if (existingLog.status === 'completed') {
-        return NextResponse.json({ 
-          received: true, 
-          status: 'already_processed',
-          webhook_log_id: existingLog.id,
-          message: 'Webhook already processed successfully'
-        });
-      }
-      
-      // אם נכשל - ננסה שוב
-      webhookLogId = existingLog.id;
-      await supabase
-        .from('webhook_logs')
-        .update({ 
-          status: 'processing',
-          retry_count: supabase.rpc('increment', { x: 1, delta: 1 })
-        })
-        .eq('id', webhookLogId);
+    if (logError) {
+      console.error('❌ Error creating webhook log:', logError);
     } else {
-      // יצירת רשומת webhook חדשה
-      const { data: newLog, error: logError } = await supabase
-        .from('webhook_logs')
-        .insert({
-          webhook_type: 'payplus_callback',
-          payload: body,
-          headers: headers,
-          transaction_uid: transactionUid,
-          page_request_uid: pageRequestUid,
-          payment_id: transaction.more_info_1 || null,
-          status: 'processing',
-          idempotency_key: idempotencyKey
-        })
-        .select('id')
-        .single();
-
-      if (logError) {
-        console.error('❌ Error creating webhook log:', logError);
-      } else {
-        webhookLogId = newLog.id;
+      webhookLogId = newLog.id;
+      // אם כבר עובד — דחה
+      if (newLog.status === 'completed') {
+        return NextResponse.json({ received: true, status: 'already_processed' });
       }
     }
 
     // אימות שהCallback מגיע מPayPlus
-    if (!verifyPayPlusCallback(body)) {
-      console.error('❌ Invalid PayPlus callback signature');
-      
+    const verification = verifyPayPlusCallback(body, headers);
+    if (!verification.valid) {
+      console.error('❌ PayPlus callback verification failed:', verification.reason);
+
       if (webhookLogId) {
         await supabase
           .from('webhook_logs')
-          .update({ 
+          .update({
             status: 'failed',
-            error_message: 'Invalid signature',
+            error_message: verification.reason || 'Verification failed',
             processed_at: new Date().toISOString()
           })
           .eq('id', webhookLogId);
       }
-      
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+
+      return NextResponse.json({ error: 'Verification failed' }, { status: 401 });
     }
 
     // PayPlus שולח את הנתונים בתוך transaction object (כבר הוגדר למעלה)
@@ -122,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     // קבלת סטטוס העסקה
     // status_code: 000 = הצלחה, אחרים = כשלון
-    const isSuccess = status_code === '000' || status_code === 0 || status_code === '0';
+    const isSuccess = status_code === '000' || status_code === 0;
     const paymentStatus = isSuccess ? 'completed' : 'failed';
 
     console.log(`💳 Payment ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${more_info_1}`);
@@ -165,49 +142,60 @@ export async function POST(req: NextRequest) {
 
     // אם התשלום הצליח ויש card_type_id - יוצרים את הכרטיסייה
     if (isSuccess && payment.metadata?.card_type_id) {
-      console.log('🎫 Creating pass for successful payment...');
-      
-      const { card_type_id, card_type_name, entries_count } = payment.metadata;
-      
-      // יצירת תוקף (3 חודשים)
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + 3);
+      const { card_type_id } = payment.metadata;
 
-      const { data: pass, error: passError } = await supabase
-        .from('passes')
-        .insert({
-          user_id: payment.user_id,
-          card_type_id: card_type_id,
-          type: card_type_name?.toLowerCase().includes('workshop') ? 'workshop' : 
-                card_type_name?.toLowerCase().includes('playground') ? 'playground' : 
-                'playground', // ברירת מחדל
-          total_entries: entries_count || 10,
-          remaining_entries: entries_count || 10,
-          expiry_date: expiryDate.toISOString(),
-          price_paid: payment.amount,
-          status: 'active',
-          purchase_date: new Date().toISOString(),
-          payment_id: payment.id
-        })
-        .select()
+      // ולידציה שה-card_type קיים ב-DB
+      const { data: cardType } = await supabase
+        .from('card_types')
+        .select('id, entries_count, name')
+        .eq('id', card_type_id)
         .single();
 
-      if (passError) {
-        console.error('❌ Error creating pass:', passError);
+      if (!cardType) {
+        console.error('❌ Invalid card_type_id in payment metadata:', card_type_id);
       } else {
-        console.log('✅ Pass created:', pass.id);
-        
-        // עדכון התשלום עם מזהה הכרטיסייה
-        await supabase
-          .from('payments')
-          .update({
-            item_id: pass.id,
-            metadata: {
-              ...payment.metadata,
-              pass_id: pass.id
-            }
+        console.log('🎫 Creating pass for successful payment...');
+
+        // יצירת תוקף (3 חודשים)
+        const expiryDate = new Date();
+        expiryDate.setMonth(expiryDate.getMonth() + 3);
+
+        const { data: pass, error: passError } = await supabase
+          .from('passes')
+          .insert({
+            user_id: payment.user_id,
+            card_type_id: cardType.id,
+            type: cardType.name?.toLowerCase().includes('workshop') ? 'workshop' :
+                  cardType.name?.toLowerCase().includes('playground') ? 'playground' :
+                  'playground',
+            total_entries: cardType.entries_count || 10,
+            remaining_entries: cardType.entries_count || 10,
+            expiry_date: expiryDate.toISOString(),
+            price_paid: payment.amount,
+            status: 'active',
+            purchase_date: new Date().toISOString(),
+            payment_id: payment.id
           })
-          .eq('id', payment.id);
+          .select()
+          .single();
+
+        if (passError) {
+          console.error('❌ Error creating pass:', passError);
+        } else {
+          console.log('✅ Pass created:', pass.id);
+
+          // עדכון התשלום עם מזהה הכרטיסייה
+          await supabase
+            .from('payments')
+            .update({
+              item_id: pass.id,
+              metadata: {
+                ...payment.metadata,
+                pass_id: pass.id
+              }
+            })
+            .eq('id', payment.id);
+        }
       }
     }
     

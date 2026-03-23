@@ -3,6 +3,7 @@
  * Documentation: https://docs.payplus.co.il/reference/post_paymentpages-generatelink
  */
 
+import crypto from 'crypto';
 import { withRateLimit, payPlusRateLimiter } from './rate-limiter';
 
 // סביבות PayPlus
@@ -12,7 +13,7 @@ const PAYPLUS_URLS = {
 };
 
 // בדיקה אם אנחנו בסביבת טסטים
-const isStaging = process.env.PAYPLUS_ENVIRONMENT === 'staging';
+const isStaging = process.env.NODE_ENV !== 'production' || process.env.PAYPLUS_ENVIRONMENT === 'staging';
 const BASE_URL = isStaging ? PAYPLUS_URLS.staging : PAYPLUS_URLS.production;
 
 // פרטי התחברות
@@ -23,7 +24,8 @@ const PAYMENT_PAGE_UID = process.env.PAYPLUS_PAYMENT_PAGE_UID || '';
 // כותרות לכל בקשה
 const getHeaders = () => ({
   'Content-Type': 'application/json',
-  'Authorization': `{"api_key":"${API_KEY}","secret_key":"${SECRET_KEY}"}`
+  'api-key': API_KEY,
+  'secret-key': SECRET_KEY
 });
 
 // סוגי עסקאות
@@ -125,7 +127,7 @@ export async function generatePaymentLink(request: PaymentPageRequest): Promise<
       more_info_1: request.more_info_1
     };
 
-    console.log('🔵 PayPlus Request:', JSON.stringify(body, null, 2));
+    console.log('🔵 PayPlus Request:', { amount: body.amount, currency: body.currency_code, email: body.customer?.email });
     console.log('🔵 PayPlus URL:', url);
     console.log('🔵 PayPlus Environment:', isStaging ? 'STAGING' : 'PRODUCTION');
 
@@ -137,7 +139,7 @@ export async function generatePaymentLink(request: PaymentPageRequest): Promise<
       });
 
       const data: PayPlusResponse = await response.json();
-      console.log('🟢 PayPlus Response:', JSON.stringify(data, null, 2));
+      console.log('🟢 PayPlus Response:', { status: data.results?.status, code: data.results?.code, page_uid: data.data?.page_request_uid });
       
       return data;
     } catch (error) {
@@ -148,70 +150,57 @@ export async function generatePaymentLink(request: PaymentPageRequest): Promise<
 }
 
 /**
- * אימות Callback מ-PayPlus
- * PayPlus שולח את הנתונים בתוך אובייקט "transaction"
+ * אימות Callback מ-PayPlus באמצעות HMAC-SHA256
+ * https://docs.payplus.co.il/reference/validate-requests-received-from-payplus
  */
-export function verifyPayPlusCallback(payload: Record<string, any>): boolean {
-  // בדיקות בסיסיות
-  if (!payload) {
-    console.error('🔴 PayPlus callback verification failed: empty payload');
-    return false;
+export function verifyPayPlusCallback(
+  body: Record<string, any>,
+  headers: Record<string, string>
+): { valid: boolean; reason?: string } {
+  // בדיקה בסיסית
+  if (!body || !body.transaction) {
+    return { valid: false, reason: 'Missing transaction object' };
   }
 
-  // PayPlus שולח את הנתונים בתוך transaction object
-  const transaction = payload.transaction;
-  if (!transaction || typeof transaction !== 'object') {
-    console.error('🔴 PayPlus callback verification failed: missing transaction object');
-    return false;
-  }
-
-  // בדיקה שיש את השדות החובה בתוך transaction
-  const requiredFields = ['uid', 'status_code', 'more_info_1'];
+  const transaction = body.transaction;
+  const requiredFields = ['uid', 'status_code'];
   const missingFields = requiredFields.filter(field => !transaction[field]);
-  
   if (missingFields.length > 0) {
-    console.error('🔴 PayPlus callback verification failed: missing required fields in transaction:', missingFields);
-    return false;
+    return { valid: false, reason: `Missing fields: ${missingFields.join(', ')}` };
   }
 
-  // בדיקת תקינות status_code
-  const statusCode = transaction.status_code;
-  if (typeof statusCode !== 'string' && typeof statusCode !== 'number') {
-    console.error('🔴 PayPlus callback verification failed: invalid status_code type');
-    return false;
+  // אימות HMAC אם secret key מוגדר
+  const secretKey = process.env.PAYPLUS_SECRET_KEY;
+  if (!secretKey) {
+    console.warn('⚠️ PAYPLUS_SECRET_KEY not set — skipping HMAC verification');
+    return { valid: true };
   }
 
-  // בדיקת תקינות uid (transaction_uid)
-  const transactionUid = transaction.uid;
-  if (typeof transactionUid !== 'string' || transactionUid.length === 0) {
-    console.error('🔴 PayPlus callback verification failed: invalid transaction uid');
-    return false;
+  // בדיקת user-agent
+  const userAgent = headers['user-agent'] || headers['User-Agent'] || '';
+  if (userAgent !== 'PayPlus') {
+    return { valid: false, reason: `Invalid user-agent: ${userAgent}` };
   }
 
-  // אם יש API signature (PayPlus תומך באימות HMAC) - נאמת אותו
-  // זה דורש הגדרה בפאנל PayPlus והוספת webhook_secret למשתני סביבה
-  const webhookSecret = process.env.PAYPLUS_WEBHOOK_SECRET;
-  if (webhookSecret && payload.signature) {
-    const signature = payload.signature as string;
-    const dataToSign = `${transaction.uid}-${transaction.status_code}-${transaction.amount}`;
-    
-    // כאן צריך לחשב HMAC-SHA256 ולהשוות
-    // לצורך הדוגמה, אני מדלג על זה כרגע
-    // TODO: להוסיף אימות HMAC אמיתי כשמוסיפים webhook secret
-    console.log('🔵 Signature verification skipped (webhook_secret not configured)');
+  // בדיקת hash header
+  const receivedHash = headers['hash'] || headers['Hash'] || '';
+  if (!receivedHash) {
+    console.warn('⚠️ No hash header received — skipping HMAC verification');
+    return { valid: true };
   }
 
-  console.log('✅ PayPlus callback verification passed');
-  return true;
-}
+  // חישוב HMAC-SHA256 של ה-body ב-Base64
+  const message = JSON.stringify(body);
+  const expectedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(message)
+    .digest('base64');
 
-/**
- * חישוב HMAC signature לאימות webhooks (לעתיד)
- */
-export function calculateWebhookSignature(data: string, secret: string): string {
-  // TODO: להוסיף crypto.createHmac('sha256', secret).update(data).digest('hex')
-  // כרגע מחזיר placeholder
-  return '';
+  if (expectedHash !== receivedHash) {
+    return { valid: false, reason: 'HMAC signature mismatch' };
+  }
+
+  return { valid: true };
 }
 
 /**
@@ -258,7 +247,7 @@ export async function processRefund(request: RefundRequest): Promise<PayPlusResp
       more_info: request.reason || 'Customer refund'
     };
 
-    console.log('🔵 PayPlus Refund Request:', JSON.stringify(body, null, 2));
+    console.log('🔵 PayPlus Refund Request:', { transaction_uid: body.transaction_uid, amount: body.amount });
     console.log('🔵 PayPlus Refund URL:', url);
 
     try {
@@ -349,7 +338,7 @@ export async function approveTransaction(transactionUid: string): Promise<PayPlu
  */
 export async function cancelTransaction(transactionUid: string): Promise<PayPlusResponse> {
   return withRateLimit(async () => {
-    const url = `${BASE_URL}/Transactions/CancelTransaction`;
+    const url = `${BASE_URL}/Transactions/Cancel`;
     
     const body = {
       transaction_uid: transactionUid
@@ -572,6 +561,11 @@ export async function getCancelledTransactions(
   }, 'cancelled-transactions');
 }
 
+/**
+ * ⚠️ WARNING: This endpoint returns REFUNDS ONLY, not all transactions.
+ * Do not use this for general transaction reconciliation.
+ * Use getApprovedTransactions() + getRejectedTransactions() instead.
+ */
 export async function getTransactionsHistory(
   request: TransactionsHistoryRequest = {}
 ): Promise<{ success: boolean; transactions: PayPlusTransaction[]; error?: string }> {

@@ -201,12 +201,17 @@ export async function reconcileWithPayPlusReport(
     );
     
     const extraPayments = systemPayments?.filter(
-      p => p.status === 'completed' && !reportPaymentIds.has(p.id)
+      p => p.status === 'completed'
+        && !reportPaymentIds.has(p.id)
+        && p.metadata?.payment_method !== 'cash'
+        && p.metadata?.payment_method !== 'pos'
+        && p.metadata?.payment_method !== 'free_coupon'
+        && p.metadata?.payment_method !== 'coupon'
     ) || [];
 
     for (const extraPayment of extraPayments) {
       result.extraInSystem.push(extraPayment.id);
-      
+
       if (autoFix) {
         // בטל תשלומים שלא בדוח
         const { error: cancelError } = await supabase
@@ -223,7 +228,7 @@ export async function reconcileWithPayPlusReport(
             .from('registrations')
             .delete()
             .eq('payment_id', extraPayment.id);
-          
+
           result.fixed++;
           console.log(`✅ Cancelled payment ${extraPayment.id} (not in PayPlus report)`);
         }
@@ -393,12 +398,17 @@ export async function reconcileWithPayPlusAPI(
     );
     
     const extraPayments = systemPayments?.filter(
-      p => p.status === 'completed' && !reportPaymentIds.has(p.id)
+      p => p.status === 'completed'
+        && !reportPaymentIds.has(p.id)
+        && p.metadata?.payment_method !== 'cash'
+        && p.metadata?.payment_method !== 'pos'
+        && p.metadata?.payment_method !== 'free_coupon'
+        && p.metadata?.payment_method !== 'coupon'
     ) || [];
 
     for (const extraPayment of extraPayments) {
       result.extraInSystem.push(extraPayment.id);
-      
+
       if (autoFix) {
         // בטל תשלומים שלא ב-PayPlus
         const { error: cancelError } = await supabase
@@ -415,7 +425,7 @@ export async function reconcileWithPayPlusAPI(
             .from('registrations')
             .delete()
             .eq('payment_id', extraPayment.id);
-          
+
           result.fixed++;
           console.log(`✅ Cancelled payment ${extraPayment.id} (not in PayPlus)`);
         }

@@ -195,23 +195,34 @@ export async function syncPendingPayments(options?: {
                 .single();
 
               if (!existingPass) {
-                const expiryDate = new Date();
-                expiryDate.setMonth(expiryDate.getMonth() + 3);
+                // ולידציה שה-card_type קיים
+                const { data: cardType } = await supabase
+                  .from('card_types')
+                  .select('id, entries_count, name')
+                  .eq('id', payment.metadata.card_type_id)
+                  .single();
 
-                await supabase
-                  .from('passes')
-                  .insert({
-                    user_id: payment.user_id,
-                    card_type_id: payment.metadata.card_type_id,
-                    type: 'playground',
-                    total_entries: payment.metadata.entries_count || 10,
-                    remaining_entries: payment.metadata.entries_count || 10,
-                    expiry_date: expiryDate.toISOString(),
-                    price_paid: payment.amount,
-                    status: 'active',
-                    purchase_date: new Date().toISOString(),
-                    payment_id: payment.id
-                  });
+                if (cardType) {
+                  const expiryDate = new Date();
+                  expiryDate.setMonth(expiryDate.getMonth() + 3);
+
+                  await supabase
+                    .from('passes')
+                    .insert({
+                      user_id: payment.user_id,
+                      card_type_id: cardType.id,
+                      type: 'playground',
+                      total_entries: cardType.entries_count || 10,
+                      remaining_entries: cardType.entries_count || 10,
+                      expiry_date: expiryDate.toISOString(),
+                      price_paid: payment.amount,
+                      status: 'active',
+                      purchase_date: new Date().toISOString(),
+                      payment_id: payment.id
+                    });
+                } else {
+                  console.error(`[SYNC-SERVICE] Invalid card_type_id: ${payment.metadata.card_type_id}`);
+                }
               }
             }
           }

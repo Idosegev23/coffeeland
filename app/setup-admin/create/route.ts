@@ -12,6 +12,15 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    const setupSecret = process.env.SETUP_SECRET;
+    const authHeader = request.headers.get('authorization');
+    if (!setupSecret || authHeader !== `Bearer ${setupSecret}`) {
+      return NextResponse.json(
+        { error: 'Unauthorized — SETUP_SECRET required' },
+        { status: 401 }
+      );
+    }
+
     const supabase = createRouteHandlerClient({ cookies });
     const body = await request.json();
 

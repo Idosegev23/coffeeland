@@ -80,6 +80,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // בדיקת תוקף
+    if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
+      return NextResponse.json(
+        { error: 'קוד הקופון פג תוקף' },
+        { status: 400 }
+      );
+    }
+
+    // בדיקת מקסימום שימושים
+    if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) {
+      return NextResponse.json(
+        { error: 'קוד הקופון מוצה — הגיע למקסימום שימושים' },
+        { status: 400 }
+      );
+    }
+
+    // בדיקת שימוש כפול
+    const { data: existingUsage } = await supabase
+      .from('coupon_usages')
+      .select('id')
+      .eq('coupon_id', coupon.id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (existingUsage) {
+      return NextResponse.json(
+        { error: 'כבר השתמשת בקוד קופון זה' },
+        { status: 400 }
+      );
+    }
+
     // בדיקת קיבולת - סופרים רק רישומים ששולמו (is_paid=true ולא מבוטלים)
     const { data: confirmedRegs } = await supabase
       .from('registrations')

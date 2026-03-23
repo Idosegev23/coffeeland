@@ -1,14 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { getServiceClient } from '@/lib/supabase';
 import { checkPaymentConsistency } from '@/lib/reconciliation-service';
+
+async function verifyAdmin() {
+  const supabaseAuth = createRouteHandlerClient({ cookies });
+  const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+  if (userError || !user) {
+    return null;
+  }
+
+  const supabase = getServiceClient();
+  const { data: admin } = await supabase
+    .from('admins')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single();
+
+  return admin;
+}
 
 /**
  * Reconciliation API
  * POST /api/admin/reconciliation
- * 
+ *
  * מריץ דוח התאמה בין PayPlus למסד הנתונים
  */
 export async function POST(req: NextRequest) {
   try {
+    const admin = await verifyAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     console.log('[ADMIN-RECONCILIATION] Starting reconciliation report...');
 
     const report = await checkPaymentConsistency();
@@ -32,7 +58,11 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const { getServiceClient } = await import('@/lib/supabase');
+    const admin = await verifyAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     const supabase = getServiceClient();
 
     const { data: reports, error } = await supabase
