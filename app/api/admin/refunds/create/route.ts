@@ -59,7 +59,31 @@ export async function POST(req: NextRequest) {
     }
 
     // ה-transaction_uid מאוחסן ב-metadata (נשמר ע"י PayPlus callback)
-    const transactionUid = payment.metadata?.payplus_transaction_uid;
+    let transactionUid = payment.metadata?.payplus_transaction_uid;
+
+    // Fallback: אם חסר ב-metadata, מחפשים ב-webhook_logs
+    if (!transactionUid) {
+      const { data: webhookLog } = await supabase
+        .from('webhook_logs')
+        .select('transaction_uid')
+        .eq('payment_id', payment.id.toString())
+        .eq('status', 'completed')
+        .not('transaction_uid', 'is', null)
+        .single();
+
+      if (webhookLog?.transaction_uid) {
+        transactionUid = webhookLog.transaction_uid;
+        // תיקון ה-metadata לעתיד
+        await supabase
+          .from('payments')
+          .update({
+            metadata: { ...payment.metadata, payplus_transaction_uid: transactionUid }
+          })
+          .eq('id', payment.id);
+        console.log(`🔧 Fixed missing transaction_uid for payment ${payment.id}: ${transactionUid}`);
+      }
+    }
+
     if (!transactionUid) {
       return NextResponse.json({ error: 'Payment has no PayPlus transaction UID - cannot refund' }, { status: 400 });
     }
