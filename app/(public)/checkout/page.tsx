@@ -121,18 +121,14 @@ function CheckoutContent() {
           description: event.description
         });
 
-        // Fetch available seats for events
+        // Fetch available seats via server API (bypasses RLS)
         if (event.capacity) {
-          const { count } = await supabase
-            .from('registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', itemId)
-            .eq('is_paid', true)
-            .neq('status', 'cancelled');
-
-          const available = Math.max(0, event.capacity - (count || 0));
-          setAvailableSeats(available);
-          setMaxQuantity(Math.min(10, available));
+          const avRes = await fetch(`/api/events/${itemId}/availability`);
+          if (avRes.ok) {
+            const avData = await avRes.json();
+            setAvailableSeats(avData.available);
+            setMaxQuantity(Math.min(10, avData.available));
+          }
         }
       } else if (itemType === 'show') {
         const ticketType = searchParams.get('ticket_type'); // 'show_only' or 'show_and_playground'
@@ -161,18 +157,14 @@ function CheckoutContent() {
           metadata: { ticket_type: ticketType }
         } as any);
 
-        // Fetch available seats for shows
+        // Fetch available seats via server API (bypasses RLS)
         if (event.capacity) {
-          const { count } = await supabase
-            .from('registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', itemId)
-            .eq('is_paid', true)
-            .neq('status', 'cancelled');
-
-          const available = Math.max(0, event.capacity - (count || 0));
-          setAvailableSeats(available);
-          setMaxQuantity(Math.min(10, available));
+          const avRes = await fetch(`/api/events/${itemId}/availability`);
+          if (avRes.ok) {
+            const avData = await avRes.json();
+            setAvailableSeats(avData.available);
+            setMaxQuantity(Math.min(10, avData.available));
+          }
         }
       } else if (itemType === 'series') {
         // טעינת נתוני סדרה (חוג/סדנה)
@@ -326,7 +318,10 @@ function CheckoutContent() {
 
       if (!response.ok || !data.payment_url) {
         console.error('PayPlus error:', data);
-        throw new Error(data.error || data.details || 'שגיאה ביצירת קישור תשלום');
+        if (data.error === 'sold_out') {
+          throw new Error(data.message || 'אזל המלאי! אין מספיק מקומות פנויים.');
+        }
+        throw new Error(data.message || data.details || 'שגיאה ביצירת קישור תשלום');
       }
 
       console.log('✅ Redirecting to PayPlus:', data.payment_url);
