@@ -7,10 +7,10 @@ import { getServiceClient } from '@/lib/supabase';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = getServiceClient();
-  const eventId = params.id;
+  const { id: eventId } = await params;
 
   const { data: event } = await supabase
     .from('events')

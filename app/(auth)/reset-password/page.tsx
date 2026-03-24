@@ -12,10 +12,42 @@ export default function ResetPasswordPage() {
   const router = useRouter()
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  // Handle auth session from Supabase recovery link
+  useEffect(() => {
+    const establishSession = async () => {
+      // Case 1: PKCE flow - code in URL search params
+      const urlParams = new URLSearchParams(window.location.search)
+      const code = urlParams.get('code')
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code)
+        // Clean URL
+        window.history.replaceState({}, '', '/reset-password')
+      }
+
+      // Case 2: Implicit flow - tokens in hash fragment
+      const hash = window.location.hash
+      if (hash && hash.includes('access_token')) {
+        // Supabase client auto-detects hash fragments
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+
+      // Check if we have a session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setSessionReady(true)
+      } else {
+        setError('הקישור פג תוקף או שגוי. נסו לבקש איפוס סיסמה מחדש.')
+      }
+    }
+
+    establishSession()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,6 +106,11 @@ export default function ResetPasswordPage() {
               </div>
               <h2 className="text-xl font-bold text-primary">הסיסמה עודכנה בהצלחה!</h2>
               <p className="text-text-light/70 text-sm">מעביר אותך לדף ההתחברות...</p>
+            </div>
+          ) : !sessionReady && !error ? (
+            <div className="text-center space-y-4 py-8">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
+              <p className="text-text-light/70 text-sm">מאמת את הקישור...</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
