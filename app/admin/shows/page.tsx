@@ -207,11 +207,33 @@ export default function AdminShowsPage() {
     const registrations = show.registrations || [];
     const paid = registrations.filter(r => r.is_paid && r.status !== 'cancelled');
     const cancelled = registrations.filter(r => r.status === 'cancelled');
+    const refunded = registrations.filter(r => r.payment?.status === 'refunded');
     const totalSold = paid.length;
     const availableSeats = show.capacity - totalSold;
-    const revenue = paid.reduce((sum, r) => sum + (r.payment?.amount || 0), 0);
 
-    return { totalSold, availableSeats, revenue, cancelled: cancelled.length };
+    // Revenue: deduplicate by payment_id to avoid double-counting
+    // (e.g. 2 tickets = 2 registrations but 1 payment of 140₪)
+    const seenPayments = new Set<string>();
+    let revenue = 0;
+    let refundedAmount = 0;
+    let totalPayments = 0;
+    paid.forEach(r => {
+      if (r.payment?.id && !seenPayments.has(r.payment.id)) {
+        seenPayments.add(r.payment.id);
+        revenue += r.payment.amount || 0;
+        totalPayments++;
+      }
+    });
+    refunded.forEach(r => {
+      if (r.payment?.id && !seenPayments.has(r.payment.id)) {
+        seenPayments.add(r.payment.id);
+        refundedAmount += r.payment.amount || 0;
+      }
+    });
+
+    const occupancyPercent = show.capacity > 0 ? Math.round((totalSold / show.capacity) * 100) : 0;
+
+    return { totalSold, availableSeats, revenue, refundedAmount, cancelled: cancelled.length, totalPayments, occupancyPercent };
   };
 
   const handleRefund = async (reg: NonNullable<Show['registrations']>[0]) => {
@@ -435,28 +457,46 @@ export default function AdminShowsPage() {
                       </span>
                     </div>
 
+                    {/* Capacity Progress Bar */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>{stats.totalSold}/{show.capacity} כרטיסים</span>
+                        <span>{stats.occupancyPercent}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className={`h-3 rounded-full transition-all ${
+                            stats.occupancyPercent >= 90 ? 'bg-red-500' :
+                            stats.occupancyPercent >= 70 ? 'bg-yellow-500' : 'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(100, stats.occupancyPercent)}%` }}
+                        />
+                      </div>
+                    </div>
+
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-4 mb-4 bg-background rounded-lg p-4">
+                    <div className="grid grid-cols-4 gap-3 mb-4 bg-background rounded-lg p-4">
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Users className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <p className="text-2xl font-bold text-blue-600">{stats.totalSold}</p>
-                        <p className="text-xs text-gray-600">נמכרו</p>
+                        <Users className="w-4 h-4 text-blue-600 mx-auto mb-1" />
+                        <p className="text-xl font-bold text-blue-600">{stats.totalSold}</p>
+                        <p className="text-xs text-gray-600">כרטיסים</p>
                       </div>
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Ticket className="w-4 h-4 text-green-600" />
-                        </div>
-                        <p className="text-2xl font-bold text-green-600">{stats.availableSeats}</p>
+                        <Ticket className="w-4 h-4 text-green-600 mx-auto mb-1" />
+                        <p className="text-xl font-bold text-green-600">{stats.availableSeats}</p>
                         <p className="text-xs text-gray-600">פנויים</p>
                       </div>
                       <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <DollarSign className="w-4 h-4 text-[#4C2C21]" />
-                        </div>
+                        <DollarSign className="w-4 h-4 text-[#4C2C21] mx-auto mb-1" />
                         <p className="text-xl font-bold text-[#4C2C21]">₪{stats.revenue.toFixed(0)}</p>
-                        <p className="text-xs text-gray-600">הכנסות</p>
+                        <p className="text-xs text-gray-600">{stats.totalPayments} תשלומים</p>
+                      </div>
+                      <div className="text-center">
+                        <XCircle className="w-4 h-4 text-red-500 mx-auto mb-1" />
+                        <p className="text-xl font-bold text-red-500">{stats.cancelled}</p>
+                        <p className="text-xs text-gray-600">
+                          {stats.refundedAmount > 0 ? `₪${stats.refundedAmount.toFixed(0)} זוכה` : 'ביטולים'}
+                        </p>
                       </div>
                     </div>
 
@@ -679,22 +719,42 @@ export default function AdminShowsPage() {
                 const stats = calculateStats(selectedShow);
                 return (
                   <div className="mb-6 p-4 bg-background rounded-lg">
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="flex justify-between text-xs text-gray-600 mb-2">
+                      <span>{stats.totalSold}/{selectedShow.capacity} כרטיסים נמכרו</span>
+                      <span>{stats.occupancyPercent}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                      <div
+                        className={`h-2 rounded-full ${
+                          stats.occupancyPercent >= 90 ? 'bg-red-500' :
+                          stats.occupancyPercent >= 70 ? 'bg-yellow-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min(100, stats.occupancyPercent)}%` }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-5 gap-4">
                       <div>
-                        <p className="text-sm text-gray-600">סה&quot;כ כרטיסים</p>
+                        <p className="text-sm text-gray-600">כרטיסים</p>
                         <p className="text-2xl font-bold text-blue-600">{stats.totalSold}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">סה&quot;כ הכנסות</p>
+                        <p className="text-sm text-gray-600">תשלומים</p>
+                        <p className="text-2xl font-bold text-blue-600">{stats.totalPayments}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">הכנסות</p>
                         <p className="text-2xl font-bold text-[#4C2C21]">₪{stats.revenue.toFixed(0)}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">מקומות פנויים</p>
+                        <p className="text-sm text-gray-600">פנויים</p>
                         <p className="text-2xl font-bold text-green-600">{stats.availableSeats}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">ביטולים</p>
+                        <p className="text-sm text-gray-600">ביטולים/זיכויים</p>
                         <p className="text-2xl font-bold text-red-500">{stats.cancelled}</p>
+                        {stats.refundedAmount > 0 && (
+                          <p className="text-xs text-red-400">₪{stats.refundedAmount.toFixed(0)} זוכה</p>
+                        )}
                       </div>
                     </div>
                   </div>
