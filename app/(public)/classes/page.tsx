@@ -14,8 +14,7 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { Calendar, Clock, MapPin, Users, DollarSign, User, CheckCircle } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { Calendar, Clock, MapPin, Users, DollarSign, User } from 'lucide-react';
 
 interface Event {
   id: string;
@@ -33,7 +32,6 @@ interface Event {
   price?: number;
   status: string;
   registrations_count?: number;
-  reserved_seats_count?: number;
 }
 
 interface Child {
@@ -47,12 +45,8 @@ export default function ClassesPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [user, setUser] = useState<any>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [selectedChild, setSelectedChild] = useState<string>('');
   const [seats, setSeats] = useState(1);
-  const [reservationQr, setReservationQr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'class' | 'workshop'>('all');
 
   const supabase = createClientComponentClient();
@@ -89,44 +83,20 @@ export default function ClassesPage() {
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = () => {
     if (!user) {
-      alert('נא להתחבר כדי להירשם');
       window.location.href = '/login?redirect=/classes';
       return;
     }
-
     if (!selectedEvent) return;
 
-    setRegistering(true);
-    try {
-      // יצירת שריון מקום (פעילויות בלבד)
-      const resvRes = await fetch('/api/reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_id: selectedEvent.id,
-          seats
-        })
-      });
-
-      if (!resvRes.ok) {
-        const error = await resvRes.json();
-        throw new Error(error.error || 'Reservation failed');
-      }
-
-      const resvData = await resvRes.json();
-      setReservationQr(resvData?.reservation?.qr_code || null);
-
-      setShowSuccess(true);
-      setSelectedEvent(null);
-      setSelectedChild('');
-      setSeats(1);
-    } catch (error: any) {
-      alert('❌ שגיאה בשריון: ' + error.message);
-    } finally {
-      setRegistering(false);
-    }
+    // Redirect to checkout for payment
+    const params = new URLSearchParams({
+      type: 'event',
+      id: selectedEvent.id,
+      quantity: seats.toString(),
+    });
+    window.location.href = `/checkout?${params.toString()}`;
   };
 
   if (loading) {
@@ -240,8 +210,8 @@ export default function ClassesPage() {
                       <div className="flex items-center text-gray-700">
                         <Users size={16} className="ml-2 text-accent" />
                         {(() => {
-                          const reserved = event.reserved_seats_count || 0;
-                          const available = Math.max(0, event.capacity - reserved);
+                          const sold = event.registrations_count || 0;
+                          const available = Math.max(0, event.capacity - sold);
                           return `נותרו ${available} מתוך ${event.capacity}`;
                         })()}
                       </div>
@@ -261,7 +231,7 @@ export default function ClassesPage() {
                       onClick={() => setSelectedEvent(event)}
                       className="bg-accent hover:bg-accent/90"
                     >
-                      שריין מקום
+                      רכישת כרטיס
                     </Button>
                   </div>
                 </div>
@@ -312,7 +282,7 @@ export default function ClassesPage() {
                     className="w-full px-4 py-2 border rounded-md"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    שריון אפשרי עד 30 דקות לפני תחילת הפעילות. התשלום יתבצע בקופה בעת הגעה.
+                    התשלום מתבצע באשראי בלבד
                   </p>
                 </div>
 
@@ -325,7 +295,7 @@ export default function ClassesPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      תשלום בקופה בעת הגעה (POS)
+                      תשלום באשראי
                     </p>
                   </div>
                 )}
@@ -336,50 +306,20 @@ export default function ClassesPage() {
               <Button
                 variant="outline"
                 onClick={() => setSelectedEvent(null)}
-                disabled={registering}
               >
                 ביטול
               </Button>
               <Button
                 onClick={handleRegister}
-                disabled={registering}
                 className="bg-accent hover:bg-accent/90"
               >
-                {registering ? 'מעבד...' : 'אשר שריון'}
+                המשך לתשלום
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* דיאלוג הצלחה */}
-        <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-          <DialogContent className="max-w-md text-center" dir="rtl">
-            <div className="py-6">
-              <CheckCircle size={64} className="mx-auto text-green-500 mb-4" />
-              <h2 className="text-2xl font-bold text-green-600 mb-2">
-                שריון הושלם בהצלחה!
-              </h2>
-              <p className="text-gray-600 mb-4">
-                הצג את ה-QR הזה בקופה כדי לאשר הגעה ולשלם
-              </p>
-              {reservationQr && (
-                <div className="bg-white p-4 rounded-lg inline-block border mb-4">
-                  <QRCodeSVG value={reservationQr} size={200} level="H" includeMargin={true} />
-                  <p className="text-xs text-gray-500 mt-2 font-mono">ID: {reservationQr}</p>
-                </div>
-              )}
-              <Button
-                onClick={() => {
-                  setShowSuccess(false);
-                  window.location.href = '/my-account';
-                }}
-                className="bg-accent hover:bg-accent/90"
-              >
-                לאיזור האישי
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* דיאלוג הצלחה הוסר - תשלום מתבצע בcheckout */}
       </div>
     </div>
   );
