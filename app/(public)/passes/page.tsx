@@ -305,7 +305,7 @@ export default function PassesPage() {
                         </span>
                         <button
                           onClick={() => { setSelectedSlotPass(null); setSelectedSlot(null) }}
-                          className="text-text-dark/50 hover:text-text-dark"
+                          className="text-primary/50 hover:text-primary"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -325,11 +325,11 @@ export default function PassesPage() {
                                   ? 'bg-red-50 text-red-400 cursor-not-allowed'
                                   : isSelected
                                   ? 'bg-accent text-white ring-2 ring-accent ring-offset-1'
-                                  : 'bg-white hover:bg-accent/10 text-text-dark border border-transparent hover:border-accent/30'
+                                  : 'bg-background hover:bg-accent/10 text-primary border border-transparent hover:border-accent/30'
                               }`}
                             >
                               <span className="font-medium">{slot.start} - {slot.end}</span>
-                              <span className={isBlocked ? 'text-red-400' : isSelected ? 'text-white/80' : 'text-text-dark/60'}>
+                              <span className={isBlocked ? 'text-red-400' : isSelected ? 'text-white/80' : 'text-primary/60'}>
                                 {isBlocked
                                   ? (slot.showTitle ? `הצגה: ${slot.showTitle}` : 'חסום')
                                   : `${available} פנויים`
