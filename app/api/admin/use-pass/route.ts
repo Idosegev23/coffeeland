@@ -63,6 +63,86 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'הכרטיסייה לא פעילה' }, { status: 400 })
     }
 
+    // --- Playground capacity check ---
+    if (pass.type === 'playground') {
+      const serviceClient = getServiceClient()
+
+      // Get capacity settings
+      const { data: capacityRow } = await serviceClient
+        .from('venue_settings')
+        .select('value')
+        .eq('key', 'playground_capacity')
+        .single()
+
+      const maxConcurrent = (capacityRow?.value as any)?.max_concurrent || 25
+      const showBufferBefore = (capacityRow?.value as any)?.show_buffer_before_minutes || 30
+      const showBlockDuration = (capacityRow?.value as any)?.show_block_duration_minutes || 120
+
+      const now = new Date()
+
+      // Check if blocked by a show
+      const twoHoursFromNow = new Date(now.getTime() + showBlockDuration * 60 * 1000)
+      const { data: activeShows } = await serviceClient
+        .from('events')
+        .select('id, title, start_at')
+        .eq('type', 'show')
+        .eq('status', 'active')
+        .lte('start_at', twoHoursFromNow.toISOString())
+        .gte('start_at', new Date(now.getTime() - showBlockDuration * 60 * 1000).toISOString())
+
+      for (const show of activeShows || []) {
+        const showStart = new Date(show.start_at)
+        const blockFrom = new Date(showStart.getTime() - showBufferBefore * 60 * 1000)
+        const blockUntil = new Date(showStart.getTime() + showBlockDuration * 60 * 1000)
+        if (now >= blockFrom && now <= blockUntil) {
+          return NextResponse.json({
+            error: `הג׳ימבורי סגור לכניסות - הצגה "${show.title}"`,
+            blocked: true,
+            showTitle: show.title
+          }, { status: 409 })
+        }
+      }
+
+      // Count current occupancy (entries in last 2 hours)
+      const twoHoursAgo = new Date(now.getTime() - PLAYGROUND_ENTRY_DURATION_MINUTES * 60 * 1000)
+      const { data: currentUsages } = await serviceClient
+        .from('pass_usages')
+        .select('used_at')
+        .gte('used_at', twoHoursAgo.toISOString())
+
+      const currentOccupancy = currentUsages?.length || 0
+      if (currentOccupancy >= maxConcurrent) {
+        return NextResponse.json({
+          error: `הג׳ימבורי מלא (${currentOccupancy}/${maxConcurrent}). נסו שוב מאוחר יותר.`,
+          full: true,
+          occupancy: currentOccupancy,
+          max: maxConcurrent
+        }, { status: 409 })
+      }
+
+      // Check if there's a show coming soon - warn about limited time
+      let maxMinutesAvailable = PLAYGROUND_ENTRY_DURATION_MINUTES
+      let warning: string | null = null
+
+      for (const show of activeShows || []) {
+        const showStart = new Date(show.start_at)
+        const blockFrom = new Date(showStart.getTime() - showBufferBefore * 60 * 1000)
+        if (blockFrom > now) {
+          const minutesUntilBlock = Math.floor((blockFrom.getTime() - now.getTime()) / 60000)
+          if (minutesUntilBlock < PLAYGROUND_ENTRY_DURATION_MINUTES) {
+            maxMinutesAvailable = Math.min(maxMinutesAvailable, minutesUntilBlock)
+            warning = `שים לב: הצגה "${show.title}" מתחילה בעוד ${minutesUntilBlock + showBufferBefore} דקות. זמן כניסה מוגבל ל-${minutesUntilBlock} דקות.`
+          }
+        }
+      }
+
+      // Store warning for response
+      ;(request as any).__capacityWarning = warning
+      ;(request as any).__maxMinutes = maxMinutesAvailable
+      ;(request as any).__occupancy = currentOccupancy + 1
+      ;(request as any).__maxConcurrent = maxConcurrent
+    }
+
     // Decrement remaining entries
     const newRemaining = pass.remaining_entries - 1
     const newStatus = newRemaining === 0 ? 'depleted' : 'active'
@@ -118,6 +198,10 @@ export async function POST(request: Request) {
       status: newStatus,
       usedAt,
       validUntil,
+      capacityWarning: (request as any).__capacityWarning || null,
+      maxMinutesAvailable: (request as any).__maxMinutes || PLAYGROUND_ENTRY_DURATION_MINUTES,
+      occupancy: (request as any).__occupancy || null,
+      maxConcurrent: (request as any).__maxConcurrent || null,
     })
   } catch (error: any) {
     console.error('Use pass error:', error)

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Ticket, Calendar, Palette } from 'lucide-react'
+import { Ticket, Calendar, Palette, Users, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -65,9 +65,14 @@ export default function PassesPage() {
   const [error, setError] = useState('')
   const [passOptions, setPassOptions] = useState<PassOption[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [playgroundStatus, setPlaygroundStatus] = useState<any>(null)
 
   useEffect(() => {
     loadCardTypes()
+    fetch('/api/playground/availability')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => data && setPlaygroundStatus(data))
+      .catch(() => {})
   }, [])
 
   const loadCardTypes = async () => {
@@ -170,6 +175,42 @@ export default function PassesPage() {
           </p>
         </div>
       </section>
+
+      {/* Playground Availability Banner */}
+      {playgroundStatus && !playgroundStatus.closed && (
+        <section className="relative">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+            <div className={`rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-4 flex items-center justify-between ${
+              playgroundStatus.currentlyBlocked
+                ? 'bg-red-50 border border-red-200'
+                : playgroundStatus.availableNow <= 3
+                ? 'bg-amber-50 border border-amber-200'
+                : 'bg-green-50 border border-green-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                {playgroundStatus.currentlyBlocked ? (
+                  <Lock className="w-6 h-6 text-red-500 shrink-0" />
+                ) : (
+                  <Users className="w-6 h-6 text-green-600 shrink-0" />
+                )}
+                <div>
+                  <span className="font-medium text-sm">
+                    {playgroundStatus.currentlyBlocked
+                      ? `הג׳ימבורי סגור כרגע - ${playgroundStatus.currentBlockReason}`
+                      : `${playgroundStatus.availableNow} מקומות פנויים עכשיו בג׳ימבורי`
+                    }
+                  </span>
+                </div>
+              </div>
+              {playgroundStatus.nextShow && !playgroundStatus.currentlyBlocked && (
+                <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full hidden sm:inline">
+                  הצגה בקרוב
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Passes Grid */}
       <section className="relative py-12 sm:py-16">

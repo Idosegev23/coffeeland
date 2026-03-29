@@ -9,7 +9,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Scan, Users, Ticket, Coffee, Calendar, ShoppingCart, CreditCard, List, RefreshCcw, Theater } from 'lucide-react'
+import { Scan, Users, Ticket, Coffee, Calendar, ShoppingCart, CreditCard, List, RefreshCcw, Theater, Clock, Lock, AlertTriangle } from 'lucide-react'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -45,6 +45,7 @@ export default function AdminDashboardPage() {
     activePasses: 0,
     todayScans: 0,
   })
+  const [playground, setPlayground] = useState<any>(null)
 
   useEffect(() => {
     loadAdminData()
@@ -95,6 +96,16 @@ export default function AdminDashboardPage() {
         activePasses: passesCount || 0,
         todayScans: scansCount || 0,
       })
+
+      // Load playground capacity data
+      try {
+        const pgRes = await fetch('/api/playground/availability')
+        if (pgRes.ok) {
+          setPlayground(await pgRes.json())
+        }
+      } catch (e) {
+        console.error('Error loading playground data:', e)
+      }
     } catch (err) {
       console.error('Error loading admin data:', err)
     } finally {
@@ -204,6 +215,109 @@ export default function AdminDashboardPage() {
             </Card>
           </div>
         </section>
+
+        {/* Playground Capacity Board */}
+        {playground && !playground.closed && (
+          <section className="mb-8">
+            <h2 className="text-2xl font-semibold text-primary mb-4">
+              לוח פניות ג׳ימבורי
+              <span className="text-sm font-normal text-text-light/60 mr-2">
+                ({playground.date})
+              </span>
+            </h2>
+
+            {/* Current Status */}
+            <Card className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-4 mb-4 ${
+              playground.currentlyBlocked ? 'bg-red-50 border-red-200' :
+              playground.availableNow <= 3 ? 'bg-amber-50 border-amber-200' :
+              'bg-green-50 border-green-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {playground.currentlyBlocked ? (
+                    <Lock className="w-8 h-8 text-red-500" />
+                  ) : playground.availableNow <= 3 ? (
+                    <AlertTriangle className="w-8 h-8 text-amber-500" />
+                  ) : (
+                    <Users className="w-8 h-8 text-green-600" />
+                  )}
+                  <div>
+                    <div className="font-bold text-lg">
+                      {playground.currentlyBlocked
+                        ? playground.currentBlockReason
+                        : `${playground.currentOccupancy}/${playground.maxConcurrent} בפנים עכשיו`
+                      }
+                    </div>
+                    <div className="text-sm text-text-light/70">
+                      {playground.currentlyBlocked
+                        ? 'הג׳ימבורי סגור לכניסות'
+                        : `${playground.availableNow} מקומות פנויים`
+                      }
+                    </div>
+                  </div>
+                </div>
+                {playground.nextShow && !playground.currentlyBlocked && (
+                  <div className="text-sm text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
+                    הצגה בעוד {Math.round((new Date(playground.nextShow.blockFrom).getTime() - Date.now()) / 60000)} דק׳
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Time Slots Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {playground.slots?.map((slot: any, i: number) => {
+                const pct = slot.max > 0 ? Math.round((slot.active / slot.max) * 100) : 0;
+                return (
+                  <Card key={i} className={`rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-3 ${
+                    slot.blocked ? 'bg-red-50 border-red-200' :
+                    pct >= 90 ? 'bg-amber-50 border-amber-200' :
+                    'bg-white'
+                  }`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-text-light/60">
+                        <Clock className="w-3 h-3 inline ml-1" />
+                        {slot.start}-{slot.end}
+                      </span>
+                      {slot.blocked ? (
+                        <Lock className="w-4 h-4 text-red-400" />
+                      ) : (
+                        <span className={`text-xs font-bold ${
+                          pct >= 90 ? 'text-red-500' : pct >= 70 ? 'text-amber-500' : 'text-green-600'
+                        }`}>
+                          {slot.active}/{slot.max}
+                        </span>
+                      )}
+                    </div>
+                    {slot.blocked ? (
+                      <div className="text-xs text-red-500 font-medium">
+                        הצגה{slot.showTitle ? ` - ${slot.showTitle}` : ''}
+                      </div>
+                    ) : (
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            pct >= 90 ? 'bg-red-400' : pct >= 70 ? 'bg-amber-400' : 'bg-green-400'
+                          }`}
+                          style={{ width: `${Math.min(100, pct)}%` }}
+                        />
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {playground?.closed && (
+          <section className="mb-8">
+            <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6 bg-gray-50 text-center">
+              <Lock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500 font-medium">הג׳ימבורי סגור היום</p>
+            </Card>
+          </section>
+        )}
 
         {/* Quick Actions */}
         <section>
