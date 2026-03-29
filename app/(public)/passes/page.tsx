@@ -94,7 +94,7 @@ export default function PassesPage() {
         price: card.sale_price || card.price,
         salePrice: card.sale_price,
         description: card.description || '',
-        popular: index === 0, // הראשון הכי פופולרי
+        popular: card.entries_count === 5, // כרטיסיית 5 כניסות הכי פופולרית
         lottie: card.type === 'playroom' ? '/lottie/play.json' : 
                 card.type === 'class' ? '/lottie/workshops.json' :
                 card.type === 'workshop' ? '/lottie/workshops.json' :
@@ -273,7 +273,7 @@ export default function PassesPage() {
                     className="w-full"
                     variant={pass.popular ? 'default' : 'secondary'}
                   >
-                    {loading === pass.id ? 'רוכש...' : 'רכוש כרטיסייה'}
+                    {loading === pass.id ? 'רוכש...' : pass.totalEntries === 1 ? 'רכוש כניסה' : 'רכוש כרטיסייה'}
                   </Button>
                 </div>
               </Card>

@@ -69,27 +69,27 @@ export function PlaygroundAvailability() {
 
         {/* Current Status Banner */}
         <div className={`rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-5 mb-6 ${
-          data.currentlyBlocked ? 'bg-red-50 border-2 border-red-200' :
-          data.availableNow <= 3 ? 'bg-amber-50 border-2 border-amber-200' :
-          'bg-green-50 border-2 border-green-200'
+          data.currentlyBlocked ? 'bg-primary/5 border-2 border-primary/20' :
+          data.availableNow <= 3 ? 'bg-secondary/10 border-2 border-secondary/30' :
+          'bg-accent/10 border-2 border-accent/30'
         }`}>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               {data.currentlyBlocked ? (
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <Lock className="w-6 h-6 text-red-500" />
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Lock className="w-6 h-6 text-primary" />
                 </div>
               ) : (
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  data.availableNow <= 3 ? 'bg-amber-100' : 'bg-green-100'
+                  data.availableNow <= 3 ? 'bg-secondary/20' : 'bg-accent/20'
                 }`}>
                   <Users className={`w-6 h-6 ${
-                    data.availableNow <= 3 ? 'text-amber-500' : 'text-green-600'
+                    data.availableNow <= 3 ? 'text-secondary' : 'text-accent'
                   }`} />
                 </div>
               )}
               <div>
-                <div className="font-bold text-lg">
+                <div className="font-bold text-lg text-primary">
                   {data.currentlyBlocked
                     ? data.currentBlockReason
                     : data.availableNow === 0
@@ -123,44 +123,44 @@ export function PlaygroundAvailability() {
               <div
                 key={i}
                 className={`rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-3 text-center transition-all ${
-                  slot.blocked ? 'bg-red-50 border-2 border-red-200' :
+                  slot.blocked ? 'bg-primary/5 border-2 border-primary/20' :
                   isCurrent ? 'bg-accent/10 border-2 border-accent shadow-md' :
-                  pct >= 90 ? 'bg-amber-50 border border-amber-200' :
-                  'bg-white border border-border'
+                  pct >= 90 ? 'bg-secondary/10 border border-secondary/30' :
+                  'bg-background-light border border-border'
                 }`}
               >
-                <div className="text-xs font-medium text-text-light/60 mb-1">
+                <div className="text-xs font-medium text-primary/60 mb-1">
                   {slot.start}
                 </div>
-                <div className="text-xs text-text-light/40 mb-2">
+                <div className="text-xs text-primary/40 mb-2">
                   עד {slot.end}
                 </div>
 
                 {slot.blocked ? (
                   <>
-                    <Lock className="w-5 h-5 text-red-400 mx-auto mb-1" />
-                    <div className="text-[10px] text-red-500 font-medium leading-tight">
+                    <Lock className="w-5 h-5 text-primary/50 mx-auto mb-1" />
+                    <div className="text-[10px] text-primary/70 font-medium leading-tight">
                       הצגה
                     </div>
                   </>
                 ) : (
                   <>
                     <div className={`text-xl font-bold ${
-                      pct >= 90 ? 'text-red-500' :
-                      pct >= 70 ? 'text-amber-500' :
-                      'text-green-600'
+                      pct >= 90 ? 'text-primary' :
+                      pct >= 70 ? 'text-secondary' :
+                      'text-accent'
                     }`}>
                       {slot.max - slot.active}
                     </div>
                     <div className="text-[10px] text-text-light/50">
                       פנויים
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                    <div className="w-full bg-primary/10 rounded-full h-1.5 mt-2">
                       <div
                         className={`h-1.5 rounded-full ${
-                          pct >= 90 ? 'bg-red-400' :
-                          pct >= 70 ? 'bg-amber-400' :
-                          'bg-green-400'
+                          pct >= 90 ? 'bg-primary' :
+                          pct >= 70 ? 'bg-secondary' :
+                          'bg-accent'
                         }`}
                         style={{ width: `${Math.min(100, pct)}%` }}
                       />
@@ -177,7 +177,7 @@ export function PlaygroundAvailability() {
         </div>
 
         {data.nextShow && !data.currentlyBlocked && (
-          <div className="mt-4 text-center text-sm text-amber-700 bg-amber-50 rounded-xl p-3">
+          <div className="mt-4 text-center text-sm text-secondary bg-secondary/10 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none p-3">
             <AlertTriangle className="w-4 h-4 inline ml-1" />
             שימו לב: הצגה &quot;{data.nextShow.title}&quot; מתחילה בקרוב - הג׳ימבורי ייסגר לכניסות
           </div>
