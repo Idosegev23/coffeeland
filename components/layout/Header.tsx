@@ -16,7 +16,6 @@ const navigation = [
   { name: 'הצגות', href: '/shows' },
   { name: 'אירועים', href: '/events' },
   { name: 'סדנאות', href: '/workshops' },
-  { name: 'ימי הולדת', href: '/birthday' },
   { name: 'תפריט', href: '/menu' },
 ]
 
