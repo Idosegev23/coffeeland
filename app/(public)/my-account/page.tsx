@@ -12,8 +12,18 @@ import { QRCodeDisplay } from '@/components/account/QRCodeDisplay'
 import { PassCard } from '@/components/account/PassCard'
 import { LoyaltyCard } from '@/components/account/LoyaltyCard'
 import { UsageHistory } from '@/components/account/UsageHistory'
-import { Plus, Ticket, Calendar, Clock, BookOpen } from 'lucide-react'
+import { Plus, Ticket, Calendar, Clock, BookOpen, Share2, CalendarPlus, AlertTriangle } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
+
+function buildGoogleCalendarUrl(title: string, startAt: string, endAt: string) {
+  const fmt = (d: string) => new Date(d).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(startAt)}/${fmt(endAt)}&location=${encodeURIComponent('CoffeeLand')}`
+}
+
+function buildWhatsAppShareUrl(eventName: string) {
+  const text = `הזמנתי כרטיס ל${eventName} ב-CoffeeLand! 🎭\nבואו גם: https://www.coffelandclub.co.il/shows`
+  return `https://wa.me/?text=${encodeURIComponent(text)}`
+}
 
 export default function MyAccountPage() {
   const router = useRouter()
@@ -212,6 +222,13 @@ export default function MyAccountPage() {
           </Button>
         </div>
 
+        {activePasses.some((p: any) => p.expiry_date && new Date(p.expiry_date) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none flex items-center gap-2 text-red-700 text-sm">
+            <AlertTriangle size={18} />
+            <span>יש לך כרטיסייה שתוקפה פג בקרוב! הקפד להשתמש בה לפני שתפוג.</span>
+          </div>
+        )}
+
         {activePasses.length === 0 ? (
           <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-8 text-center">
             <p className="text-text-light/70 mb-4">אין כרטיסיות פעילות</p>
@@ -299,35 +316,60 @@ export default function MyAccountPage() {
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="grid sm:grid-cols-3 gap-4 text-sm flex-1">
-                      <div className="flex items-center text-gray-700">
-                        <Calendar size={16} className="ml-2 text-accent" />
-                        {new Date(event.start_at).toLocaleDateString('he-IL', {
-                          weekday: 'long',
-                          day: 'numeric',
-                          month: 'long'
-                        })}
-                      </div>
-
-                      <div className="flex items-center text-gray-700">
-                        <Clock size={16} className="ml-2 text-accent" />
-                        {new Date(event.start_at).toLocaleTimeString('he-IL', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-
-                      {event.price && (
+                    <div className="flex-1">
+                      <div className="grid sm:grid-cols-3 gap-4 text-sm">
                         <div className="flex items-center text-gray-700">
-                          <Ticket size={16} className="ml-2 text-accent" />
-                          ₪{event.price}
+                          <Calendar size={16} className="ml-2 text-accent" />
+                          {new Date(event.start_at).toLocaleDateString('he-IL', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long'
+                          })}
+                        </div>
+
+                        <div className="flex items-center text-gray-700">
+                          <Clock size={16} className="ml-2 text-accent" />
+                          {new Date(event.start_at).toLocaleTimeString('he-IL', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+
+                        {event.price && (
+                          <div className="flex items-center text-gray-700">
+                            <Ticket size={16} className="ml-2 text-accent" />
+                            ₪{event.price}
+                          </div>
+                        )}
+                      </div>
+
+                      {!isPast && registration.status === 'confirmed' && (
+                        <div className="flex gap-2 mt-3">
+                          <a
+                            href={buildGoogleCalendarUrl(event.title, event.start_at, event.end_at)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-none bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                          >
+                            <CalendarPlus size={14} />
+                            הוסף ליומן
+                          </a>
+                          <a
+                            href={buildWhatsAppShareUrl(event.title)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-none bg-green-50 text-green-700 hover:bg-green-100 transition-colors border border-green-200"
+                          >
+                            <Share2 size={14} />
+                            שתפו בוואטסאפ
+                          </a>
                         </div>
                       )}
                     </div>
 
                     {registration.qr_code && registration.status === 'confirmed' && !isPast && (
-                      <div className="bg-white p-2 rounded-lg border text-center flex-shrink-0">
-                        <QRCodeSVG value={registration.qr_code} size={80} level="H" />
+                      <div className="bg-white p-3 rounded-lg border-2 border-accent/30 text-center flex-shrink-0">
+                        <QRCodeSVG value={registration.qr_code} size={120} level="H" includeMargin={true} />
                         <p className="text-xs text-gray-500 mt-1 font-mono">{registration.qr_code.substring(0, 10)}...</p>
                       </div>
                     )}
@@ -417,9 +459,9 @@ export default function MyAccountPage() {
                     </div>
 
                     {reg.qr_code && isActive && !isExpired && (
-                      <div className="bg-white p-2 rounded-lg border text-center flex-shrink-0">
-                        <QRCodeSVG value={reg.qr_code} size={80} />
-                        <p className="text-[10px] text-gray-400 mt-1">QR לכניסה</p>
+                      <div className="bg-white p-3 rounded-lg border-2 border-accent/30 text-center flex-shrink-0">
+                        <QRCodeSVG value={reg.qr_code} size={120} level="H" includeMargin={true} />
+                        <p className="text-xs text-gray-400 mt-1">QR לכניסה</p>
                       </div>
                     )}
                   </div>
@@ -607,11 +649,34 @@ export default function MyAccountPage() {
                           לא ניתן לבטל - פחות מ-{deadline} שעות להצגה
                         </p>
                       )}
+
+                      {ticket.status === 'confirmed' && hoursUntilShow > 0 && (
+                        <div className="flex gap-2 mt-3">
+                          <a
+                            href={buildGoogleCalendarUrl(event.title, event.start_at, event.end_at)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-none bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                          >
+                            <CalendarPlus size={14} />
+                            הוסף ליומן
+                          </a>
+                          <a
+                            href={buildWhatsAppShareUrl(event.title)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-none bg-green-50 text-green-700 hover:bg-green-100 transition-colors border border-green-200"
+                          >
+                            <Share2 size={14} />
+                            שתפו בוואטסאפ
+                          </a>
+                        </div>
+                      )}
                     </div>
-                    
+
                     {ticket.qr_code && ticket.status === 'confirmed' && (
-                      <div className="bg-white p-3 rounded-lg border text-center flex-shrink-0">
-                        <QRCodeSVG value={ticket.qr_code} size={100} level="H" />
+                      <div className="bg-white p-3 rounded-lg border-2 border-accent/30 text-center flex-shrink-0">
+                        <QRCodeSVG value={ticket.qr_code} size={130} level="H" includeMargin={true} />
                         <p className="text-xs text-gray-500 mt-1 font-mono">{ticket.qr_code.substring(0, 12)}...</p>
                       </div>
                     )}

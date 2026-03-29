@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Phone, Mail, Home, User, Loader2, ArrowLeft, Ticket, AlertCircle } from 'lucide-react';
+import { CheckCircle, Phone, Mail, Home, User, Loader2, ArrowLeft, Ticket, AlertCircle, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
@@ -300,6 +300,21 @@ function PaymentSuccessContent() {
                 מעבר אוטומטי לאיזור האישי בעוד {countdown} שניות...
               </p>
             </div>
+
+            {/* WhatsApp Share */}
+            {transactionDetails.name && (
+              <div className="mb-6">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`הזמנתי כרטיס ל${transactionDetails.name} ב-CoffeeLand! 🎭\nבואו גם: https://www.coffelandclub.co.il/shows`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 w-full h-12 px-6 text-base font-medium rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-[#25D366] text-white hover:bg-[#1fb855] transition-colors"
+                >
+                  <Share2 className="w-5 h-5" />
+                  שתפו בוואטסאפ
+                </a>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="grid sm:grid-cols-2 gap-3">

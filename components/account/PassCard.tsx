@@ -59,7 +59,7 @@ function LottieIcon({ src }: { src: string }) {
 export function PassCard({ type, totalEntries, remainingEntries, expiryDate, purchaseDate }: PassCardProps) {
   const config = passConfig[type]
   const usagePercent = (remainingEntries / totalEntries) * 100
-  const isExpiring = expiryDate && new Date(expiryDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+  const isExpiring = expiryDate && new Date(expiryDate) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
 
   return (
     <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] p-4">
@@ -101,9 +101,14 @@ export function PassCard({ type, totalEntries, remainingEntries, expiryDate, pur
           {/* Dates */}
           <div className="space-y-1 text-xs text-text-dark/70">
             {expiryDate && (
-              <div className="flex items-center gap-1">
+              <div className={`flex items-center gap-1 ${isExpiring ? 'text-red-300 font-semibold' : ''}`}>
                 <Calendar className="w-3 h-3" />
                 <span>תוקף עד: {new Date(expiryDate).toLocaleDateString('he-IL')}</span>
+                {isExpiring && (
+                  <span className="mr-1 text-red-300">
+                    ({Math.max(0, Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} ימים)
+                  </span>
+                )}
               </div>
             )}
             <div className="flex items-center gap-1">
