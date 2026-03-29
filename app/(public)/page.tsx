@@ -7,6 +7,7 @@ import FeaturedShows from '@/components/home/FeaturedShows'
 import { FeaturedWorkshops } from '@/components/home/FeaturedWorkshops'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+import { PlaygroundAvailability } from '@/components/home/PlaygroundAvailability'
 
 const HeroCarousel = dynamic(
   () => import('@/components/hero/HeroCarousel').then((m) => ({ default: m.HeroCarousel })),
@@ -36,6 +37,10 @@ export default function HomePage() {
       <FeaturedShows />
       <FeaturedWorkshops />
       <NavTiles />
+
+      <Separator className="my-0" />
+
+      <PlaygroundAvailability />
 
       <Separator className="my-0" />
 
