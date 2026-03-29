@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
-import { Calendar, Users, DollarSign, Ticket, RefreshCw, ArrowRight, Plus, Eye, Upload, Check, XCircle, Undo2, Loader2 } from 'lucide-react';
+import { Calendar, Users, DollarSign, Ticket, RefreshCw, ArrowRight, Plus, Eye, Upload, Check, XCircle, Undo2, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
@@ -705,13 +705,25 @@ export default function AdminShowsPage() {
             <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-primary">{selectedShow.title} - משתתפים</h2>
-                <Button
-                  onClick={() => exportToCSV(selectedShow)}
-                  variant="outline"
-                  size="sm"
-                >
-                  ייצוא ל-CSV
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => exportToCSV(selectedShow)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    ייצוא ל-CSV
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                  >
+                    <a href={`/api/admin/export?type=registrations&event_id=${selectedShow.id}`} download>
+                      <Download className="w-4 h-4 ml-1" />
+                      ייצוא לאקסל
+                    </a>
+                  </Button>
+                </div>
               </div>
 
               {/* Summary */}

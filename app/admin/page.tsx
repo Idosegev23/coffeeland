@@ -9,7 +9,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { getCurrentUser } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Scan, Users, Ticket, Coffee, Calendar, ShoppingCart, CreditCard, List, RefreshCcw, Theater, Clock, Lock, AlertTriangle } from 'lucide-react'
+import { Scan, Users, Ticket, Coffee, Calendar, ShoppingCart, CreditCard, List, RefreshCcw, Theater, Clock, Lock, AlertTriangle, BarChart3 } from 'lucide-react'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -447,6 +447,22 @@ export default function AdminDashboardPage() {
                 <div className="text-right">
                   <div className="font-semibold">ניהול זיכויים</div>
                   <div className="text-xs opacity-70">זיכוי תשלומים ללקוחות</div>
+                </div>
+              </Link>
+            </Button>
+
+            {/* דוח הכנסות */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start"
+              asChild
+            >
+              <Link href="/admin/revenue" className="gap-4">
+                <BarChart3 className="w-8 h-8 text-emerald-600" />
+                <div className="text-right">
+                  <div className="font-semibold">דוח הכנסות</div>
+                  <div className="text-xs opacity-70">סיכום הכנסות לפי תקופה וסוג</div>
                 </div>
               </Link>
             </Button>
