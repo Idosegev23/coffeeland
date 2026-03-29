@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Ticket, Calendar, Palette, Users, Lock } from 'lucide-react'
+import { Ticket, Calendar, Palette, Users, Lock, Clock, ChevronDown, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -66,6 +66,8 @@ export default function PassesPage() {
   const [passOptions, setPassOptions] = useState<PassOption[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [playgroundStatus, setPlaygroundStatus] = useState<any>(null)
+  const [selectedSlotPass, setSelectedSlotPass] = useState<string | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
 
   useEffect(() => {
     loadCardTypes()
@@ -111,28 +113,45 @@ export default function PassesPage() {
 
   const handlePurchase = async (pass: PassOption) => {
     setError('')
+
+    // For single-entry passes, show time slot picker if we have slots
+    if (pass.totalEntries === 1 && playgroundStatus?.slots?.length > 0 && !selectedSlot) {
+      setSelectedSlotPass(pass.id)
+      return
+    }
+
     setLoading(pass.id)
 
     try {
       // Check if user is logged in
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
+
       console.log('Purchase - auth check:', { user: user?.id, error: authError })
-      
+
       if (!user || authError) {
         console.log('No user found, redirecting to register')
-        // Redirect to register with return URL to checkout
         router.push(`/register?redirect=/checkout?item=${pass.id}&type=pass`)
         return
       }
 
-      // Redirect to checkout page with item details
-      router.push(`/checkout?item=${pass.id}&type=pass`)
+      const slotParam = selectedSlot ? `&slot=${encodeURIComponent(selectedSlot)}` : ''
+      router.push(`/checkout?item=${pass.id}&type=pass${slotParam}`)
     } catch (err: any) {
       setError(err.message || 'שגיאה')
     } finally {
       setLoading(null)
+      setSelectedSlot(null)
+      setSelectedSlotPass(null)
     }
+  }
+
+  const handleSlotSelect = (slotStart: string) => {
+    setSelectedSlot(slotStart)
+  }
+
+  const handleSlotConfirm = (pass: PassOption) => {
+    if (!selectedSlot) return
+    handlePurchase(pass)
   }
 
   if (loadingData) {
@@ -275,6 +294,63 @@ export default function PassesPage() {
                   >
                     {loading === pass.id ? 'רוכש...' : pass.totalEntries === 1 ? 'רכוש כניסה' : 'רכוש כרטיסייה'}
                   </Button>
+
+                  {/* Time Slot Picker for single entries */}
+                  {selectedSlotPass === pass.id && pass.totalEntries === 1 && playgroundStatus?.slots && (
+                    <div className="mt-3 p-3 bg-background-light rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none border border-accent/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-primary flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          בחרו משבצת זמן
+                        </span>
+                        <button
+                          onClick={() => { setSelectedSlotPass(null); setSelectedSlot(null) }}
+                          className="text-text-dark/50 hover:text-text-dark"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {playgroundStatus.slots.map((slot: any) => {
+                          const available = slot.max - slot.active;
+                          const isBlocked = slot.blocked;
+                          const isSelected = selectedSlot === slot.start;
+                          return (
+                            <button
+                              key={slot.start}
+                              onClick={() => !isBlocked && handleSlotSelect(slot.start)}
+                              disabled={isBlocked}
+                              className={`w-full text-right px-3 py-2 rounded-lg text-xs transition-all flex items-center justify-between ${
+                                isBlocked
+                                  ? 'bg-red-50 text-red-400 cursor-not-allowed'
+                                  : isSelected
+                                  ? 'bg-accent text-white ring-2 ring-accent ring-offset-1'
+                                  : 'bg-white hover:bg-accent/10 text-text-dark border border-transparent hover:border-accent/30'
+                              }`}
+                            >
+                              <span className="font-medium">{slot.start} - {slot.end}</span>
+                              <span className={isBlocked ? 'text-red-400' : isSelected ? 'text-white/80' : 'text-text-dark/60'}>
+                                {isBlocked
+                                  ? (slot.showTitle ? `הצגה: ${slot.showTitle}` : 'חסום')
+                                  : `${available} פנויים`
+                                }
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedSlot && (
+                        <Button
+                          onClick={() => handleSlotConfirm(pass)}
+                          disabled={loading === pass.id}
+                          className="w-full mt-2"
+                          size="sm"
+                        >
+                          {loading === pass.id ? 'רוכש...' : 'המשך לרכישה'}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
               ))}

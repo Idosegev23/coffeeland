@@ -4,18 +4,19 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { 
-  CreditCard, 
-  Lock, 
-  ShoppingCart, 
-  ArrowRight, 
+import {
+  CreditCard,
+  Lock,
+  ShoppingCart,
+  ArrowRight,
   CheckCircle2,
   Loader2,
   Shield,
   Calendar,
   Ticket,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -46,6 +47,11 @@ function CheckoutContent() {
   const [error, setError] = useState('');
   const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: { full_name?: string } } | null>(null);
   
+  // Waitlist state
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
+  const [waitlistError, setWaitlistError] = useState('');
+
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
@@ -245,6 +251,29 @@ function CheckoutContent() {
       setCouponApplied(false);
     } finally {
       setCouponLoading(false);
+    }
+  };
+
+  const handleJoinWaitlist = async () => {
+    if (!cartItem) return;
+    setWaitlistLoading(true);
+    setWaitlistError('');
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: cartItem.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setWaitlistError(data.error || 'שגיאה בהרשמה לרשימת המתנה');
+        return;
+      }
+      setWaitlistJoined(true);
+    } catch {
+      setWaitlistError('שגיאה בהרשמה לרשימת המתנה');
+    } finally {
+      setWaitlistLoading(false);
     }
   };
 
@@ -494,9 +523,41 @@ function CheckoutContent() {
                       </div>
                     </div>
                     {availableSeats !== null && (
-                      <p className={`text-xs text-center ${availableSeats <= 5 ? 'text-red-500 font-medium' : 'text-text-light/60'}`}>
-                        {availableSeats === 0 ? 'אין מקומות פנויים' : `נותרו ${availableSeats} מקומות`}
-                      </p>
+                      <div className="text-center">
+                        <p className={`text-xs ${availableSeats <= 5 ? 'text-red-500 font-medium' : 'text-text-light/60'}`}>
+                          {availableSeats === 0 ? 'אין מקומות פנויים' : `נותרו ${availableSeats} מקומות`}
+                        </p>
+                        {availableSeats === 0 && (cartItem?.type === 'show' || cartItem?.type === 'event') && (
+                          <div className="mt-2">
+                            {waitlistJoined ? (
+                              <div className="p-2 bg-green-50 border border-green-200 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none">
+                                <p className="text-xs text-green-700 font-medium flex items-center justify-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  נרשמת לרשימת המתנה! נודיע לך אם יתפנה מקום
+                                </p>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={handleJoinWaitlist}
+                                  disabled={waitlistLoading}
+                                  className="w-full px-3 py-2 bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent text-xs font-medium rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none transition-all flex items-center justify-center gap-1"
+                                >
+                                  {waitlistLoading ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Bell className="w-3 h-3" />
+                                  )}
+                                  הצטרפו לרשימת המתנה
+                                </button>
+                                {waitlistError && (
+                                  <p className="text-xs text-red-500 mt-1">{waitlistError}</p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
