@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { getServiceClient } from '@/lib/supabase';
 import { processRefund } from '@/lib/payplus';
+import { notifyRefundProcessed } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -219,6 +220,10 @@ export async function POST(req: NextRequest) {
         });
 
         console.log('✅ Refund completed successfully');
+
+        // Notify admin
+        const { data: refundUser } = await supabase.from('users').select('full_name').eq('id', payment.user_id).single();
+        notifyRefundProcessed(refundUser?.full_name || 'לקוח', refund_amount, refund.id).catch(() => {});
       } else {
         console.error('❌ Refund failed:', payplusResponse.results?.description);
       }

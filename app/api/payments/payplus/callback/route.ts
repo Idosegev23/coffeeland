@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { verifyPayPlusCallback } from '@/lib/payplus';
+import { notifyShowSoldOut, notifyPaymentFailed } from '@/lib/notifications';
 
 /**
  * Callback/Webhook מ-PayPlus - Enhanced Version
@@ -103,6 +104,10 @@ export async function POST(req: NextRequest) {
     const paymentStatus = isSuccess ? 'completed' : 'failed';
 
     console.log(`💳 Payment ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${more_info_1}`);
+
+    if (!isSuccess && more_info_1) {
+      notifyPaymentFailed(more_info_1, amount || 0, `status_code: ${status_code}`).catch(() => {});
+    }
 
     // מציאת התשלום בDB
     const { data: payment, error: findError } = await supabase
@@ -246,7 +251,19 @@ export async function POST(req: NextRequest) {
         console.error('❌ Error creating registrations:', regError);
       } else {
         console.log(`✅ Created ${registrations?.length || 0} registration(s):`, registrations?.map(r => r.id));
-        
+
+        // Check if show is now sold out → notify admin
+        const { data: eventForCheck } = await supabase
+          .from('events').select('id, title, capacity').eq('id', event_id).single();
+        if (eventForCheck?.capacity) {
+          const { count: totalSold } = await supabase
+            .from('registrations').select('*', { count: 'exact', head: true })
+            .eq('event_id', event_id).eq('is_paid', true).neq('status', 'cancelled');
+          if ((totalSold || 0) >= eventForCheck.capacity) {
+            notifyShowSoldOut(eventForCheck.title, event_id).catch(() => {});
+          }
+        }
+
         // עדכון התשלום עם מזהה הרישום הראשון (לצורך תאימות)
         if (registrations && registrations.length > 0) {
           await supabase
