@@ -28,6 +28,7 @@ import {
   Plus
 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast';
 
 interface Customer {
   id: string;
@@ -72,13 +73,16 @@ export default function CustomersPage() {
   });
 
   const supabase = createClientComponentClient();
+  const toast = useToast();
 
   useEffect(() => {
     loadCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     filterCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, customers]);
 
   const loadCustomers = async () => {
@@ -95,7 +99,7 @@ export default function CustomersPage() {
       setFilteredCustomers(list);
     } catch (error: any) {
       console.error('Error loading customers:', error);
-      alert('שגיאה בטעינת לקוחות: ' + (error.message || 'שגיאה לא ידועה'));
+      toast('שגיאה בטעינת לקוחות: ' + (error.message || 'שגיאה לא ידועה'), 'error');
     } finally {
       setLoading(false);
     }
@@ -132,7 +136,7 @@ export default function CustomersPage() {
 
   const handleCreateUser = async () => {
     if (!createForm.full_name || !createForm.email || !createForm.phone || !createForm.password) {
-      alert('נא למלא את כל השדות');
+      toast('נא למלא את כל השדות', 'info');
       return;
     }
 
@@ -152,7 +156,7 @@ export default function CustomersPage() {
 
       const data = await response.json();
       
-      alert(`✅ משתמש נוצר בהצלחה!\nאימייל: ${createForm.email}\nסיסמה: ${createForm.password}\nQR: ${data.user.qr_code}`);
+      toast(`משתמש נוצר בהצלחה! אימייל: ${createForm.email} סיסמה: ${createForm.password} QR: ${data.user.qr_code}`, 'success');
       
       setShowCreateDialog(false);
       setCreateForm({
@@ -166,7 +170,7 @@ export default function CustomersPage() {
       loadCustomers();
     } catch (error: any) {
       console.error('Error creating user:', error);
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     } finally {
       setCreatingUser(false);
     }

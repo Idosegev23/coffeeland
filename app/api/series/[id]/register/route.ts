@@ -155,7 +155,7 @@ export async function POST(
   } catch (error: any) {
     console.error('Error registering to series:', error);
     return NextResponse.json(
-      { error: 'Failed to register', details: error.message },
+      { error: 'Failed to register' },
       { status: 500 }
     );
   }

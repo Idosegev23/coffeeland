@@ -78,6 +78,7 @@ export default function PlaygroundPage() {
 
   React.useEffect(() => {
     loadCardTypes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadCardTypes = async () => {

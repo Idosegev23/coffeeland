@@ -87,7 +87,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Error fetching attendance:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch attendance', details: error.message },
+      { error: 'Failed to fetch attendance' },
       { status: 500 }
     );
   }
@@ -195,7 +195,7 @@ export async function PATCH(
   } catch (error: any) {
     console.error('Error updating attendance:', error);
     return NextResponse.json(
-      { error: 'Failed to update attendance', details: error.message },
+      { error: 'Failed to update attendance' },
       { status: 500 }
     );
   }

@@ -6,6 +6,7 @@ import { X, CheckCircle, CreditCard, Banknote } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/toast'
 
 type PaymentMethod = 'cash' | 'credit' | 'bit' | 'other'
 
@@ -30,6 +31,7 @@ export function ReservationCheckInModal({ reservation, onClose }: Props) {
   const [loading, setLoading] = useState(false)
   const [method, setMethod] = useState<PaymentMethod>('cash')
   const [done, setDone] = useState(false)
+  const toast = useToast()
 
   const start = new Date(reservation.event.start_at)
   const price = reservation.event.price || 0
@@ -52,7 +54,7 @@ export function ReservationCheckInModal({ reservation, onClose }: Props) {
       setDone(true)
       setTimeout(() => window.location.reload(), 700)
     } catch (e: any) {
-      alert(e.message || 'שגיאה')
+      toast(e.message || 'שגיאה', 'error')
     } finally {
       setLoading(false)
     }

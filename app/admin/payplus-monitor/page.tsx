@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/components/ui/toast';
 
 interface SyncStats {
   pending_payments: number;
@@ -40,6 +41,7 @@ export default function PayPlusMonitorPage() {
   const [reconciling, setReconciling] = useState(false);
   const [reconcileResult, setReconcileResult] = useState<any>(null);
   const [daysBack, setDaysBack] = useState(7);
+  const toast = useToast();
 
   useEffect(() => {
     loadData();
@@ -89,13 +91,13 @@ export default function PayPlusMonitorPage() {
       const data = await res.json();
       
       if (data.success) {
-        alert(`סנכרון הושלם!\nעודכנו: ${data.result.total_updated}\nנכשלו: ${data.result.total_failed}`);
+        toast(`סנכרון הושלם! עודכנו: ${data.result.total_updated}, נכשלו: ${data.result.total_failed}`, 'success');
         loadData();
       } else {
-        alert(`שגיאה: ${data.error}`);
+        toast(`שגיאה: ${data.error}`, 'error');
       }
     } catch (error: any) {
-      alert(`שגיאה: ${error.message}`);
+      toast(`שגיאה: ${error.message}`, 'error');
     } finally {
       setSyncing(false);
     }
@@ -117,14 +119,14 @@ export default function PayPlusMonitorPage() {
       if (data.success) {
         setReconcileResult(data);
         if (autoFix) {
-          alert(`✅ התאמה הושלמה עם תיקונים אוטומטיים!\nנבדקו: ${data.summary.totalInReport}\nתוקנו: ${data.summary.fixed} רשומות`);
+          toast(`התאמה הושלמה עם תיקונים אוטומטיים! נבדקו: ${data.summary.totalInReport}, תוקנו: ${data.summary.fixed} רשומות`, 'success');
           loadData();
         }
       } else {
-        alert(`שגיאה: ${data.error}`);
+        toast(`שגיאה: ${data.error}`, 'error');
       }
     } catch (error: any) {
-      alert(`שגיאה: ${error.message}`);
+      toast(`שגיאה: ${error.message}`, 'error');
     } finally {
       setReconciling(false);
     }

@@ -79,7 +79,7 @@ export async function PATCH(
     return NextResponse.json({ card_type: cardType });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to update card type', details: error.message },
+      { error: 'Failed to update card type' },
       { status: 500 }
     );
   }
@@ -141,7 +141,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to delete card type', details: error.message },
+      { error: 'Failed to delete card type' },
       { status: 500 }
     );
   }

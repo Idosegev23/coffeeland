@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { CreditCard, Search, Filter, RefreshCw, AlertCircle, CheckCircle, XCircle, ExternalLink, Info, Database, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast';
 
 interface Payment {
   id: string;
@@ -89,6 +90,7 @@ export default function RefundsPage() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [selectedPaymentDetails, setSelectedPaymentDetails] = useState<Payment | null>(null);
 
+  const toast = useToast();
   const supabase = createClientComponentClient();
 
   // טעינת תשלומים
@@ -106,7 +108,7 @@ export default function RefundsPage() {
       setFilteredPayments(data.payments || []);
     } catch (error) {
       console.error('Error loading payments:', error);
-      alert('שגיאה בטעינת תשלומים');
+      toast('שגיאה בטעינת תשלומים', 'error');
     } finally {
       setLoading(false);
     }
@@ -114,6 +116,7 @@ export default function RefundsPage() {
 
   useEffect(() => {
     loadPayments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   // חיפוש
@@ -152,7 +155,7 @@ export default function RefundsPage() {
   // חיפוש עסקה ב-PayPlus
   const searchPayPlus = async () => {
     if (!payPlusSearchUid.trim()) {
-      alert('יש להזין מזהה עסקה');
+      toast('יש להזין מזהה עסקה', 'error');
       return;
     }
 
@@ -189,7 +192,7 @@ export default function RefundsPage() {
       }
     } catch (error) {
       console.error('Error searching PayPlus:', error);
-      alert('❌ שגיאה בחיפוש ב-PayPlus');
+      toast('שגיאה בחיפוש ב-PayPlus', 'error');
     } finally {
       setPayPlusSearching(false);
     }
@@ -207,7 +210,7 @@ export default function RefundsPage() {
     
     const amount = parseFloat(refundAmount);
     if (isNaN(amount) || amount <= 0 || amount > selectedPayment.amount) {
-      alert('סכום לא תקין');
+      toast('סכום לא תקין', 'error');
       return;
     }
 
@@ -226,15 +229,15 @@ export default function RefundsPage() {
       const result = await response.json();
 
       if (result.success) {
-        alert('✅ זיכוי בוצע בהצלחה!');
+        toast('זיכוי בוצע בהצלחה!', 'success');
         closeDialog();
         loadPayments(); // רענון
       } else {
-        alert(`❌ שגיאה: ${result.message || 'הזיכוי נכשל'}`);
+        toast(`שגיאה: ${result.message || 'הזיכוי נכשל'}`, 'error');
       }
     } catch (error) {
       console.error('Error processing refund:', error);
-      alert('❌ שגיאה בביצוע זיכוי');
+      toast('שגיאה בביצוע זיכוי', 'error');
     } finally {
       setProcessing(false);
     }

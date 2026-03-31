@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncPendingPayments, detectStuckPayments } from '@/lib/payplus-sync-service';
 
+export const maxDuration = 60;
+
 /**
  * PayPlus Sync API
  * POST /api/admin/payplus/sync

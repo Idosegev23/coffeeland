@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { syncPendingPayments, detectStuckPayments } from '@/lib/payplus-sync-service';
 
+export const maxDuration = 60;
+
 /**
  * Cron Job - תיקון אוטומטי של תשלומים תקועים (Enhanced)
  * GET /api/cron/fix-pending-payments
@@ -126,7 +128,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ 
       success: false,
-      error: error.message,
+      error: 'Internal server error',
       timestamp: new Date().toISOString(),
       duration_ms: duration
     }, { status: 500 });

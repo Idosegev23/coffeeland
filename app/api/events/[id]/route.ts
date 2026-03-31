@@ -44,7 +44,7 @@ export async function GET(
     return NextResponse.json({ event });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Event not found', details: error.message },
+      { error: 'Event not found' },
       { status: 404 }
     );
   }
@@ -153,7 +153,7 @@ export async function PATCH(
     return NextResponse.json({ event });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to update event', details: error.message },
+      { error: 'Failed to update event' },
       { status: 500 }
     );
   }
@@ -221,7 +221,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to delete event', details: error.message },
+      { error: 'Failed to delete event' },
       { status: 500 }
     );
   }

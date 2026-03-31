@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
 import { Camera, CameraOff, Keyboard } from 'lucide-react'
+import { useToast } from '@/components/ui/toast'
 
 interface QRScannerProps {
   onScan: (code: string) => void
@@ -15,6 +16,7 @@ export function QRScanner({ onScan }: QRScannerProps) {
   const [manualCode, setManualCode] = useState('')
   const [error, setError] = useState('')
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const toast = useToast()
 
   const startScanning = async () => {
     setError('')
@@ -65,7 +67,7 @@ export function QRScanner({ onScan }: QRScannerProps) {
         : err.message || 'שגיאה בהפעלת המצלמה'
       
       setError(errorMsg)
-      alert(errorMsg + '\n\nהשתמש בהזנה ידנית במקום.')
+      toast(errorMsg + ' השתמש בהזנה ידנית במקום.', 'error')
       setManualMode(true)
     }
   }

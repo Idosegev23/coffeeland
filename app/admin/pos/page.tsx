@@ -7,6 +7,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -72,6 +73,7 @@ function POSContent() {
   const [loading, setLoading] = useState(false);
 
   const supabase = createClientComponentClient();
+  const toast = useToast();
 
   useEffect(() => {
     loadCardTypes();
@@ -101,7 +103,7 @@ function POSContent() {
 
   const searchCustomer = async () => {
     if (!phoneSearch.trim()) {
-      alert('נא להזין מספר טלפון');
+      toast('נא להזין מספר טלפון', 'error');
       return;
     }
 
@@ -114,13 +116,13 @@ function POSContent() {
         .single();
 
       if (error || !data) {
-        alert('לקוח לא נמצא. ניתן ליצור חשבון חדש בעמוד ההרשמה.');
+        toast('לקוח לא נמצא. ניתן ליצור חשבון חדש בעמוד ההרשמה.', 'error');
         return;
       }
 
       setCustomer(data);
     } catch (error: any) {
-      alert('שגיאה בחיפוש: ' + error.message);
+      toast('שגיאה בחיפוש: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -128,7 +130,7 @@ function POSContent() {
 
   const completeSale = async () => {
     if (!customer || !selectedCard) {
-      alert('נא לבחור לקוח וכרטיסייה');
+      toast('נא לבחור לקוח וכרטיסייה', 'error');
       return;
     }
 
@@ -174,10 +176,10 @@ function POSContent() {
       setPhoneSearch('');
       setPaymentMethod('cash');
 
-      alert('✅ מכירה הושלמה בהצלחה!');
+      toast('מכירה הושלמה בהצלחה!', 'success');
     } catch (error: any) {
       console.error('POS sale error:', error);
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }

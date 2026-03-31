@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { checkTransactionStatus } from '@/lib/payplus';
+import { logger } from '@/lib/logger';
 
 /**
  * API לבדיקת סטטוס תשלום ישירות מ-PayPlus
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
     
     // בדיקת סטטוס ישירות מ-PayPlus
-    console.log(`🔍 Checking PayPlus status for payment: ${payment_id}`);
+    logger.info(`🔍 Checking PayPlus status for payment: ${payment_id}`);
     
     const payPlusResponse = await checkTransactionStatus(transactionUid);
     
@@ -67,10 +68,10 @@ export async function POST(req: NextRequest) {
     const isSuccess = payPlusResponse.results.status === 'success' || 
                       payPlusResponse.results.code === 0;
     
-    console.log(`PayPlus status: ${payPlusResponse.results.status}, code: ${payPlusResponse.results.code}`);
+    logger.info(`PayPlus status: ${payPlusResponse.results.status}, code: ${payPlusResponse.results.code}`);
     
     if (isSuccess && payment.status === 'pending') {
-      console.log(`✅ Payment ${payment_id} succeeded according to PayPlus - fixing now!`);
+      logger.info(`✅ Payment ${payment_id} succeeded according to PayPlus - fixing now!`);
       
       // התשלום הצליח אבל ה-callback לא הגיע - נתקן אותו!
       await supabase
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error verifying payment status:', error);
+    logger.error('Error verifying payment status:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

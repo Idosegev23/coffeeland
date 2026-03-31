@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 
+export const maxDuration = 60;
+
 /**
  * Webhook Retry Processor
  * GET /api/webhooks/retry
@@ -148,7 +150,7 @@ export async function GET(req: NextRequest) {
     console.error('[WEBHOOK-RETRY] Fatal error:', error);
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: 'Internal server error',
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }

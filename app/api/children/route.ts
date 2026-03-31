@@ -30,7 +30,7 @@ export async function GET() {
     return NextResponse.json({ children });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to fetch children', details: error.message },
+      { error: 'Failed to fetch children' },
       { status: 500 }
     );
   }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ child });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to create child', details: error.message },
+      { error: 'Failed to create child' },
       { status: 500 }
     );
   }

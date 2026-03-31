@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Calendar, Users, DollarSign, Ticket, RefreshCw, ArrowRight, Plus, Eye, Upload, Check, XCircle, Undo2, Loader2, Download } from 'lucide-react';
@@ -50,6 +51,7 @@ export default function AdminShowsPage() {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [uploading, setUploading] = useState(false);
   const [refundingId, setRefundingId] = useState<string | null>(null);
+  const toast = useToast();
 
   const supabase = createClientComponentClient();
 
@@ -104,11 +106,11 @@ export default function AdminShowsPage() {
         s.id === show.id ? { ...s, status: newStatus } : s
       ));
 
-      alert(newStatus === 'full' 
-        ? '⛔ המכירה נעצרה בהצלחה!' 
-        : '✅ המכירה נפתחה בהצלחה!');
+      toast(newStatus === 'full'
+        ? 'המכירה נעצרה בהצלחה!'
+        : 'המכירה נפתחה בהצלחה!', 'success');
     } catch (error: any) {
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 
@@ -194,9 +196,9 @@ export default function AdminShowsPage() {
       });
       
       await loadShows();
-      alert('✅ ההצגה נוצרה בהצלחה!');
+      toast('ההצגה נוצרה בהצלחה!', 'success');
     } catch (error: any) {
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     } finally {
       setLoading(false);
       setUploading(false);
@@ -238,7 +240,7 @@ export default function AdminShowsPage() {
 
   const handleRefund = async (reg: NonNullable<Show['registrations']>[0]) => {
     if (!reg.payment?.id) {
-      alert('לא נמצא תשלום לזיכוי');
+      toast('לא נמצא תשלום לזיכוי', 'error');
       return;
     }
 
@@ -260,7 +262,7 @@ export default function AdminShowsPage() {
       const data = await res.json();
 
       if (data.success) {
-        alert('הזיכוי בוצע בהצלחה');
+        toast('הזיכוי בוצע בהצלחה', 'success');
         const showId = selectedShow?.id;
         const res2 = await fetch('/api/events?type=show');
         const data2 = await res2.json();
@@ -271,10 +273,10 @@ export default function AdminShowsPage() {
           if (updated) setSelectedShow(updated);
         }
       } else {
-        alert('שגיאה בזיכוי: ' + (data.message || data.error || 'שגיאה לא ידועה'));
+        toast('שגיאה בזיכוי: ' + (data.message || data.error || 'שגיאה לא ידועה'), 'error');
       }
     } catch (error: any) {
-      alert('שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     } finally {
       setRefundingId(null);
     }
@@ -292,7 +294,7 @@ export default function AdminShowsPage() {
 
       if (error) throw error;
 
-      alert('הרישום בוטל בהצלחה');
+      toast('הרישום בוטל בהצלחה', 'success');
       const showId = selectedShow?.id;
       const res2 = await fetch('/api/events?type=show');
       const data2 = await res2.json();
@@ -303,7 +305,7 @@ export default function AdminShowsPage() {
         if (updated) setSelectedShow(updated);
       }
     } catch (error: any) {
-      alert('שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     } finally {
       setRefundingId(null);
     }

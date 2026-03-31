@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Heebo } from 'next/font/google'
 import Script from 'next/script'
+import { ToastProvider } from '@/components/ui/toast'
 import './globals.css'
 
 const heebo = Heebo({
@@ -73,7 +74,7 @@ export default function RootLayout({
         >
           דלג לתוכן הראשי
         </a>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
         
         {/* Google Analytics */}
         {GA_TRACKING_ID && (

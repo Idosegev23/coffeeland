@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/toast'
 
 interface Pass {
   id: string
@@ -67,6 +68,7 @@ const typeLabels: Record<string, string> = {
 export function UserPassesModal({ user: userData, onClose }: UserPassesModalProps) {
   const [loading, setLoading] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const toast = useToast()
 
   const handleUsePass = async (passId: string) => {
     setLoading(passId)
@@ -87,13 +89,14 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
       const data = await response.json()
       setSuccess(passId)
       if (data?.validUntil) {
-        alert(
-          `✅ כניסה נוצלה!\nתקף עד: ${new Date(data.validUntil).toLocaleString('he-IL', {
+        toast(
+          `כניסה נוצלה! תקף עד: ${new Date(data.validUntil).toLocaleString('he-IL', {
             hour: '2-digit',
             minute: '2-digit',
             day: '2-digit',
             month: '2-digit',
-          })}`
+          })}`,
+          'success'
         )
       }
       
@@ -102,7 +105,7 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
         window.location.href = window.location.href
       }, 500)
     } catch (err: any) {
-      alert(err.message)
+      toast(err.message, 'error')
       setLoading(null)
     }
   }
@@ -130,7 +133,7 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
         window.location.href = window.location.href
       }, 500)
     } catch (err: any) {
-      alert(err.message)
+      toast(err.message, 'error')
       setLoading(null)
     }
   }
@@ -160,7 +163,7 @@ export function UserPassesModal({ user: userData, onClose }: UserPassesModalProp
         window.location.href = window.location.href
       }, 500)
     } catch (err: any) {
-      alert(err.message)
+      toast(err.message, 'error')
       setLoading(null)
     }
   }

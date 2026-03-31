@@ -64,6 +64,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     loadCheckoutData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const loadCheckoutData = async () => {

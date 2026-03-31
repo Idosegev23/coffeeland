@@ -72,7 +72,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Error fetching series:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch series', details: error.message },
+      { error: 'Failed to fetch series' },
       { status: 500 }
     );
   }
@@ -160,7 +160,7 @@ export async function PATCH(
   } catch (error: any) {
     console.error('Error updating series:', error);
     return NextResponse.json(
-      { error: 'Failed to update series', details: error.message },
+      { error: 'Failed to update series' },
       { status: 500 }
     );
   }
@@ -254,7 +254,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error('Error deleting series:', error);
     return NextResponse.json(
-      { error: 'Failed to delete series', details: error.message },
+      { error: 'Failed to delete series' },
       { status: 500 }
     );
   }

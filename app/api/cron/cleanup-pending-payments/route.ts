@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 
+export const maxDuration = 30;
+
 /**
  * Cron job לניקוי תשלומים ממתינים ישנים (>15 דקות)
  * מונע מצב של "הזמנות רפאים" שתופסות קיבולת
@@ -33,7 +35,7 @@ export async function GET(req: Request) {
       console.error('❌ Error fetching old payments:', fetchError);
       return NextResponse.json({ 
         success: false, 
-        error: fetchError.message 
+        error: 'Internal server error'
       }, { status: 500 });
     }
 
@@ -62,7 +64,7 @@ export async function GET(req: Request) {
       console.error('❌ Error cancelling payments:', cancelError);
       return NextResponse.json({ 
         success: false, 
-        error: cancelError.message 
+        error: 'Internal server error'
       }, { status: 500 });
     }
 
@@ -83,7 +85,7 @@ export async function GET(req: Request) {
     console.error('❌ Error in cleanup cron:', error);
     return NextResponse.json({ 
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }

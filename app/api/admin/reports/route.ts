@@ -193,7 +193,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error('Error loading reports (admin):', error)
     return NextResponse.json(
-      { error: 'Failed to load reports', details: error.message },
+      { error: 'Failed to load reports' },
       { status: 500 }
     )
   }

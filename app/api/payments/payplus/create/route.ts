@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { generatePaymentLink, isPayPlusConfigured, getPayPlusConfig } from '@/lib/payplus';
 import { getServiceClient } from '@/lib/supabase';
+import { logger } from '@/lib/logger';
 
 /**
  * יצירת קישור לדף תשלום PayPlus
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     // בדיקה שPayPlus מוגדר
     if (!isPayPlusConfigured()) {
-      console.error('❌ PayPlus not configured:', getPayPlusConfig());
+      logger.error('❌ PayPlus not configured:', getPayPlusConfig());
       return NextResponse.json({
         error: 'Payment system not configured',
         details: getPayPlusConfig()
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
         }, { status: 409 }); // 409 Conflict
       }
 
-      console.log(`✅ Capacity check passed for ${event.title}: ${availableSeats} seats available (${confirmedCount} confirmed, ${pendingCount} pending), purchasing ${ticketQuantity} tickets`);
+      logger.info(`✅ Capacity check passed for ${event.title}: ${availableSeats} seats available (${confirmedCount} confirmed, ${pendingCount} pending), purchasing ${ticketQuantity} tickets`);
     }
 
     // 🔗 בדיקת קיבולת לסדרה
@@ -178,7 +179,7 @@ export async function POST(req: NextRequest) {
           }, { status: 409 });
         }
 
-        console.log(`✅ Series capacity check passed for ${series.title}: ${availableSpots} spots available`);
+        logger.info(`✅ Series capacity check passed for ${series.title}: ${availableSpots} spots available`);
       }
     }
 
@@ -216,7 +217,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (dbError) {
-      console.error('❌ Error creating pending payment:', dbError);
+      logger.error('❌ Error creating pending payment:', dbError);
       return NextResponse.json({ error: 'Failed to create payment record' }, { status: 500 });
     }
 
@@ -244,7 +245,7 @@ export async function POST(req: NextRequest) {
 
     // בדיקת תוצאה
     if (paymentResponse.results?.status !== 'success' || !paymentResponse.data?.payment_page_link) {
-      console.error('❌ PayPlus error:', paymentResponse);
+      logger.error('❌ PayPlus error:', paymentResponse);
       
       // עדכון סטטוס בDB
       await serviceClient
@@ -270,7 +271,7 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', pendingPayment.id);
 
-    console.log('✅ Payment link created:', paymentResponse.data.payment_page_link);
+    logger.info('✅ Payment link created:', paymentResponse.data.payment_page_link);
 
     return NextResponse.json({
       success: true,
@@ -280,7 +281,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error in PayPlus create:', error);
+    logger.error('❌ Error in PayPlus create:', error);
     return NextResponse.json({ 
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'

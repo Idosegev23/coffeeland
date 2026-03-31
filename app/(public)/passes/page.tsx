@@ -75,6 +75,7 @@ export default function PassesPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => data && setPlaygroundStatus(data))
       .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadCardTypes = async () => {

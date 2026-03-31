@@ -7,6 +7,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ card_types: data });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to fetch card types', details: error.message },
+      { error: 'Failed to fetch card types' },
       { status: 500 }
     );
   }
@@ -64,11 +65,11 @@ export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     
-    console.log('🔍 POST /api/card-types - checking auth...');
+    logger.info('🔍 POST /api/card-types - checking auth...');
     
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    console.log('👤 User check:', {
+    logger.info('👤 User check:', {
       hasUser: !!user,
       userId: user?.id,
       userEmail: user?.email,
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
     });
     
     if (!user) {
-      console.log('❌ No user found - returning 401');
+      logger.info('❌ No user found - returning 401');
       return NextResponse.json({ error: 'Unauthorized - No user session' }, { status: 401 });
     }
 
@@ -87,22 +88,22 @@ export async function POST(request: Request) {
       .eq('is_active', true)
       .single();
 
-    console.log('🔐 Admin check:', {
+    logger.info('🔐 Admin check:', {
       hasAdmin: !!admin,
       adminId: admin?.id,
       error: adminError?.message
     });
 
     if (!admin) {
-      console.log('❌ User is not an admin - returning 403');
+      logger.info('❌ User is not an admin - returning 403');
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
     
-    console.log('✅ Auth successful - proceeding with insert');
+    logger.info('✅ Auth successful - proceeding with insert');
 
     const body = await request.json();
     
-    console.log('📦 Request body:', body);
+    logger.info('📦 Request body:', body);
 
     // Use service role client for insert (bypasses RLS)
     const serviceClient = getServiceClient();
@@ -131,7 +132,7 @@ export async function POST(request: Request) {
       insertData.is_family = body.is_family;
     }
     
-    console.log('💾 Insert data:', insertData);
+    logger.info('💾 Insert data:', insertData);
     
     const { data: cardType, error } = await serviceClient
       .from('card_types')
@@ -140,11 +141,11 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('❌ Insert error:', error);
+      logger.error('❌ Insert error:', error);
       throw error;
     }
 
-    console.log('✅ Card type created:', cardType.id);
+    logger.info('✅ Card type created:', cardType.id);
 
     // Audit log
     await serviceClient.from('audit_log').insert({
@@ -157,9 +158,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ card_type: cardType });
   } catch (error: any) {
-    console.error('❌ Fatal error:', error);
+    logger.error('❌ Fatal error:', error);
     return NextResponse.json(
-      { error: 'Failed to create card type', details: error.message },
+      { error: 'Failed to create card type' },
       { status: 500 }
     );
   }

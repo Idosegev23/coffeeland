@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error creating registration:', error);
     return NextResponse.json(
-      { error: 'Failed to create registration', details: error.message },
+      { error: 'Failed to create registration' },
       { status: 500 }
     );
   }
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ registrations });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Failed to fetch registrations', details: error.message },
+      { error: 'Failed to fetch registrations' },
       { status: 500 }
     );
   }

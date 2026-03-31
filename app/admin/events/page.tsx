@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Calendar, Plus, Edit, Trash2, Users, ArrowRight, UserCheck, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast';
 
 interface Event {
   id: string;
@@ -178,6 +179,7 @@ const weekdayLabels: Array<{ key: number; label: string }> = [
 ];
 
 export default function AdminEventsPage() {
+  const toast = useToast();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -382,18 +384,18 @@ export default function AdminEventsPage() {
       if (data.series) {
         // נוצרה סדרה מקושרת
         setEvents([...events, ...(data.events || [])]);
-        alert(`✅ נוצרה סדרה "${formData.title}" עם ${data.events?.length || 0} מפגשים!`);
+        toast(`נוצרה סדרה "${formData.title}" עם ${data.events?.length || 0} מפגשים!`, 'success');
       } else if (data.events && Array.isArray(data.events)) {
         setEvents([...events, ...data.events]);
-        alert(`✅ נוצרו ${data.events.length} מופעים וסונכרנו (ככל האפשר) ליומן Google!`);
+        toast(`נוצרו ${data.events.length} מופעים וסונכרנו (ככל האפשר) ליומן Google!`, 'success');
       } else {
       setEvents([...events, data.event]);
-        alert('✅ אירוע נוצר בהצלחה וסונכרן ליומן Google!');
+        toast('אירוע נוצר בהצלחה וסונכרן ליומן Google!', 'success');
       }
       setShowCreateDialog(false);
       resetForm();
     } catch (error: any) {
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 
@@ -433,10 +435,10 @@ export default function AdminEventsPage() {
       setShowCreateDialog(false);
       setEditingEvent(null);
       resetForm();
-      alert('✅ אירוע עודכן בהצלחה וסונכרן ליומן Google!');
+      toast('אירוע עודכן בהצלחה וסונכרן ליומן Google!', 'success');
     } catch (error: any) {
       console.error('Update error:', error);
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 
@@ -460,11 +462,11 @@ export default function AdminEventsPage() {
         e.id === event.id ? { ...e, status: newStatus } : e
       ));
 
-      alert(newStatus === 'full' 
-        ? '⛔ המכירה נעצרה בהצלחה!' 
-        : '✅ המכירה נפתחה בהצלחה!');
+      toast(newStatus === 'full'
+        ? 'המכירה נעצרה בהצלחה!'
+        : 'המכירה נפתחה בהצלחה!', 'success');
     } catch (error: any) {
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 
@@ -479,9 +481,9 @@ export default function AdminEventsPage() {
       if (!res.ok) throw new Error('Failed to delete');
 
       setEvents(events.filter(e => e.id !== id));
-      alert('✅ אירוע נמחק');
+      toast('אירוע נמחק', 'success');
     } catch (error: any) {
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 
@@ -555,7 +557,7 @@ export default function AdminEventsPage() {
   // ייצוא רשימת משתתפים ל-CSV
   const exportToCSV = useCallback((event: Event) => {
     if (!event.registrations || event.registrations.length === 0) {
-      alert('אין נרשמים לייצוא');
+      toast('אין נרשמים לייצוא', 'info');
       return;
     }
 
@@ -593,7 +595,7 @@ export default function AdminEventsPage() {
     link.href = URL.createObjectURL(blob);
     link.download = `${event.title}_משתתפים.csv`;
     link.click();
-  }, []);
+  }, [toast]);
 
   // חישוב סטטיסטיקות לאירוע
   const calculateEventStats = useCallback((event: Event) => {
@@ -1394,7 +1396,7 @@ export default function AdminEventsPage() {
                               
                               if (error) {
                                 console.error('Error uploading image:', error);
-                                alert('שגיאה בהעלאת התמונה: ' + error.message);
+                                toast('שגיאה בהעלאת התמונה: ' + error.message, 'error');
                                 return;
                               }
                               
@@ -1409,15 +1411,15 @@ export default function AdminEventsPage() {
                               
                               // בדיקה שה-URL תקין
                               if (!publicUrl || publicUrl.includes('undefined')) {
-                                alert('שגיאה ביצירת URL לתמונה');
+                                toast('שגיאה ביצירת URL לתמונה', 'error');
                                 return;
                               }
                               
                               setFormData({...formData, banner_image_url: publicUrl});
-                              alert('✅ התמונה הועלתה בהצלחה!');
+                              toast('התמונה הועלתה בהצלחה!', 'success');
                             } catch (err) {
                               console.error('Upload error:', err);
-                              alert('שגיאה בהעלאת התמונה');
+                              toast('שגיאה בהעלאת התמונה', 'error');
                             } finally {
                               setUploadingImage(false);
                             }

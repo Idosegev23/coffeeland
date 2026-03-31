@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { getServiceClient } from '@/lib/supabase';
 import { isPayPlusConfigured, checkTransactionStatus } from '@/lib/payplus';
 import { getRateLimitStats } from '@/lib/rate-limiter';
 
+export const maxDuration = 30;
+
 /**
  * Health Check API
  * GET /api/admin/health
- * 
+ *
  * בודק את תקינות כל המערכות:
  * - Database connectivity
  * - PayPlus API connectivity
@@ -14,6 +18,21 @@ import { getRateLimitStats } from '@/lib/rate-limiter';
  * - Rate limiter status
  */
 export async function GET(req: NextRequest) {
+  // בדיקת הרשאות אדמין
+  const authClient = createRouteHandlerClient({ cookies });
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const { data: admin } = await authClient
+    .from('admins')
+    .select('is_active')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!admin?.is_active) {
+    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  }
+
   const startTime = Date.now();
   const checks: any = {};
 

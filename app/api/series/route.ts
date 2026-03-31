@@ -96,7 +96,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error('Error fetching series:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch series', details: error.message },
+      { error: 'Failed to fetch series' },
       { status: 500 }
     );
   }
@@ -267,7 +267,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error creating series:', error);
     return NextResponse.json(
-      { error: 'Failed to create series', details: error.message },
+      { error: 'Failed to create series' },
       { status: 500 }
     );
   }

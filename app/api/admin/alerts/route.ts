@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { getServiceClient } from '@/lib/supabase';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * Admin API - Alerts
@@ -7,6 +11,21 @@ import { getServiceClient } from '@/lib/supabase';
  */
 export async function GET(req: NextRequest) {
   try {
+    // בדיקת הרשאות אדמין
+    const authClient = createRouteHandlerClient({ cookies });
+    const { data: { user } } = await authClient.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { data: admin } = await authClient
+      .from('admins')
+      .select('is_active')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!admin?.is_active) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     const supabase = getServiceClient();
     const { searchParams } = new URL(req.url);
     

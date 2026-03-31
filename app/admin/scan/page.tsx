@@ -11,10 +11,12 @@ import { QRScanner } from '@/components/admin/QRScanner'
 import { UserPassesModal } from '@/components/admin/UserPassesModal'
 import { ReservationCheckInModal } from '@/components/admin/ReservationCheckInModal'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { useToast } from '@/components/ui/toast'
 
 export default function AdminScanPage() {
   const router = useRouter()
   const supabase = createClientComponentClient()
+  const toast = useToast()
   const [scannedUser, setScannedUser] = useState<any>(null)
   const [scannedReservation, setScannedReservation] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -102,7 +104,7 @@ export default function AdminScanPage() {
     } catch (err: any) {
       console.error('❌ Scan error:', err)
       setError(err.message || 'שגיאה בסריקה')
-      alert('שגיאה: ' + (err.message || 'שגיאה בסריקה'))
+      toast('שגיאה: ' + (err.message || 'שגיאה בסריקה'), 'error')
     } finally {
       setLoading(false)
     }

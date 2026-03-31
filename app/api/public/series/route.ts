@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error('Error fetching public series:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch series', details: error.message },
+      { error: 'Failed to fetch series' },
       { status: 500 }
     );
   }

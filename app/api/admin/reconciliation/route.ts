@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { getServiceClient } from '@/lib/supabase';
 import { checkPaymentConsistency } from '@/lib/reconciliation-service';
 
+export const maxDuration = 30;
+
 async function verifyAdmin() {
   const supabaseAuth = createRouteHandlerClient({ cookies });
   const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();

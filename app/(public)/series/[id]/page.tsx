@@ -67,6 +67,7 @@ export default function SeriesDetailPage() {
 
   useEffect(() => {
     loadSeries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
   const loadSeries = async () => {

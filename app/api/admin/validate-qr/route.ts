@@ -1,23 +1,24 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     const { qrCode } = await request.json()
 
-    console.log('🔍 Validate QR - Start:', { qrCode })
+    logger.info('🔍 Validate QR - Start:', { qrCode })
 
     if (!qrCode) {
-      console.log('❌ No QR code provided')
+      logger.info('❌ No QR code provided')
       return NextResponse.json({ error: 'QR code is required' }, { status: 400 })
     }
 
     // Verify admin
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
     
-    console.log('👤 Auth check:', {
+    logger.info('👤 Auth check:', {
       hasUser: !!authUser,
       userId: authUser?.id,
       userEmail: authUser?.email,
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     })
 
     if (!authUser || authError) {
-      console.log('❌ Unauthorized - no user found')
+      logger.info('❌ Unauthorized - no user found')
       return NextResponse.json({ 
         error: 'Unauthorized - Please login', 
         details: authError?.message 
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
       .eq('user_id', authUser.id)
       .maybeSingle()
 
-    console.log('🔐 Admin check:', {
+    logger.info('🔐 Admin check:', {
       hasAdmin: !!adminData,
       adminId: adminData?.id,
       isActive: adminData?.is_active,
@@ -46,18 +47,18 @@ export async function POST(request: Request) {
     })
 
     if (!adminData?.is_active) {
-      console.log('❌ Not an admin or inactive')
+      logger.info('❌ Not an admin or inactive')
       return NextResponse.json({ 
         error: 'Not an admin',
         details: `User ${authUser.id} is not an active admin`
       }, { status: 403 })
     }
 
-    console.log('✅ Admin verified:', adminData.id)
+    logger.info('✅ Admin verified:', adminData.id)
 
     // Try to find registration ticket first (TICKET-XXX format)
     if (qrCode.startsWith('TICKET-')) {
-      console.log('🎫 Detected ticket QR code, searching registrations...')
+      logger.info('🎫 Detected ticket QR code, searching registrations...')
       
       const { data: registration, error: regError } = await supabase
         .from('registrations')
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
         .maybeSingle()
 
       if (registration) {
-        console.log('✅ Found registration:', registration.id)
+        logger.info('✅ Found registration:', registration.id)
         return NextResponse.json({
           type: 'ticket',
           registration: {
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
         })
       }
       
-      console.log('⚠️ Ticket not found in registrations')
+      logger.info('⚠️ Ticket not found in registrations')
       return NextResponse.json({ error: 'כרטיס לא נמצא במערכת' }, { status: 404 })
     }
 
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
       loyaltyCard,
     })
   } catch (error: any) {
-    console.error('Validate QR error:', error)
+    logger.error('Validate QR error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

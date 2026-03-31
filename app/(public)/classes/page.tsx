@@ -53,6 +53,7 @@ export default function ClassesPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterType]);
 
   const loadData = async () => {

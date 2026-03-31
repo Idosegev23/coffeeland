@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { verifyPayPlusCallback } from '@/lib/payplus';
 import { notifyShowSoldOut, notifyPaymentFailed } from '@/lib/notifications';
+import { logger } from '@/lib/logger';
 
 /**
  * Callback/Webhook מ-PayPlus - Enhanced Version
@@ -19,8 +20,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const headers = Object.fromEntries(req.headers.entries());
     
-    console.log('📥 PayPlus Callback received at:', new Date().toISOString());
-    console.log('📥 Callback received:', { transaction_uid: body.transaction?.uid, status_code: body.transaction?.status_code, payment_id: body.transaction?.more_info_1 });
+    logger.info('📥 PayPlus Callback received at:', new Date().toISOString());
+    logger.info('📥 Callback received:', { transaction_uid: body.transaction?.uid, status_code: body.transaction?.status_code, payment_id: body.transaction?.more_info_1 });
 
     // PayPlus שולח את הנתונים בתוך transaction object
     const transaction = body.transaction || {};
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (logError) {
-      console.error('❌ Error creating webhook log:', logError);
+      logger.error('❌ Error creating webhook log:', logError);
     } else {
       webhookLogId = newLog.id;
       // אם כבר עובד — דחה
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     // אימות שהCallback מגיע מPayPlus
     const verification = verifyPayPlusCallback(body, headers);
     if (!verification.valid) {
-      console.error('❌ PayPlus callback verification failed:', verification.reason);
+      logger.error('❌ PayPlus callback verification failed:', verification.reason);
 
       if (webhookLogId) {
         await supabase
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
     const isSuccess = status_code === '000' || status_code === 0;
     const paymentStatus = isSuccess ? 'completed' : 'failed';
 
-    console.log(`💳 Payment ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${more_info_1}`);
+    logger.info(`💳 Payment ${isSuccess ? 'SUCCESS' : 'FAILED'}: ${more_info_1}`);
 
     if (!isSuccess && more_info_1) {
       notifyPaymentFailed(more_info_1, amount || 0, `status_code: ${status_code}`).catch(() => {});
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (findError || !payment) {
-      console.error('❌ Payment not found:', more_info_1, findError);
+      logger.error('❌ Payment not found:', more_info_1, findError);
       // עדיין מחזירים 200 לPayPlus
       return NextResponse.json({ received: true, error: 'Payment not found' });
     }
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
       .eq('id', payment.id);
 
     if (updateError) {
-      console.error('❌ Error updating payment:', updateError);
+      logger.error('❌ Error updating payment:', updateError);
     }
 
     // אם התשלום הצליח ויש card_type_id - יוצרים את הכרטיסייה
@@ -157,9 +158,9 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (!cardType) {
-        console.error('❌ Invalid card_type_id in payment metadata:', card_type_id);
+        logger.error('❌ Invalid card_type_id in payment metadata:', card_type_id);
       } else {
-        console.log('🎫 Creating pass for successful payment...');
+        logger.info('🎫 Creating pass for successful payment...');
 
         // יצירת תוקף (3 חודשים)
         const expiryDate = new Date();
@@ -185,9 +186,9 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (passError) {
-          console.error('❌ Error creating pass:', passError);
+          logger.error('❌ Error creating pass:', passError);
         } else {
-          console.log('✅ Pass created:', pass.id);
+          logger.info('✅ Pass created:', pass.id);
 
           // עדכון התשלום עם מזהה הכרטיסייה
           await supabase
@@ -206,7 +207,7 @@ export async function POST(req: NextRequest) {
     
     // אם התשלום הצליח והוא עבור הצגה - יוצרים registration(s)
     if (isSuccess && payment.metadata?.event_id) {
-      console.log('🎭 Creating show registration(s) for successful payment...');
+      logger.info('🎭 Creating show registration(s) for successful payment...');
 
       const { event_id, ticket_type } = payment.metadata;
 
@@ -223,7 +224,7 @@ export async function POST(req: NextRequest) {
                       (body.transaction?.items?.[0]?.quantity) || 
                       1;
       
-      console.log(`🎟️ Creating ${quantity} registration(s) for event ${event_id}`);
+      logger.info(`🎟️ Creating ${quantity} registration(s) for event ${event_id}`);
       
       // יצירת מספר registrations לפי הכמות
       const registrationsToInsert = Array.from({ length: quantity }, () => {
@@ -248,9 +249,9 @@ export async function POST(req: NextRequest) {
         .select();
 
       if (regError) {
-        console.error('❌ Error creating registrations:', regError);
+        logger.error('❌ Error creating registrations:', regError);
       } else {
-        console.log(`✅ Created ${registrations?.length || 0} registration(s):`, registrations?.map(r => r.id));
+        logger.info(`✅ Created ${registrations?.length || 0} registration(s):`, registrations?.map(r => r.id));
 
         // Check if show is now sold out → notify admin
         const { data: eventForCheck } = await supabase
@@ -285,7 +286,7 @@ export async function POST(req: NextRequest) {
 
     // 🔗 אם התשלום הצליח והוא עבור סדרה - יוצרים series_registration + attendance
     if (isSuccess && payment.metadata?.series_id) {
-      console.log('📚 Creating series registration for successful payment...');
+      logger.info('📚 Creating series registration for successful payment...');
 
       const { series_id, child_id } = payment.metadata;
 
@@ -333,9 +334,9 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (seriesRegError) {
-          console.error('❌ Error creating series registration:', seriesRegError);
+          logger.error('❌ Error creating series registration:', seriesRegError);
         } else {
-          console.log('✅ Series registration created:', seriesReg.id);
+          logger.info('✅ Series registration created:', seriesReg.id);
 
           // יצירת שורות session_attendance לכל מפגש עתידי
           if (seriesEvents && seriesEvents.length > 0) {
@@ -354,9 +355,9 @@ export async function POST(req: NextRequest) {
                 .insert(attendanceRows);
 
               if (attendanceError) {
-                console.error('❌ Error creating attendance rows:', attendanceError);
+                logger.error('❌ Error creating attendance rows:', attendanceError);
               } else {
-                console.log(`✅ Created ${attendanceRows.length} attendance rows`);
+                logger.info(`✅ Created ${attendanceRows.length} attendance rows`);
               }
             }
           }
@@ -378,7 +379,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log('✅ PayPlus callback processed successfully');
+    logger.info('✅ PayPlus callback processed successfully');
 
     // סימון webhook log בתור completed
     if (webhookLogId) {
@@ -392,7 +393,7 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', webhookLogId);
       
-      console.log(`⏱️ Webhook processed in ${duration}ms`);
+      logger.info(`⏱️ Webhook processed in ${duration}ms`);
     }
     
     // PayPlus מצפה לתשובה 200
@@ -405,7 +406,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error processing PayPlus callback:', error);
+    logger.error('❌ Error processing PayPlus callback:', error);
     
     // סימון webhook log בתור failed
     if (webhookLogId && supabase) {
@@ -449,7 +450,7 @@ export async function POST(req: NextRequest) {
  * GET - לבדיקת זמינות ה-endpoint
  */
 export async function GET() {
-  console.log('✅ PayPlus Callback GET check at:', new Date().toISOString());
+  logger.info('✅ PayPlus Callback GET check at:', new Date().toISOString());
   return NextResponse.json({ 
     status: 'ok',
     endpoint: 'PayPlus Callback',

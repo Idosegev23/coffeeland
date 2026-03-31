@@ -95,8 +95,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error cancelling ticket:', error);
     return NextResponse.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }

@@ -14,6 +14,7 @@ import { LoyaltyCard } from '@/components/account/LoyaltyCard'
 import { UsageHistory } from '@/components/account/UsageHistory'
 import { Plus, Ticket, Calendar, Clock, BookOpen, Share2, CalendarPlus, AlertTriangle } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
+import { useToast } from '@/components/ui/toast'
 
 function buildGoogleCalendarUrl(title: string, startAt: string, endAt: string) {
   const fmt = (d: string) => new Date(d).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
@@ -28,6 +29,7 @@ function buildWhatsAppShareUrl(eventName: string) {
 export default function MyAccountPage() {
   const router = useRouter()
   const supabase = createClientComponentClient()
+  const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [activePasses, setActivePasses] = useState<any[]>([])
@@ -41,6 +43,7 @@ export default function MyAccountPage() {
 
   useEffect(() => {
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function loadData() {
@@ -628,15 +631,15 @@ export default function MyAccountPage() {
                               const data = await res.json()
                               
                               if (!res.ok) {
-                                alert('❌ ' + (data.error || 'שגיאה בביטול'))
+                                toast(data.error || 'שגיאה בביטול', 'error')
                                 return
                               }
                               
-                              alert('✅ ' + data.message)
+                              toast(data.message, 'success')
                               loadData() // Reload data
                             } catch (err) {
                               console.error('Error cancelling ticket:', err)
-                              alert('❌ שגיאה בביטול הכרטיס')
+                              toast('שגיאה בביטול הכרטיס', 'error')
                             }
                           }}
                         >

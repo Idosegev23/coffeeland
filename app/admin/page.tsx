@@ -49,6 +49,7 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     loadAdminData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadAdminData = async () => {

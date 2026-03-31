@@ -6,6 +6,8 @@ import {
   generateReconciliationReport 
 } from '@/lib/payplus-reconciliation';
 
+export const maxDuration = 30;
+
 /**
  * API להתאמת דוחות PayPlus CSV עם המערכת
  * POST /api/admin/payplus/reconcile-csv

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { CreditCard, Plus, Edit, Trash2, ArrowRight, Tag } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast';
 
 interface CardType {
   id: string;
@@ -48,9 +49,11 @@ export default function CardTypesPage() {
   });
 
   const supabase = createClientComponentClient();
+  const toast = useToast();
 
   useEffect(() => {
     loadCardTypes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCardTypes = async () => {
@@ -64,7 +67,7 @@ export default function CardTypesPage() {
       setCardTypes(data || []);
     } catch (error: any) {
       console.error('Error loading card types:', error);
-      alert('שגיאה בטעינת כרטיסיות');
+      toast('שגיאה בטעינת כרטיסיות', 'error');
     } finally {
       setLoading(false);
     }
@@ -98,13 +101,13 @@ export default function CardTypesPage() {
         throw new Error(errorData.error || 'שגיאה ביצירת כרטיסייה');
       }
 
-      alert('✅ סוג כרטיסייה נוצר בהצלחה!');
+      toast('סוג כרטיסייה נוצר בהצלחה!', 'success');
       setShowCreateDialog(false);
       resetForm();
       loadCardTypes();
     } catch (error: any) {
       console.error('Error creating card type:', error);
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 
@@ -138,13 +141,13 @@ export default function CardTypesPage() {
         throw new Error(errorData.error || 'שגיאה בעדכון כרטיסייה');
       }
 
-      alert('✅ סוג כרטיסייה עודכן!');
+      toast('סוג כרטיסייה עודכן!', 'success');
       setEditingCard(null);
       resetForm();
       loadCardTypes();
     } catch (error: any) {
       console.error('Error updating card type:', error);
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 
@@ -161,11 +164,11 @@ export default function CardTypesPage() {
         throw new Error(errorData.error || 'שגיאה במחיקת כרטיסייה');
       }
 
-      alert('✅ סוג כרטיסייה נמחק');
+      toast('סוג כרטיסייה נמחק', 'success');
       loadCardTypes();
     } catch (error: any) {
       console.error('Error deleting card type:', error);
-      alert('❌ שגיאה: ' + error.message);
+      toast('שגיאה: ' + error.message, 'error');
     }
   };
 

@@ -2,6 +2,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    console.log('📦 POS Sale request body:', body);
+    logger.info('📦 POS Sale request body:', body);
     
     const { 
       customer_id, 
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     } = body;
 
     if (!customer_id || !card_type_id || !total_entries || !price_paid) {
-      console.error('❌ Missing required fields:', { customer_id, card_type_id, total_entries, price_paid });
+      logger.error('❌ Missing required fields:', { customer_id, card_type_id, total_entries, price_paid });
       return NextResponse.json({ 
         error: 'Missing required fields',
         details: { customer_id: !!customer_id, card_type_id: !!card_type_id, total_entries: !!total_entries, price_paid: !!price_paid }
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
       purchase_date: new Date().toISOString(),
     };
 
-    console.log('💳 Creating pass with data:', passInsert);
+    logger.info('💳 Creating pass with data:', passInsert);
 
     const { data: pass, error: passError } = await serviceClient
       .from('passes')
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
       .single();
 
     if (passError) {
-      console.error('❌ Error creating pass:', passError);
+      logger.error('❌ Error creating pass:', passError);
       return NextResponse.json({ 
         error: 'Failed to create pass', 
         details: passError.message,
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
     
-    console.log('✅ Pass created successfully:', pass);
+    logger.info('✅ Pass created successfully:', pass);
 
     const paymentType =
       payment_method === 'cash'
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
       }
     };
 
-    console.log('💰 Creating payment with data:', paymentInsert);
+    logger.info('💰 Creating payment with data:', paymentInsert);
 
     const { data: payment, error: paymentError } = await serviceClient
       .from('payments')
@@ -144,7 +145,7 @@ export async function POST(request: Request) {
       .single();
 
     if (paymentError) {
-      console.error('❌ Error creating payment:', paymentError);
+      logger.error('❌ Error creating payment:', paymentError);
       // במקרה של שגיאה בתשלום, נמחק את הכרטיסייה
       await serviceClient.from('passes').delete().eq('id', pass.id);
       return NextResponse.json({ 
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
     
-    console.log('✅ Payment created successfully:', payment);
+    logger.info('✅ Payment created successfully:', payment);
 
     // קישור התשלום לכרטיסייה (לא חובה אבל שימושי)
     await serviceClient
@@ -183,7 +184,7 @@ export async function POST(request: Request) {
       payment
     });
   } catch (error: any) {
-    console.error('Error in POS sale:', error);
+    logger.error('Error in POS sale:', error);
     return NextResponse.json(
       { error: 'Failed to complete POS sale', details: error.message },
       { status: 500 }

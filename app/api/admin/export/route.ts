@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { getServiceClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 function escapeCsvField(value: string): string {
   if (!value) return '';

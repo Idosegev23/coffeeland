@@ -19,6 +19,7 @@ import {
   RefreshCcw
 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/components/ui/toast';
 
 interface ReportData {
   totalCustomers: number;
@@ -53,9 +54,11 @@ export default function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'year'>('month');
+  const toast = useToast();
 
   useEffect(() => {
     loadReportData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadReportData = async () => {
@@ -70,7 +73,7 @@ export default function ReportsPage() {
 
     } catch (error: any) {
       console.error('Error loading report data:', error);
-      alert('שגיאה בטעינת דוחות: ' + (error.message || 'שגיאה לא ידועה'));
+      toast('שגיאה בטעינת דוחות: ' + (error.message || 'שגיאה לא ידועה'), 'error');
     } finally {
       setLoading(false);
     }

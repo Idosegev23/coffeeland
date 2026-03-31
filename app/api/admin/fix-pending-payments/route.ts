@@ -1,16 +1,34 @@
 import { NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { getServiceClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /**
  * API לתיקון תשלומים תקועים במצב pending
  * GET /api/admin/fix-pending-payments
- * 
+ *
  * מוצא תשלומים ישנים במצב pending ומתקן אותם
  */
 export async function GET(req: Request) {
   try {
+    // בדיקת הרשאות אדמין
+    const authClient = createRouteHandlerClient({ cookies });
+    const { data: { user } } = await authClient.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { data: admin } = await authClient
+      .from('admins')
+      .select('is_active')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!admin?.is_active) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const dryRun = searchParams.get('dry_run') === 'true'; // אם true, רק בודק בלי לתקן
     
@@ -27,9 +45,9 @@ export async function GET(req: Request) {
     
     if (error) {
       console.error('Error fetching pending payments:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-    
+
     if (!pendingPayments || pendingPayments.length === 0) {
       return NextResponse.json({
         message: 'No pending payments to fix',
@@ -169,6 +187,6 @@ export async function GET(req: Request) {
     
   } catch (error: any) {
     console.error('Error fixing pending payments:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
