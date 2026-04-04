@@ -15,7 +15,7 @@ const eventTypes = [
   {
     id: 'standard',
     name: 'חבילה סטנדרטית',
-    price: '2,000 ₪',
+    price: '3,000 ₪',
     duration: '2 שעות',
     capacity: 'עד 20 ילדים + 20 מבוגרים',
     popular: true,
