@@ -24,6 +24,7 @@ function PaymentSuccessContent() {
   const [countdown, setCountdown] = useState(8);
   const [loading, setLoading] = useState(true);
   const [isPending, setIsPending] = useState(false);
+  const [hasSession, setHasSession] = useState(true);
 
   useEffect(() => {
     loadPaymentDetails();
@@ -166,10 +167,18 @@ function PaymentSuccessContent() {
     }
   };
 
-  // Auto-redirect to my-account after countdown
+  // Check if user still has a session (may be lost after PayPlus redirect)
   useEffect(() => {
-    if (loading || isPending) return;
-    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-redirect to my-account after countdown (only if session exists)
+  useEffect(() => {
+    if (loading || isPending || !hasSession) return;
+
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -182,7 +191,7 @@ function PaymentSuccessContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [router, loading, isPending]);
+  }, [router, loading, isPending, hasSession]);
 
   if (loading) {
     return (
@@ -293,14 +302,27 @@ function PaymentSuccessContent() {
             </div>
 
             {/* Auto-redirect Notice */}
-            <div className="bg-blue-50 rounded-xl p-4 mb-6 flex items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600 font-bold text-lg">{countdown}</span>
+            {hasSession ? (
+              <div className="bg-blue-50 rounded-xl p-4 mb-6 flex items-center justify-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-blue-600 font-bold text-lg">{countdown}</span>
+                </div>
+                <p className="text-blue-700 text-sm">
+                  מעבר אוטומטי לאיזור האישי בעוד {countdown} שניות...
+                </p>
               </div>
-              <p className="text-blue-700 text-sm">
-                מעבר אוטומטי לאיזור האישי בעוד {countdown} שניות...
-              </p>
-            </div>
+            ) : (
+              <div className="bg-amber-50 rounded-xl p-4 mb-6 text-center">
+                <p className="text-amber-800 text-sm mb-3">
+                  התשלום עבר בהצלחה! כדי לראות את הכרטיס באיזור האישי, התחברו מחדש:
+                </p>
+                <Link href="/login?redirectTo=/my-account">
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                    התחברות לאיזור האישי
+                  </Button>
+                </Link>
+              </div>
+            )}
 
             {/* WhatsApp Share */}
             {transactionDetails.name && (
