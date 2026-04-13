@@ -775,13 +775,14 @@ export default function AdminShowsPage() {
                 );
               })()}
 
-              {/* Table */}
+              {/* Table - grouped by user */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-background">
                     <tr>
                       <th className="text-right p-3 text-sm font-semibold">שם</th>
                       <th className="text-right p-3 text-sm font-semibold">טלפון</th>
+                      <th className="text-right p-3 text-sm font-semibold">כרטיסים</th>
                       <th className="text-right p-3 text-sm font-semibold">סוג כרטיס</th>
                       <th className="text-right p-3 text-sm font-semibold">סכום</th>
                       <th className="text-right p-3 text-sm font-semibold">סטטוס</th>
@@ -790,79 +791,99 @@ export default function AdminShowsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedShow.registrations
-                      ?.sort((a, b) => {
-                        // confirmed/paid first, then cancelled
-                        if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
-                        if (a.status !== 'cancelled' && b.status === 'cancelled') return -1;
-                        return 0;
-                      })
-                      .map((reg) => {
-                        const isCancelled = reg.status === 'cancelled';
-                        const isRefunded = reg.payment?.status === 'refunded';
-                        const isPaid = reg.is_paid && reg.payment?.status === 'completed';
+                    {(() => {
+                      const regs = selectedShow.registrations || [];
+                      // Group registrations by payment_id (same purchase) or by user phone+status
+                      const grouped: Map<string, typeof regs> = new Map();
+                      regs.forEach(reg => {
+                        const key = reg.payment?.id || `${reg.user.phone}-${reg.status}-${reg.id}`;
+                        if (!grouped.has(key)) grouped.set(key, []);
+                        grouped.get(key)!.push(reg);
+                      });
 
-                        return (
-                          <tr key={reg.id} className={`border-t hover:bg-background/50 ${isCancelled ? 'opacity-50' : ''}`}>
-                            <td className="p-3 text-sm">{reg.user.full_name}</td>
-                            <td className="p-3 text-sm">{reg.user.phone}</td>
-                            <td className="p-3 text-sm">
-                              {reg.ticket_type === 'show_only' ? '🎭 הצגה בלבד' : '🎪 הצגה + גימבורי'}
-                            </td>
-                            <td className="p-3 text-sm font-semibold">
-                              ₪{reg.payment?.amount || 0}
-                            </td>
-                            <td className="p-3">
-                              {isCancelled ? (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
-                                  <XCircle className="w-3 h-3 ml-1" />
-                                  {isRefunded ? 'זוכה' : 'בוטל'}
-                                </span>
-                              ) : isPaid ? (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                                  <Check className="w-3 h-3 ml-1" /> שולם
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  ממתין
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-3 text-sm text-gray-600" suppressHydrationWarning>
-                              {new Date(reg.registered_at).toLocaleDateString('he-IL')}
-                            </td>
-                            <td className="p-3">
-                              {!isCancelled && isPaid && (
-                                <div className="flex gap-1">
-                                  <button
-                                    onClick={() => handleRefund(reg)}
-                                    disabled={refundingId === reg.id}
-                                    className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 disabled:opacity-50"
-                                    title="זיכוי + ביטול"
-                                  >
-                                    {refundingId === reg.id ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <><Undo2 className="w-3 h-3 ml-1" /> זכה</>
-                                    )}
-                                  </button>
-                                  <button
-                                    onClick={() => handleCancel(reg)}
-                                    disabled={refundingId === reg.id}
-                                    className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 disabled:opacity-50"
-                                    title="ביטול ללא זיכוי"
-                                  >
-                                    <XCircle className="w-3 h-3 ml-1" /> בטל
-                                  </button>
-                                </div>
-                              )}
-                              {isCancelled && (
-                                <span className="text-xs text-gray-400">-</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      return Array.from(grouped.values())
+                        .sort((a, b) => {
+                          const aCancel = a[0].status === 'cancelled';
+                          const bCancel = b[0].status === 'cancelled';
+                          if (aCancel && !bCancel) return 1;
+                          if (!aCancel && bCancel) return -1;
+                          return 0;
+                        })
+                        .map((group) => {
+                          const first = group[0];
+                          const ticketCount = group.length;
+                          const isCancelled = first.status === 'cancelled';
+                          const isRefunded = first.payment?.status === 'refunded';
+                          const isPaid = first.is_paid && first.payment?.status === 'completed';
+                          const amount = first.payment?.amount || 0;
+                          const ticketTypes = [...new Set(group.map(r => r.ticket_type))];
+                          const ticketLabel = ticketTypes.map(t => t === 'show_only' ? '🎭 הצגה בלבד' : '🎪 הצגה + גימבורי').join(', ');
+
+                          return (
+                            <tr key={first.id} className={`border-t hover:bg-background/50 ${isCancelled ? 'opacity-50' : ''}`}>
+                              <td className="p-3 text-sm">{first.user.full_name}</td>
+                              <td className="p-3 text-sm">{first.user.phone}</td>
+                              <td className="p-3 text-sm font-semibold text-center">
+                                {ticketCount > 1 ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-accent/15 text-accent">
+                                    {ticketCount}
+                                  </span>
+                                ) : '1'}
+                              </td>
+                              <td className="p-3 text-sm">{ticketLabel}</td>
+                              <td className="p-3 text-sm font-semibold">₪{amount}</td>
+                              <td className="p-3">
+                                {isCancelled ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                                    <XCircle className="w-3 h-3 ml-1" />
+                                    {isRefunded ? 'זוכה' : 'בוטל'}
+                                  </span>
+                                ) : isPaid ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    <Check className="w-3 h-3 ml-1" /> שולם
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    ממתין
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-sm text-gray-600" suppressHydrationWarning>
+                                {new Date(first.registered_at).toLocaleDateString('he-IL')}
+                              </td>
+                              <td className="p-3">
+                                {!isCancelled && isPaid && (
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => handleRefund(first)}
+                                      disabled={refundingId === first.id}
+                                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 disabled:opacity-50"
+                                      title="זיכוי + ביטול"
+                                    >
+                                      {refundingId === first.id ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <><Undo2 className="w-3 h-3 ml-1" /> זכה</>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => handleCancel(first)}
+                                      disabled={refundingId === first.id}
+                                      className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 disabled:opacity-50"
+                                      title="ביטול ללא זיכוי"
+                                    >
+                                      <XCircle className="w-3 h-3 ml-1" /> בטל
+                                    </button>
+                                  </div>
+                                )}
+                                {isCancelled && (
+                                  <span className="text-xs text-gray-400">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                    })()}
                   </tbody>
                 </table>
                 {(!selectedShow.registrations || selectedShow.registrations.length === 0) && (
