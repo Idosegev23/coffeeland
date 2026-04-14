@@ -42,8 +42,12 @@ export function Header() {
   }, [user])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/'
+    // Sign out client-side first to clear local session
+    try {
+      await supabase.auth.signOut()
+    } catch {}
+    // Then hit server route to ensure server cookies are cleared too
+    window.location.href = '/auth/signout'
   }
 
   return (
