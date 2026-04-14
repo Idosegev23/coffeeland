@@ -16,7 +16,7 @@
     <p style="color:#4C2C21;font-size:16px;line-height:1.6;margin:0 0 30px;">
       לחצו על הכפתור כדי להתחבר לחשבון שלכם ב-CoffeeLand
     </p>
-    <a href="{{ .ConfirmationURL }}"
+    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/my-account"
        style="display:inline-block;background-color:#5F614C;color:#F9F7F3;text-decoration:none;padding:14px 40px;border-radius:16px 16px 16px 0;font-size:16px;font-weight:bold;">
       התחברות לחשבון
     </a>
