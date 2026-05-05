@@ -94,7 +94,7 @@ export default function ClassesPage() {
     // Redirect to checkout for payment
     const params = new URLSearchParams({
       type: 'event',
-      id: selectedEvent.id,
+      item: selectedEvent.id,
       quantity: seats.toString(),
     });
     window.location.href = `/checkout?${params.toString()}`;
