@@ -32,13 +32,14 @@ interface Payment {
     email: string;
     phone: string;
   };
-  refunds: Array<{ 
-    id: string; 
-    refund_amount: number; 
+  refunds: Array<{
+    id: string;
+    refund_amount: number;
     status: string;
     created_at: string;
     reason: string;
   }>;
+  registrations?: Array<{ id: string; status: string }>;
 }
 
 interface PayPlusSearchResult {
@@ -71,6 +72,7 @@ export default function RefundsPage() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [refundAmount, setRefundAmount] = useState('');
   const [refundReason, setRefundReason] = useState('');
+  const [ticketsToRefund, setTicketsToRefund] = useState<number>(1);
   const [processing, setProcessing] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   
@@ -136,12 +138,43 @@ export default function RefundsPage() {
     setFilteredPayments(filtered);
   }, [searchTerm, payments]);
 
+  // ספירת כרטיסים פעילים בתשלום (לזיכוי לפי כמות)
+  const getActiveTicketsCount = (payment: Payment) => {
+    return (payment.registrations || []).filter(r => r.status !== 'cancelled').length;
+  };
+
+  // מחיר ליחידה (סכום מקורי / כמות כוללת בהזמנה)
+  const getUnitPrice = (payment: Payment) => {
+    const totalQty = Number(payment.metadata?.quantity) || (payment.registrations?.length || 1);
+    if (totalQty <= 0) return payment.amount;
+    return Number(payment.amount) / totalQty;
+  };
+
   // פתיחת דיאלוג זיכוי
   const openRefundDialog = (payment: Payment) => {
     setSelectedPayment(payment);
-    setRefundAmount(payment.amount.toString());
+    const activeCount = getActiveTicketsCount(payment);
+    if (activeCount > 1) {
+      // ברירת מחדל: זיכוי כרטיס אחד
+      setTicketsToRefund(1);
+      const unit = getUnitPrice(payment);
+      setRefundAmount(unit.toFixed(2));
+    } else {
+      setTicketsToRefund(activeCount || 1);
+      setRefundAmount(payment.amount.toString());
+    }
     setRefundReason('');
     setShowDialog(true);
+  };
+
+  // עדכון כמות כרטיסים -> חישוב סכום אוטומטית
+  const handleTicketsChange = (n: number) => {
+    if (!selectedPayment) return;
+    const activeCount = getActiveTicketsCount(selectedPayment);
+    const clamped = Math.max(1, Math.min(n, activeCount));
+    setTicketsToRefund(clamped);
+    const unit = getUnitPrice(selectedPayment);
+    setRefundAmount((unit * clamped).toFixed(2));
   };
 
   // סגירת דיאלוג
@@ -150,6 +183,7 @@ export default function RefundsPage() {
     setSelectedPayment(null);
     setRefundAmount('');
     setRefundReason('');
+    setTicketsToRefund(1);
   };
 
   // חיפוש עסקה ב-PayPlus
@@ -214,6 +248,9 @@ export default function RefundsPage() {
       return;
     }
 
+    const activeCount = getActiveTicketsCount(selectedPayment);
+    const sendTickets = activeCount > 1 ? ticketsToRefund : undefined;
+
     setProcessing(true);
     try {
       const response = await fetch('/api/admin/refunds/create', {
@@ -222,6 +259,7 @@ export default function RefundsPage() {
         body: JSON.stringify({
           payment_id: selectedPayment.id,
           refund_amount: amount,
+          tickets_to_refund: sendTickets,
           reason: refundReason || null
         })
       });
@@ -484,13 +522,14 @@ export default function RefundsPage() {
                         </Button>
                       )}
 
-                      {payment.status === 'completed' && !completedRefund && (
+                      {payment.status === 'completed' &&
+                        ((!payment.registrations || payment.registrations.length === 0) || getActiveTicketsCount(payment) > 0) && (
                         <Button
                           onClick={() => openRefundDialog(payment)}
                           className="gap-2 bg-red-600 hover:bg-red-700"
                         >
                           <CreditCard className="w-4 h-4" />
-                          ביצוע זיכוי
+                          {completedRefund ? 'זיכוי נוסף' : 'ביצוע זיכוי'}
                         </Button>
                       )}
                       
@@ -777,13 +816,68 @@ export default function RefundsPage() {
                   <p className="text-sm text-gray-500 mt-1">
                     {getItemTypeLabel(selectedPayment.item_type)} • {new Date(selectedPayment.created_at).toLocaleDateString('he-IL')}
                   </p>
+                  {getActiveTicketsCount(selectedPayment) > 0 && (
+                    <p className="text-sm text-gray-700 mt-1">
+                      🎟️ כרטיסים פעילים: <strong>{getActiveTicketsCount(selectedPayment)}</strong>
+                      {' '} (₪{getUnitPrice(selectedPayment).toFixed(2)} ליחידה)
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {/* בחירת כמות כרטיסים לזיכוי - מוצג רק כשיש יותר מכרטיס אחד פעיל */}
+              {getActiveTicketsCount(selectedPayment) > 1 && (
+                <div className="mb-4">
+                  <label className="block mb-2 font-semibold text-primary">
+                    כמות כרטיסים לזיכוי
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleTicketsChange(ticketsToRefund - 1)}
+                      disabled={ticketsToRefund <= 1}
+                      className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold hover:bg-accent/20 disabled:opacity-40"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      value={ticketsToRefund}
+                      onChange={(e) => handleTicketsChange(parseInt(e.target.value || '1'))}
+                      min={1}
+                      max={getActiveTicketsCount(selectedPayment)}
+                      className="border border-text-light/20 p-2 w-20 rounded-lg text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTicketsChange(ticketsToRefund + 1)}
+                      disabled={ticketsToRefund >= getActiveTicketsCount(selectedPayment)}
+                      className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold hover:bg-accent/20 disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      מתוך {getActiveTicketsCount(selectedPayment)} כרטיסים פעילים
+                    </span>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => handleTicketsChange(getActiveTicketsCount(selectedPayment))}
+                      className="text-sm px-3 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20"
+                    >
+                      כל הכרטיסים
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* סכום זיכוי */}
               <div className="mb-4">
                 <label className="block mb-2 font-semibold text-primary">
                   סכום לזיכוי (₪)
+                  {getActiveTicketsCount(selectedPayment) > 1 && (
+                    <span className="text-xs text-gray-500 mr-2">(מחושב אוטומטית מכמות הכרטיסים)</span>
+                  )}
                 </label>
                 <input
                   type="number"
@@ -795,20 +889,22 @@ export default function RefundsPage() {
                   className="border border-text-light/20 p-3 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-lg"
                   placeholder={`מקסימום: ${selectedPayment.amount}`}
                 />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => setRefundAmount(selectedPayment.amount.toString())}
-                    className="text-sm px-3 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20"
-                  >
-                    זיכוי מלא
-                  </button>
-                  <button
-                    onClick={() => setRefundAmount((selectedPayment.amount / 2).toString())}
-                    className="text-sm px-3 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20"
-                  >
-                    50%
-                  </button>
-                </div>
+                {getActiveTicketsCount(selectedPayment) <= 1 && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => setRefundAmount(selectedPayment.amount.toString())}
+                      className="text-sm px-3 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20"
+                    >
+                      זיכוי מלא
+                    </button>
+                    <button
+                      onClick={() => setRefundAmount((selectedPayment.amount / 2).toString())}
+                      className="text-sm px-3 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20"
+                    >
+                      50%
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* סיבה */}
@@ -829,7 +925,12 @@ export default function RefundsPage() {
               <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
                   ⚠️ <strong>שים לב:</strong> פעולת הזיכוי תבוצע באופן מיידי דרך PayPlus ולא ניתן לבטל אותה.
-                  {parseFloat(refundAmount) === selectedPayment.amount && (
+                  {getActiveTicketsCount(selectedPayment) > 1 ? (
+                    <span className="block mt-1">
+                      יבוטלו <strong>{ticketsToRefund}</strong> כרטיסים מתוך {getActiveTicketsCount(selectedPayment)} פעילים.
+                      השאר יישארו תקפים.
+                    </span>
+                  ) : parseFloat(refundAmount) === selectedPayment.amount && (
                     <span className="block mt-1">הכרטיס/רישום יבוטל אוטומטית.</span>
                   )}
                 </p>

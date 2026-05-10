@@ -32,11 +32,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { payment_id, refund_amount, reason } = await req.json();
+    const { payment_id, refund_amount, reason, tickets_to_refund } = await req.json();
 
     // בדיקת פרמטרים
     if (!payment_id || !refund_amount || refund_amount <= 0) {
       return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+    }
+
+    if (tickets_to_refund !== undefined && (!Number.isInteger(tickets_to_refund) || tickets_to_refund <= 0)) {
+      return NextResponse.json({ error: 'Invalid tickets_to_refund' }, { status: 400 });
     }
 
     // טעינת פרטי התשלום המקורי
@@ -52,15 +56,30 @@ export async function POST(req: NextRequest) {
 
     // בדיקות תקינות
     if (payment.status === 'refunded') {
-      return NextResponse.json({ error: 'Payment already refunded' }, { status: 400 });
+      return NextResponse.json({ error: 'Payment already fully refunded' }, { status: 400 });
     }
 
     if (payment.amount === 0) {
       return NextResponse.json({ error: 'Cannot refund a free payment' }, { status: 400 });
     }
 
-    if (refund_amount > payment.amount) {
-      return NextResponse.json({ error: 'Refund amount exceeds payment amount' }, { status: 400 });
+    // סכום שכבר זוכה בעבר (זיכויים חלקיים קודמים)
+    const { data: priorRefunds } = await supabase
+      .from('refunds')
+      .select('refund_amount')
+      .eq('payment_id', payment.id)
+      .eq('status', 'completed');
+    const alreadyRefunded = (priorRefunds || []).reduce(
+      (sum, r) => sum + Number(r.refund_amount || 0),
+      0
+    );
+    const remainingRefundable = Number(payment.amount) - alreadyRefunded;
+
+    if (refund_amount > remainingRefundable + 0.01) {
+      return NextResponse.json({
+        error: 'Refund amount exceeds remaining refundable amount',
+        remaining_refundable: remainingRefundable
+      }, { status: 400 });
     }
 
     // ה-transaction_uid מאוחסן ב-metadata (נשמר ע"י PayPlus callback)
@@ -93,20 +112,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment has no PayPlus transaction UID - cannot refund' }, { status: 400 });
     }
 
-    // בדיקה אם כבר יש זיכוי בתהליך
-    const { data: existingRefund } = await supabase
+    // בדיקה אם כבר יש זיכוי בתהליך (pending) - חוסם זיכוי כפול בו זמנית
+    const { data: pendingRefund } = await supabase
       .from('refunds')
-      .select('*')
+      .select('id')
       .eq('payment_id', payment.id)
-      .in('status', ['pending', 'completed'])
-      .single();
+      .eq('status', 'pending')
+      .maybeSingle();
 
-    if (existingRefund) {
-      return NextResponse.json({ 
-        error: existingRefund.status === 'completed' 
-          ? 'Payment already refunded' 
-          : 'Refund already in progress' 
-      }, { status: 400 });
+    if (pendingRefund) {
+      return NextResponse.json({ error: 'Refund already in progress' }, { status: 400 });
     }
 
     // יצירת רשומת זיכוי (pending)
@@ -120,7 +135,8 @@ export async function POST(req: NextRequest) {
         original_amount: payment.amount,
         refund_type: refund_amount === payment.amount ? 'full' : 'partial',
         reason: reason || null,
-        status: 'pending'
+        status: 'pending',
+        metadata: tickets_to_refund ? { tickets_to_refund } : null
       })
       .select()
       .single();
@@ -159,48 +175,62 @@ export async function POST(req: NextRequest) {
         .eq('id', refund.id);
 
       if (isSuccess) {
-        // עדכון סטטוס התשלום המקורי
+        // טעינת ההרשמות הפעילות של תשלום זה (לזיהוי כמה לבטל)
+        const { data: activeRegs } = await supabase
+          .from('registrations')
+          .select('id, registered_at')
+          .eq('payment_id', payment.id)
+          .neq('status', 'cancelled')
+          .order('registered_at', { ascending: true });
+
+        const activeCount = activeRegs?.length || 0;
+        const isFullRefund = refund_amount === payment.amount;
+        // כמה כרטיסים לבטל: אם נשלח tickets_to_refund - השתמש בו;
+        // אם לא, ובמקרה של זיכוי מלא - בטל הכל; אחרת אל תבטל כלום (לכרטיסיות וכו').
+        let regsToCancel = 0;
+        if (tickets_to_refund) {
+          regsToCancel = Math.min(tickets_to_refund, activeCount);
+        } else if (isFullRefund) {
+          regsToCancel = activeCount;
+        }
+
+        let cancelledCount = 0;
+        if (regsToCancel > 0 && activeRegs && activeRegs.length > 0) {
+          const idsToCancel = activeRegs.slice(0, regsToCancel).map(r => r.id);
+          const { data: cancelledRegs } = await supabase
+            .from('registrations')
+            .update({ status: 'cancelled', is_paid: false })
+            .in('id', idsToCancel)
+            .select();
+          cancelledCount = cancelledRegs?.length || 0;
+          console.log(`✅ Cancelled ${cancelledCount}/${activeCount} registration(s) for payment ${payment.id}`);
+        }
+
+        // סטטוס התשלום: 'refunded' רק אם לא נותרו רישומים פעילים (זיכוי מלא בפועל)
+        const remainingActive = activeCount - cancelledCount;
+        const newPaymentStatus = remainingActive === 0 && (isFullRefund || activeCount > 0)
+          ? 'refunded'
+          : payment.status;
+
+        const previousRefundedAmount = Number(payment.metadata?.refunded_amount) || 0;
         await supabase
           .from('payments')
           .update({
-            status: 'refunded',
+            status: newPaymentStatus,
             metadata: {
               ...payment.metadata,
               refund_id: refund.id,
-              refunded_amount: refund_amount,
-              refunded_at: new Date().toISOString()
+              refunded_amount: previousRefundedAmount + refund_amount,
+              refunded_at: new Date().toISOString(),
+              partial_refund: newPaymentStatus !== 'refunded',
+              refunded_quantity: (Number(payment.metadata?.refunded_quantity) || 0) + cancelledCount,
+              remaining_quantity: remainingActive
             }
           })
           .eq('id', payment.id);
 
-        // ביטול registrations שקשורות לתשלום זה (לפי payment_id)
-        const { data: cancelledRegs, error: regCancelError } = await supabase
-          .from('registrations')
-          .update({ status: 'cancelled', is_paid: false })
-          .eq('payment_id', payment.id)
-          .select();
-
-        if (!regCancelError && cancelledRegs && cancelledRegs.length > 0) {
-          console.log(`✅ Cancelled ${cancelledRegs.length} registration(s) for payment ${payment.id}`);
-        }
-
-        // גם לפי event_id מה-metadata (למקרה שה-payment_id לא תואם)
-        if (payment.metadata?.event_id) {
-          const { data: extraCancelled } = await supabase
-            .from('registrations')
-            .update({ status: 'cancelled', is_paid: false })
-            .eq('event_id', payment.metadata.event_id)
-            .eq('user_id', payment.user_id)
-            .eq('payment_id', payment.id)
-            .select();
-
-          if (extraCancelled && extraCancelled.length > 0) {
-            console.log(`✅ Extra cancelled ${extraCancelled.length} registration(s) by event_id`);
-          }
-        }
-
-        // סימון כרטיסייה כמזוכה
-        if (payment.metadata?.card_type_id && payment.item_id) {
+        // סימון כרטיסייה כמזוכה (רק בזיכוי מלא של כרטיסייה)
+        if (isFullRefund && payment.metadata?.card_type_id && payment.item_id) {
           await supabase
             .from('passes')
             .update({ status: 'refunded' })
@@ -216,7 +246,13 @@ export async function POST(req: NextRequest) {
           action: 'process_refund',
           entity_type: 'payment',
           entity_id: payment.id,
-          details: { refund_id: refund.id, amount: refund_amount, reason }
+          details: {
+            refund_id: refund.id,
+            amount: refund_amount,
+            reason,
+            tickets_refunded: cancelledCount,
+            remaining_tickets: remainingActive
+          }
         });
 
         console.log('✅ Refund completed successfully');

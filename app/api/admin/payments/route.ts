@@ -56,7 +56,8 @@ export async function GET(req: NextRequest) {
       .select(`
         *,
         user:users!payments_user_id_fkey(id, full_name, email, phone),
-        refunds(id, refund_amount, status, created_at, reason)
+        refunds(id, refund_amount, status, created_at, reason),
+        registrations(id, status)
       `)
       .order('created_at', { ascending: false });
 
