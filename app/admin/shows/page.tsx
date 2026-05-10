@@ -51,6 +51,19 @@ export default function AdminShowsPage() {
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [uploading, setUploading] = useState(false);
   const [refundingId, setRefundingId] = useState<string | null>(null);
+
+  // Refund dialog state
+  type RegRow = NonNullable<Show['registrations']>[0];
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [refundContext, setRefundContext] = useState<{
+    reg: RegRow;
+    activeCount: number;
+    totalCount: number;
+    unitPrice: number;
+  } | null>(null);
+  const [refundTickets, setRefundTickets] = useState(1);
+  const [refundReason, setRefundReason] = useState('');
+
   const toast = useToast();
 
   const supabase = createClientComponentClient();
@@ -207,30 +220,36 @@ export default function AdminShowsPage() {
 
   const calculateStats = (show: Show) => {
     const registrations = show.registrations || [];
-    const paid = registrations.filter(r => r.is_paid && r.status !== 'cancelled');
+    const active = registrations.filter(r => r.is_paid && r.status !== 'cancelled');
     const cancelled = registrations.filter(r => r.status === 'cancelled');
-    const refunded = registrations.filter(r => r.payment?.status === 'refunded');
-    const totalSold = paid.length;
+    const totalSold = active.length;
     const availableSeats = show.capacity - totalSold;
 
-    // Revenue: deduplicate by payment_id to avoid double-counting
-    // (e.g. 2 tickets = 2 registrations but 1 payment of 140₪)
-    const seenPayments = new Set<string>();
+    // חישוב הכנסות לפי תשלום: כל תשלום מתחלק יחסית בין רישומים פעילים למבוטלים.
+    // זה תומך בזיכוי חלקי שבו חלק מהכרטיסים מבוטלים אבל התשלום עצמו במצב 'completed'.
+    type PaymentBucket = { amount: number; total: number; active: number; cancelled: number };
+    const buckets: Map<string, PaymentBucket> = new Map();
+    registrations.forEach(r => {
+      if (!r.payment?.id) return;
+      let b = buckets.get(r.payment.id);
+      if (!b) {
+        b = { amount: Number(r.payment.amount) || 0, total: 0, active: 0, cancelled: 0 };
+        buckets.set(r.payment.id, b);
+      }
+      b.total += 1;
+      if (r.status === 'cancelled') b.cancelled += 1;
+      else if (r.is_paid) b.active += 1;
+    });
+
     let revenue = 0;
     let refundedAmount = 0;
     let totalPayments = 0;
-    paid.forEach(r => {
-      if (r.payment?.id && !seenPayments.has(r.payment.id)) {
-        seenPayments.add(r.payment.id);
-        revenue += r.payment.amount || 0;
-        totalPayments++;
-      }
-    });
-    refunded.forEach(r => {
-      if (r.payment?.id && !seenPayments.has(r.payment.id)) {
-        seenPayments.add(r.payment.id);
-        refundedAmount += r.payment.amount || 0;
-      }
+    buckets.forEach(b => {
+      if (b.total === 0) return;
+      const unit = b.amount / b.total;
+      revenue += unit * b.active;
+      refundedAmount += unit * b.cancelled;
+      if (b.active > 0) totalPayments += 1;
     });
 
     const occupancyPercent = show.capacity > 0 ? Math.round((totalSold / show.capacity) * 100) : 0;
@@ -238,14 +257,39 @@ export default function AdminShowsPage() {
     return { totalSold, availableSeats, revenue, refundedAmount, cancelled: cancelled.length, totalPayments, occupancyPercent };
   };
 
-  const handleRefund = async (reg: NonNullable<Show['registrations']>[0]) => {
+  const openRefundDialog = (reg: RegRow) => {
     if (!reg.payment?.id) {
       toast('לא נמצא תשלום לזיכוי', 'error');
       return;
     }
+    const allInPayment = (selectedShow?.registrations || []).filter(
+      r => r.payment?.id === reg.payment?.id
+    );
+    const totalCount = allInPayment.length || 1;
+    const activeCount = allInPayment.filter(r => r.status !== 'cancelled' && r.is_paid).length;
+    const unitPrice = (Number(reg.payment.amount) || 0) / totalCount;
 
-    const amount = reg.payment.amount || 0;
-    if (!confirm(`האם לבצע זיכוי של ₪${amount} ל-${reg.user.full_name}?`)) return;
+    setRefundContext({ reg, activeCount, totalCount, unitPrice });
+    setRefundTickets(1);
+    setRefundReason('');
+    setRefundDialogOpen(true);
+  };
+
+  const closeRefundDialog = () => {
+    setRefundDialogOpen(false);
+    setRefundContext(null);
+    setRefundTickets(1);
+    setRefundReason('');
+  };
+
+  const handleRefundConfirm = async () => {
+    if (!refundContext) return;
+    const { reg, activeCount, unitPrice } = refundContext;
+    if (!reg.payment?.id) return;
+
+    const tickets = Math.max(1, Math.min(refundTickets, activeCount));
+    const amount = Number((unitPrice * tickets).toFixed(2));
+    const isFull = tickets === activeCount && tickets >= 1;
 
     setRefundingId(reg.id);
     try {
@@ -255,14 +299,21 @@ export default function AdminShowsPage() {
         body: JSON.stringify({
           payment_id: reg.payment.id,
           refund_amount: amount,
-          reason: 'ביטול ע"י אדמין מדף ניהול הצגות'
+          tickets_to_refund: activeCount > 1 ? tickets : undefined,
+          reason: refundReason?.trim() || 'ביטול ע"י אדמין מדף ניהול הצגות'
         })
       });
 
       const data = await res.json();
 
       if (data.success) {
-        toast('הזיכוי בוצע בהצלחה', 'success');
+        toast(
+          isFull
+            ? 'הזיכוי בוצע בהצלחה (כל הכרטיסים)'
+            : `הזיכוי בוצע בהצלחה (${tickets} כרטיסים)`,
+          'success'
+        );
+        closeRefundDialog();
         const showId = selectedShow?.id;
         const res2 = await fetch('/api/events?type=show');
         const data2 = await res2.json();
@@ -793,10 +844,20 @@ export default function AdminShowsPage() {
                   <tbody>
                     {(() => {
                       const regs = selectedShow.registrations || [];
-                      // Group registrations by payment_id (same purchase) or by user phone+status
+                      // Total tickets per payment (לחישוב מחיר ליחידה כשיש זיכוי חלקי)
+                      const totalPerPayment: Map<string, number> = new Map();
+                      regs.forEach(reg => {
+                        const pid = reg.payment?.id;
+                        if (!pid) return;
+                        totalPerPayment.set(pid, (totalPerPayment.get(pid) || 0) + 1);
+                      });
+
+                      // Group by payment_id + status — כך שכרטיסים פעילים וכרטיסים מבוטלים
+                      // מאותה רכישה יוצגו בשורות נפרדות.
                       const grouped: Map<string, typeof regs> = new Map();
                       regs.forEach(reg => {
-                        const key = reg.payment?.id || `${reg.user.phone}-${reg.status}-${reg.id}`;
+                        const baseKey = reg.payment?.id || `${reg.user.phone}-${reg.id}`;
+                        const key = `${baseKey}|${reg.status}`;
                         if (!grouped.has(key)) grouped.set(key, []);
                         grouped.get(key)!.push(reg);
                       });
@@ -815,7 +876,12 @@ export default function AdminShowsPage() {
                           const isCancelled = first.status === 'cancelled';
                           const isRefunded = first.payment?.status === 'refunded';
                           const isPaid = first.is_paid && first.payment?.status === 'completed';
-                          const amount = first.payment?.amount || 0;
+                          const paymentTotal = first.payment?.amount || 0;
+                          const totalTickets = first.payment?.id ? (totalPerPayment.get(first.payment.id) || ticketCount) : ticketCount;
+                          // אם יש פילוג בין שורות (פעיל/מבוטל) — חלק את הסכום באופן יחסי לפי כמות הכרטיסים בקבוצה.
+                          const amount = totalTickets > 0
+                            ? (Number(paymentTotal) / totalTickets) * ticketCount
+                            : paymentTotal;
                           const ticketTypes = [...new Set(group.map(r => r.ticket_type))];
                           const ticketLabel = ticketTypes.map(t => t === 'show_only' ? '🎭 הצגה בלבד' : '🎪 הצגה + גימבורי').join(', ');
 
@@ -831,7 +897,7 @@ export default function AdminShowsPage() {
                                 ) : '1'}
                               </td>
                               <td className="p-3 text-sm">{ticketLabel}</td>
-                              <td className="p-3 text-sm font-semibold">₪{amount}</td>
+                              <td className="p-3 text-sm font-semibold">₪{Number(amount).toFixed(0)}</td>
                               <td className="p-3">
                                 {isCancelled ? (
                                   <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
@@ -855,10 +921,10 @@ export default function AdminShowsPage() {
                                 {!isCancelled && isPaid && (
                                   <div className="flex gap-1">
                                     <button
-                                      onClick={() => handleRefund(first)}
+                                      onClick={() => openRefundDialog(first)}
                                       disabled={refundingId === first.id}
                                       className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200 disabled:opacity-50"
-                                      title="זיכוי + ביטול"
+                                      title="זיכוי כרטיסים"
                                     >
                                       {refundingId === first.id ? (
                                         <Loader2 className="w-3 h-3 animate-spin" />
@@ -907,6 +973,154 @@ export default function AdminShowsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Refund Dialog */}
+        {refundDialogOpen && refundContext && (
+          <Dialog open={refundDialogOpen} onOpenChange={(o) => !o && closeRefundDialog()}>
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" dir="rtl">
+              <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                    <Undo2 className="w-5 h-5 text-orange-700" />
+                  </div>
+                  <h3 className="text-xl font-bold text-primary">זיכוי כרטיסים</h3>
+                </div>
+
+                {/* פרטי לקוח ותשלום */}
+                <div className="mb-4 p-4 bg-background-light rounded-lg">
+                  <p className="font-semibold text-base mb-1">{refundContext.reg.user.full_name}</p>
+                  <p className="text-sm text-text-light/70">{refundContext.reg.user.phone}</p>
+                  <div className="mt-3 pt-3 border-t border-text-light/10 grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-text-light/60">סכום מקורי</p>
+                      <p className="font-bold">₪{Number(refundContext.reg.payment?.amount || 0).toFixed(0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-text-light/60">סך כרטיסים</p>
+                      <p className="font-bold">{refundContext.totalCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-text-light/60">פעילים</p>
+                      <p className="font-bold text-green-700">{refundContext.activeCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-text-light/60">מחיר ליחידה</p>
+                      <p className="font-bold">₪{refundContext.unitPrice.toFixed(0)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* בחירת כמות */}
+                {refundContext.activeCount > 1 ? (
+                  <div className="mb-4">
+                    <label className="block mb-2 font-semibold text-primary">כמות כרטיסים לזיכוי</label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setRefundTickets(Math.max(1, refundTickets - 1))}
+                        disabled={refundTickets <= 1}
+                        className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold hover:bg-accent/20 disabled:opacity-40"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        value={refundTickets}
+                        onChange={(e) => {
+                          const n = parseInt(e.target.value || '1');
+                          setRefundTickets(Math.max(1, Math.min(refundContext.activeCount, isNaN(n) ? 1 : n)));
+                        }}
+                        min={1}
+                        max={refundContext.activeCount}
+                        className="border border-text-light/20 p-2 w-20 rounded-lg text-center text-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setRefundTickets(Math.min(refundContext.activeCount, refundTickets + 1))}
+                        disabled={refundTickets >= refundContext.activeCount}
+                        className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold hover:bg-accent/20 disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                      <span className="text-sm text-text-light/70">
+                        מתוך {refundContext.activeCount}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRefundTickets(refundContext.activeCount)}
+                      className="mt-2 text-sm px-3 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20"
+                    >
+                      כל הכרטיסים הפעילים
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                    בתשלום זה נותר כרטיס פעיל אחד — יזוכה במלואו.
+                  </div>
+                )}
+
+                {/* סיבה */}
+                <div className="mb-4">
+                  <label className="block mb-2 font-semibold text-primary">סיבת הזיכוי (אופציונלי)</label>
+                  <textarea
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    rows={2}
+                    placeholder="למשל: בקשת לקוח, ביטול אירוע..."
+                    className="border border-text-light/20 p-2 w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-sm"
+                  />
+                </div>
+
+                {/* סיכום */}
+                <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-orange-900">כרטיסים שיבוטלו</span>
+                    <span className="font-bold text-orange-900">{refundTickets}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-orange-900">כרטיסים שיישארו פעילים</span>
+                    <span className="font-bold text-orange-900">{refundContext.activeCount - refundTickets}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 mt-2 border-t border-orange-200">
+                    <span className="text-sm font-semibold text-orange-900">סכום לזיכוי</span>
+                    <span className="text-xl font-bold text-orange-900">
+                      ₪{(refundContext.unitPrice * refundTickets).toFixed(0)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* אזהרה */}
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+                  ⚠️ הזיכוי יבוצע מיידית דרך PayPlus ולא ניתן לבטלו.
+                </div>
+
+                {/* כפתורים */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleRefundConfirm}
+                    disabled={refundingId === refundContext.reg.id}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 gap-2"
+                  >
+                    {refundingId === refundContext.reg.id ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> מעבד...</>
+                    ) : (
+                      <><Undo2 className="w-4 h-4" /> אשר זיכוי</>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={closeRefundDialog}
+                    variant="outline"
+                    disabled={refundingId === refundContext.reg.id}
+                    className="flex-1"
+                  >
+                    ביטול
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Dialog>
         )}
       </div>
     </div>
