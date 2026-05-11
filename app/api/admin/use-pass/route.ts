@@ -80,20 +80,24 @@ export async function POST(request: Request) {
 
       const now = new Date()
 
-      // Check if blocked by a show
-      const twoHoursFromNow = new Date(now.getTime() + showBlockDuration * 60 * 1000)
+      // Check if blocked by a show — חלון הנעילה מבוסס על שעות ההצגה בפועל:
+      // מ-(start_at - buffer) ועד end_at של ההצגה. אם end_at חסר, נופלים חזרה ל-(start_at + showBlockDuration).
+      const windowFrom = new Date(now.getTime() - showBlockDuration * 60 * 1000)
+      const windowTo = new Date(now.getTime() + showBlockDuration * 60 * 1000)
       const { data: activeShows } = await serviceClient
         .from('events')
-        .select('id, title, start_at')
+        .select('id, title, start_at, end_at')
         .eq('type', 'show')
         .eq('status', 'active')
-        .lte('start_at', twoHoursFromNow.toISOString())
-        .gte('start_at', new Date(now.getTime() - showBlockDuration * 60 * 1000).toISOString())
+        .lte('start_at', windowTo.toISOString())
+        .gte('start_at', windowFrom.toISOString())
 
       for (const show of activeShows || []) {
         const showStart = new Date(show.start_at)
         const blockFrom = new Date(showStart.getTime() - showBufferBefore * 60 * 1000)
-        const blockUntil = new Date(showStart.getTime() + showBlockDuration * 60 * 1000)
+        const blockUntil = show.end_at
+          ? new Date(show.end_at)
+          : new Date(showStart.getTime() + showBlockDuration * 60 * 1000)
         if (now >= blockFrom && now <= blockUntil) {
           return NextResponse.json({
             error: `הג׳ימבורי סגור לכניסות - הצגה "${show.title}"`,

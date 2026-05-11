@@ -82,13 +82,15 @@ export async function GET(req: NextRequest) {
     .gte('start_at', dayStartUTC)
     .lte('start_at', dayEndUTC);
 
-  // Mark slots blocked by shows
+  // Mark slots blocked by shows — חלון הנעילה: (show_start - buffer) עד end_at בפועל.
+  // נופלים חזרה ל-(show_start + block_duration) רק אם אין end_at.
   if (shows) {
     for (const show of shows) {
       const showStart = new Date(show.start_at);
-      // Block from (show_start - buffer) to (show_start + block_duration)
       const blockFrom = new Date(showStart.getTime() - showBufferBefore * 60 * 1000);
-      const blockUntil = new Date(showStart.getTime() + showBlockDuration * 60 * 1000);
+      const blockUntil = show.end_at
+        ? new Date(show.end_at)
+        : new Date(showStart.getTime() + showBlockDuration * 60 * 1000);
 
       for (const slot of slots) {
         const slotStartDate = new Date(`${dateStr}T${slot.start}:00+03:00`);
@@ -140,14 +142,16 @@ export async function GET(req: NextRequest) {
 
   const currentOccupancy = currentUsages?.length || 0;
 
-  // Check if NOW is blocked by a show
+  // Check if NOW is blocked by a show — מבוסס על end_at בפועל של ההצגה
   let currentlyBlocked = false;
   let currentBlockReason = '';
   if (shows) {
     for (const show of shows) {
       const showStart = new Date(show.start_at);
       const blockFrom = new Date(showStart.getTime() - showBufferBefore * 60 * 1000);
-      const blockUntil = new Date(showStart.getTime() + showBlockDuration * 60 * 1000);
+      const blockUntil = show.end_at
+        ? new Date(show.end_at)
+        : new Date(showStart.getTime() + showBlockDuration * 60 * 1000);
       if (now >= blockFrom && now <= blockUntil) {
         currentlyBlocked = true;
         currentBlockReason = `הצגה: ${show.title}`;
