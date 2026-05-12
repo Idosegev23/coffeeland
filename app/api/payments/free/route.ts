@@ -22,24 +22,17 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { 
-      event_id, 
-      ticket_type, 
-      quantity = 1, 
+    const {
+      event_id,
+      ticket_type,
+      quantity = 1,
       coupon_code,
-      original_amount 
+      original_amount
     } = body;
 
     if (!event_id) {
       return NextResponse.json(
         { error: 'חסר מזהה אירוע' },
-        { status: 400 }
-      );
-    }
-
-    if (!coupon_code) {
-      return NextResponse.json(
-        { error: 'חסר קוד קופון' },
         { status: 400 }
       );
     }
@@ -58,57 +51,72 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // בדיקת קוד קופון
-    const { data: coupon, error: couponError } = await supabase
-      .from('coupons')
-      .select('*')
-      .ilike('code', coupon_code.trim())
-      .single();
+    // החלטה אם זו רכישה חינמית מאירוע חינם (ללא קופון), או דרך קופון.
+    let coupon: any = null;
+    if (coupon_code) {
+      // בדיקת קוד קופון
+      const { data: couponData, error: couponError } = await supabase
+        .from('coupons')
+        .select('*')
+        .ilike('code', coupon_code.trim())
+        .single();
 
-    if (couponError || !coupon) {
-      return NextResponse.json(
-        { error: 'קוד קופון לא תקף' },
-        { status: 400 }
-      );
-    }
+      if (couponError || !couponData) {
+        return NextResponse.json(
+          { error: 'קוד קופון לא תקף' },
+          { status: 400 }
+        );
+      }
 
-    // וידוא שזה קופון חינמי
-    if (coupon.discount_type !== 'free') {
-      return NextResponse.json(
-        { error: 'קוד קופון זה לא מאפשר כניסה חינמית' },
-        { status: 400 }
-      );
-    }
+      // וידוא שזה קופון חינמי
+      if (couponData.discount_type !== 'free') {
+        return NextResponse.json(
+          { error: 'קוד קופון זה לא מאפשר כניסה חינמית' },
+          { status: 400 }
+        );
+      }
 
-    // בדיקת תוקף
-    if (coupon.expiry_date && new Date(coupon.expiry_date) < new Date()) {
-      return NextResponse.json(
-        { error: 'קוד הקופון פג תוקף' },
-        { status: 400 }
-      );
-    }
+      // בדיקת תוקף
+      if (couponData.expiry_date && new Date(couponData.expiry_date) < new Date()) {
+        return NextResponse.json(
+          { error: 'קוד הקופון פג תוקף' },
+          { status: 400 }
+        );
+      }
 
-    // בדיקת מקסימום שימושים
-    if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) {
-      return NextResponse.json(
-        { error: 'קוד הקופון מוצה — הגיע למקסימום שימושים' },
-        { status: 400 }
-      );
-    }
+      // בדיקת מקסימום שימושים
+      if (couponData.max_uses && (couponData.used_count || 0) >= couponData.max_uses) {
+        return NextResponse.json(
+          { error: 'קוד הקופון מוצה — הגיע למקסימום שימושים' },
+          { status: 400 }
+        );
+      }
 
-    // בדיקת שימוש כפול
-    const { data: existingUsage } = await supabase
-      .from('coupon_usages')
-      .select('id')
-      .eq('coupon_id', coupon.id)
-      .eq('user_id', user.id)
-      .single();
+      // בדיקת שימוש כפול
+      const { data: existingUsage } = await supabase
+        .from('coupon_usages')
+        .select('id')
+        .eq('coupon_id', couponData.id)
+        .eq('user_id', user.id)
+        .single();
 
-    if (existingUsage) {
-      return NextResponse.json(
-        { error: 'כבר השתמשת בקוד קופון זה' },
-        { status: 400 }
-      );
+      if (existingUsage) {
+        return NextResponse.json(
+          { error: 'כבר השתמשת בקוד קופון זה' },
+          { status: 400 }
+        );
+      }
+
+      coupon = couponData;
+    } else {
+      // ללא קופון — מותר רק אם האירוע עצמו חינמי
+      const eventPrice = Number(event.price) || 0;
+      if (eventPrice > 0) {
+        return NextResponse.json(
+          { error: 'אירוע זה אינו חינמי — נדרש תשלום' },
+          { status: 400 }
+        );
+      }
     }
 
     // בדיקת קיבולת - סופרים רק רישומים ששולמו (is_paid=true ולא מבוטלים)
@@ -141,6 +149,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // קביעת item_type לפי סוג האירוע
+    const itemType = event.type === 'show'
+      ? 'show'
+      : event.type === 'series'
+        ? 'series'
+        : 'event_registration';
+
     // יצירת תשלום עם סטטוס completed (using service client for permissions)
     const { data: payment, error: paymentError } = await serviceClient
       .from('payments')
@@ -148,17 +163,24 @@ export async function POST(req: NextRequest) {
         user_id: user.id,
         amount: 0, // חינמי!
         status: 'completed',
-        payment_method: 'coupon',
-        item_type: 'show',
+        payment_method: coupon ? 'coupon' : 'free_event',
+        item_type: itemType,
         metadata: {
           event_id,
           ticket_type: ticket_type || 'regular',
           quantity,
-          coupon_code: coupon.code,
-          coupon_id: coupon.id,
-          original_amount,
-          discount_amount: original_amount,
-          payment_method: 'free_coupon'
+          ...(coupon
+            ? {
+                coupon_code: coupon.code,
+                coupon_id: coupon.id,
+                original_amount,
+                discount_amount: original_amount,
+                payment_method: 'free_coupon'
+              }
+            : {
+                original_amount: 0,
+                payment_method: 'free_event'
+              })
         },
         completed_at: new Date().toISOString()
       })
@@ -221,26 +243,29 @@ export async function POST(req: NextRequest) {
       })
       .eq('id', payment.id);
 
-    // רישום שימוש בקופון
-    await serviceClient
-      .from('coupon_usages')
-      .insert({
-        coupon_id: coupon.id,
-        user_id: user.id,
-        payment_id: payment.id,
-        discount_amount: original_amount || 0
-      });
+    // רישום שימוש בקופון (רק כשמדובר בקופון, לא באירוע חינמי)
+    if (coupon) {
+      await serviceClient
+        .from('coupon_usages')
+        .insert({
+          coupon_id: coupon.id,
+          user_id: user.id,
+          payment_id: payment.id,
+          discount_amount: original_amount || 0
+        });
 
-    // עדכון מספר השימושים בקופון
-    await serviceClient
-      .from('coupons')
-      .update({ 
-        used_count: (coupon.used_count || 0) + 1,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', coupon.id);
+      await serviceClient
+        .from('coupons')
+        .update({
+          used_count: (coupon.used_count || 0) + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', coupon.id);
+    }
 
-    console.log(`✅ Free purchase created with coupon ${coupon.code}: ${registrations.length} tickets`);
+    console.log(
+      `✅ Free purchase created (${coupon ? `coupon ${coupon.code}` : 'free event'}): ${registrations.length} tickets`
+    );
 
     return NextResponse.json({
       success: true,

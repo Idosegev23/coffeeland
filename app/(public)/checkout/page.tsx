@@ -297,16 +297,20 @@ function CheckoutContent() {
         finalAmount = couponData.final_amount;
       }
 
-      // If final amount is 0 (free with coupon), use free payment endpoint
-      if (finalAmount === 0 && couponApplied) {
+      // אם הסכום הסופי 0 — נעקוף את PayPlus דרך נקודת קצה ייעודית (קופון או אירוע חינמי).
+      if (finalAmount === 0) {
+        const isEventBased = itemType === 'show' || itemType === 'event' || itemType === 'series';
+        if (!isEventBased) {
+          throw new Error('לא ניתן לרכוש פריט זה ללא תשלום');
+        }
         const response = await fetch('/api/payments/free', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            event_id: itemType === 'show' ? cartItem.id : null,
+            event_id: cartItem.id,
             ticket_type: (cartItem as any).metadata?.ticket_type,
             quantity: quantity,
-            coupon_code: couponCode,
+            coupon_code: couponApplied ? couponCode : undefined,
             original_amount: totalAmount
           })
         });
@@ -758,14 +762,16 @@ function CheckoutContent() {
                 {/* Payment Info */}
                 <div className="bg-blue-50 rounded-xl p-4 mb-6">
                   <div className="flex items-start gap-3">
-                    {couponApplied && couponData?.is_free ? (
+                    {(cartItem && cartItem.price === 0) || (couponApplied && couponData?.is_free) ? (
                       <>
                         <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
                         <div>
                           <h4 className="font-medium text-green-800 mb-1">רכישה חינמית 🎉</h4>
                           <p className="text-sm text-green-700">
-                            בזכות קוד הקופון, הרכישה היא חינמית לחלוטין. 
-                            לא נדרש תשלום - לחץ על &quot;אישור רכישה&quot; כדי להשלים.
+                            {couponApplied && couponData?.is_free
+                              ? 'בזכות קוד הקופון, הרכישה היא חינמית לחלוטין.'
+                              : 'הפעילות הזו חינמית לחלוטין.'}
+                            {' '}לא נדרש תשלום - לחץ על &quot;אישור רכישה&quot; כדי להשלים.
                           </p>
                         </div>
                       </>
@@ -818,22 +824,28 @@ function CheckoutContent() {
                     disabled={processing || availableSeats === 0}
                     className="flex-1 bg-green-600 hover:bg-green-700"
                   >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {couponApplied && couponData?.is_free ? 'אישור רכישה...' : 'מעבד...'}
-                      </>
-                    ) : couponApplied && couponData?.is_free ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        אישור רכישה חינמית 🎉
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4 mr-2" />
-                        המשך לתשלום מאובטח
-                      </>
-                    )}
+                    {(() => {
+                      const isFree = (cartItem && cartItem.price === 0) || (couponApplied && couponData?.is_free);
+                      if (processing) {
+                        return (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            {isFree ? 'אישור רכישה...' : 'מעבד...'}
+                          </>
+                        );
+                      }
+                      return isFree ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          אישור רכישה חינמית 🎉
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4 mr-2" />
+                          המשך לתשלום מאובטח
+                        </>
+                      );
+                    })()}
                   </Button>
                 </div>
               </Card>
