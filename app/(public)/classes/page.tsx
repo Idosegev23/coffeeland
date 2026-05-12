@@ -62,14 +62,18 @@ export default function ClassesPage() {
       const { data: { user: userData } } = await supabase.auth.getUser();
       setUser(userData);
 
-      // טעינת אירועים
+      // טעינת אירועים - רק חוגים, סדנאות ואירועים (לא הצגות / סדרות)
       const nowIso = new Date().toISOString();
-      const eventsUrl = filterType === 'all' 
-        ? `/api/public/events?status=active&from=${encodeURIComponent(nowIso)}&limit=50`
-        : `/api/public/events?status=active&type=${filterType}&from=${encodeURIComponent(nowIso)}&limit=50`;
-      const eventsRes = await fetch(eventsUrl);
+      const eventsRes = await fetch(
+        `/api/public/events?status=active&from=${encodeURIComponent(nowIso)}&limit=50`
+      );
       const eventsData = await eventsRes.json();
-      setEvents(eventsData.events || []);
+      const allEvents: Event[] = eventsData.events || [];
+      const allowedTypes: Event['type'][] = ['class', 'workshop', 'event'];
+      const filtered = allEvents.filter(e =>
+        allowedTypes.includes(e.type) && (filterType === 'all' || e.type === filterType)
+      );
+      setEvents(filtered);
 
       // טעינת ילדים אם מחובר
       if (userData) {

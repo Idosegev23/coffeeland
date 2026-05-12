@@ -119,11 +119,30 @@ function CheckoutContent() {
           return;
         }
 
+        // אם האירוע בעצם הצגה — הפנייה לדף ההצגות במקום לפתוח checkout עם מחיר 0
+        if (event.type === 'show') {
+          router.replace(`/shows`);
+          return;
+        }
+
+        // ולסדרות יש דף checkout משלהן
+        if (event.type === 'series' || event.series_id) {
+          const sid = event.series_id || event.id;
+          router.replace(`/checkout?type=series&item=${sid}`);
+          return;
+        }
+
+        const eventPrice = Number(event.price) || 0;
+        if (eventPrice <= 0) {
+          setError('לא נמצא מחיר לאירוע — נסה דרך הדף הראשי או צור קשר');
+          return;
+        }
+
         setCartItem({
           id: event.id,
           name: event.title,
           type: 'event',
-          price: event.price || 0,
+          price: eventPrice,
           entries: 1,
           description: event.description
         });
