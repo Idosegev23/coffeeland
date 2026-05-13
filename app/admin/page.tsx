@@ -40,6 +40,7 @@ export default function AdminDashboardPage() {
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [role, setRole] = useState<'admin' | 'store_manager' | null>(null)
   const [stats, setStats] = useState({
     totalUsers: 0,
     activePasses: 0,
@@ -74,29 +75,53 @@ export default function AdminDashboardPage() {
 
       setUser(userData || { id: user.id, email: user.email })
 
-      // Load stats
-      const { count: usersCount } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
+      // Load admin role
+      const { data: adminRow } = await supabase
+        .from('admins')
+        .select('role, is_active')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      const userRole = (adminRow?.role === 'store_manager' ? 'store_manager' : 'admin') as 'admin' | 'store_manager'
+      setRole(userRole)
 
-      const { count: passesCount } = await supabase
-        .from('passes')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
+      // For store managers we don't load financial stats
+      if (userRole === 'admin') {
+        const { count: usersCount } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
 
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      const { count: scansCount } = await supabase
-        .from('pass_usages')
-        .select('*', { count: 'exact', head: true })
-        .gte('used_at', today.toISOString())
+        const { count: passesCount } = await supabase
+          .from('passes')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'active')
 
-      setStats({
-        totalUsers: usersCount || 0,
-        activePasses: passesCount || 0,
-        todayScans: scansCount || 0,
-      })
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        const { count: scansCount } = await supabase
+          .from('pass_usages')
+          .select('*', { count: 'exact', head: true })
+          .gte('used_at', today.toISOString())
+
+        setStats({
+          totalUsers: usersCount || 0,
+          activePasses: passesCount || 0,
+          todayScans: scansCount || 0,
+        })
+      } else {
+        // Store manager: only today's scans is OK to show
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const { count: scansCount } = await supabase
+          .from('pass_usages')
+          .select('*', { count: 'exact', head: true })
+          .gte('used_at', today.toISOString())
+        setStats({
+          totalUsers: 0,
+          activePasses: 0,
+          todayScans: scansCount || 0,
+        })
+      }
 
       // Load playground capacity data
       try {
@@ -145,7 +170,9 @@ export default function AdminDashboardPage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-1">
             פאנל ניהול
           </h1>
-          <p className="text-text-light/70">שלום, {user?.full_name} (מנהל)</p>
+          <p className="text-text-light/70">
+            שלום, {user?.full_name} ({role === 'store_manager' ? 'מנהל/ת חנות' : 'מנהל'})
+          </p>
           <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
             <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
               <Link href="/">כניסה לדף הבית</Link>
@@ -178,30 +205,34 @@ export default function AdminDashboardPage() {
         {/* Stats */}
         <section className="mb-8">
           <h2 className="text-2xl font-semibold text-primary mb-4">סטטיסטיקות</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12">
-                  <LottieIcon src="/lottie/people.json" />
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-text-dark">{stats.totalUsers}</div>
-                  <div className="text-sm text-text-dark/70">משתמשים רשומים</div>
-                </div>
-              </div>
-            </Card>
+          <div className={`grid gap-4 ${role === 'store_manager' ? 'sm:grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+            {role !== 'store_manager' && (
+              <>
+                <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12">
+                      <LottieIcon src="/lottie/people.json" />
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-text-dark">{stats.totalUsers}</div>
+                      <div className="text-sm text-text-dark/70">משתמשים רשומים</div>
+                    </div>
+                  </div>
+                </Card>
 
-            <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12">
-                  <LottieIcon src="/lottie/play.json" />
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-text-dark">{stats.activePasses}</div>
-                  <div className="text-sm text-text-dark/70">כרטיסיות פעילות</div>
-                </div>
-              </div>
-            </Card>
+                <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12">
+                      <LottieIcon src="/lottie/play.json" />
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold text-text-dark">{stats.activePasses}</div>
+                      <div className="text-sm text-text-dark/70">כרטיסיות פעילות</div>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
 
             <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] p-6">
               <div className="flex items-center gap-4">
@@ -324,7 +355,7 @@ export default function AdminDashboardPage() {
         <section>
           <h2 className="text-2xl font-semibold text-primary mb-4">פעולות מהירות</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* סריקת QR */}
+            {/* סריקת QR — זמין גם למנהל חנות */}
             <Button
               variant="outline"
               size="lg"
@@ -339,6 +370,8 @@ export default function AdminDashboardPage() {
                 </div>
               </Link>
             </Button>
+
+            {role === 'admin' && (<>
 
             {/* ניהול חוגים וסדנאות */}
             <Button
@@ -483,6 +516,23 @@ export default function AdminDashboardPage() {
                 </div>
               </Link>
             </Button>
+
+            {/* סגירות וונאו */}
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-auto py-6 justify-start"
+              asChild
+            >
+              <Link href="/admin/closures" className="gap-4">
+                <Lock className="w-8 h-8 text-slate-600" />
+                <div className="text-right">
+                  <div className="font-semibold">סגירות וונאו</div>
+                  <div className="text-xs opacity-70">ימי סגירה ושעות מיוחדות + חגים</div>
+                </div>
+              </Link>
+            </Button>
+            </>)}
           </div>
         </section>
       </div>

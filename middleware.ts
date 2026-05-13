@@ -29,7 +29,7 @@ export async function middleware(req: NextRequest) {
     // Check if user is admin
     const { data: adminData } = await supabase
       .from('admins')
-      .select('is_active')
+      .select('is_active, role')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
@@ -38,6 +38,23 @@ export async function middleware(req: NextRequest) {
     if (!adminData?.is_active) {
       console.log('❌ Not an admin, redirecting to /my-account')
       return NextResponse.redirect(new URL('/my-account', req.url))
+    }
+
+    // Store managers can only access dashboard + scan + validate-qr pages.
+    // Anything financial or destructive is blocked.
+    if (adminData.role === 'store_manager') {
+      const allowedStoreManagerPaths = [
+        '/admin',
+        '/admin/scan',
+      ];
+      const path = req.nextUrl.pathname;
+      const allowed = allowedStoreManagerPaths.some(p =>
+        path === p || path === `${p}/` || path.startsWith(`${p}/`)
+      );
+      if (!allowed) {
+        console.log('❌ store_manager blocked from', path)
+        return NextResponse.redirect(new URL('/admin', req.url))
+      }
     }
 
     console.log('✅ Admin verified, allowing access')

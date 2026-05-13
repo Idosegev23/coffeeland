@@ -33,7 +33,8 @@ export async function POST(request: Request) {
 
     // קבלת הנתונים
     const body = await request.json();
-    const { full_name, email, phone, password, is_admin } = body;
+    const { full_name, email, phone, password, is_admin, role } = body;
+    const adminRole = role === 'store_manager' ? 'store_manager' : 'admin';
 
     if (!full_name || !email || !phone || !password) {
       return NextResponse.json(
@@ -110,7 +111,8 @@ export async function POST(request: Request) {
         .from('admins')
         .insert({
           user_id: userId,
-          is_active: true
+          is_active: true,
+          role: adminRole,
         });
 
       if (adminInsertError) {
@@ -131,7 +133,8 @@ export async function POST(request: Request) {
         full_name,
         phone,
         qr_code: qrCode,
-        is_admin
+        is_admin,
+        role: is_admin ? adminRole : null
       }
     });
 

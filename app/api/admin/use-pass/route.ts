@@ -80,6 +80,34 @@ export async function POST(request: Request) {
 
       const now = new Date()
 
+      // בדיקת סגירות יזומות (יום שלם או חלון שעות) שהוגדרו ידנית ע"י אדמין
+      const todayStr = now.toISOString().split('T')[0]
+      const { data: closuresToday } = await serviceClient
+        .from('venue_closures')
+        .select('id, is_full_day, start_time, end_time, reason, holiday_name')
+        .eq('closure_date', todayStr)
+
+      for (const c of closuresToday || []) {
+        if (c.is_full_day) {
+          return NextResponse.json({
+            error: c.reason || c.holiday_name || 'הג׳ימבורי סגור היום',
+            blocked: true,
+            closure: true,
+          }, { status: 409 })
+        }
+        if (c.start_time && c.end_time) {
+          const from = new Date(`${todayStr}T${c.start_time}+03:00`)
+          const until = new Date(`${todayStr}T${c.end_time}+03:00`)
+          if (now >= from && now <= until) {
+            return NextResponse.json({
+              error: c.reason || c.holiday_name || 'הג׳ימבורי סגור כעת',
+              blocked: true,
+              closure: true,
+            }, { status: 409 })
+          }
+        }
+      }
+
       // Check if blocked by a show — חלון הנעילה מבוסס על שעות ההצגה בפועל:
       // מ-(start_at - buffer) ועד end_at של ההצגה. אם end_at חסר, נופלים חזרה ל-(start_at + showBlockDuration).
       const windowFrom = new Date(now.getTime() - showBlockDuration * 60 * 1000)

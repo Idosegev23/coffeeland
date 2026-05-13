@@ -31,6 +31,22 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      // Pre-check: store_manager users can only log in with password
+      const restrictRes = await fetch('/api/auth/check-restrictions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      })
+      if (restrictRes.ok) {
+        const restrictData = await restrictRes.json()
+        if (restrictData?.magic_link_allowed === false) {
+          setError('המשתמש הזה רשאי להתחבר עם סיסמה בלבד. הזינו את הסיסמה למטה.')
+          setShowPassword(true)
+          setLoading(false)
+          return
+        }
+      }
+
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
       const { error: magicError } = await supabase.auth.signInWithOtp({
         email: formData.email,

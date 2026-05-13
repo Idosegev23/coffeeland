@@ -95,6 +95,40 @@ export async function GET(req: NextRequest) {
     .gte('start_at', dayStartUTC)
     .lte('start_at', dayEndUTC);
 
+  // Get manual venue closures for this date (full-day or specific hours)
+  const { data: closures } = await supabase
+    .from('venue_closures')
+    .select('id, is_full_day, start_time, end_time, reason, holiday_name')
+    .eq('closure_date', dateStr);
+
+  const fullDayClosure = (closures || []).find(c => c.is_full_day);
+  if (fullDayClosure) {
+    return NextResponse.json({
+      closed: true,
+      slots: [],
+      message: fullDayClosure.reason || fullDayClosure.holiday_name || 'סגור היום',
+      closureReason: fullDayClosure.reason || fullDayClosure.holiday_name || null,
+    });
+  }
+
+  // Mark slots blocked by partial-day closures
+  if (closures) {
+    for (const c of closures) {
+      if (c.is_full_day || !c.start_time || !c.end_time) continue;
+      const closureFrom = new Date(`${dateStr}T${c.start_time}+03:00`);
+      const closureUntil = new Date(`${dateStr}T${c.end_time}+03:00`);
+      for (const slot of slots) {
+        const slotStartDate = new Date(`${dateStr}T${slot.start}:00+03:00`);
+        const slotEndDate = new Date(`${dateStr}T${slot.end}:00+03:00`);
+        if (slotStartDate < closureUntil && slotEndDate > closureFrom) {
+          slot.blocked = true;
+          slot.blockReason = 'closure';
+          slot.showTitle = c.reason || c.holiday_name || 'סגור';
+        }
+      }
+    }
+  }
+
   // Mark slots blocked by shows — חלון הנעילה: (show_start - buffer) עד end_at בפועל.
   // נופלים חזרה ל-(show_start + block_duration) רק אם אין end_at.
   if (shows) {
@@ -168,6 +202,19 @@ export async function GET(req: NextRequest) {
       if (now >= blockFrom && now <= blockUntil) {
         currentlyBlocked = true;
         currentBlockReason = `הצגה: ${show.title}`;
+      }
+    }
+  }
+
+  // Check if NOW is blocked by a manual hour-window closure
+  if (!currentlyBlocked && closures) {
+    for (const c of closures) {
+      if (c.is_full_day || !c.start_time || !c.end_time) continue;
+      const from = new Date(`${dateStr}T${c.start_time}+03:00`);
+      const until = new Date(`${dateStr}T${c.end_time}+03:00`);
+      if (now >= from && now <= until) {
+        currentlyBlocked = true;
+        currentBlockReason = c.reason || c.holiday_name || 'סגור';
       }
     }
   }
