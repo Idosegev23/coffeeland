@@ -205,11 +205,19 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // אם התשלום הצליח והוא עבור הצגה - יוצרים registration(s)
+    // אם התשלום הצליח והוא עבור הצגה/אירוע - יוצרים registration(s)
     if (isSuccess && payment.metadata?.event_id) {
-      logger.info('🎭 Creating show registration(s) for successful payment...');
+      logger.info('🎭 Creating event registration(s) for successful payment...');
 
       const { event_id, ticket_type } = payment.metadata;
+
+      // טעינת סוג האירוע כדי לקבוע item_type נכון (show / event_registration)
+      const { data: eventForType } = await supabase
+        .from('events')
+        .select('type')
+        .eq('id', event_id)
+        .single();
+      const eventItemType = eventForType?.type === 'show' ? 'show' : 'event_registration';
 
       // ניקוי רישומי pending ישנים של אותו משתמש לאותו אירוע - למניעת כפילויות
       await supabase
@@ -271,7 +279,7 @@ export async function POST(req: NextRequest) {
             .from('payments')
             .update({
               item_id: registrations[0].id,
-              item_type: 'show',
+              item_type: eventItemType,
               metadata: {
                 ...payment.metadata,
                 registration_id: registrations[0].id,

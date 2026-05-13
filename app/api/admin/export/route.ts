@@ -54,11 +54,13 @@ export async function GET(req: NextRequest) {
 
     if (type === 'registrations') {
       const eventId = searchParams.get('event_id');
+      // ברירת מחדל: לא לכלול רישומים מבוטלים/מזוכים. אפשר לבקש include_cancelled=true לכלל ההיסטוריה.
+      const includeCancelled = searchParams.get('include_cancelled') === 'true';
       if (!eventId) {
         return NextResponse.json({ error: 'event_id is required' }, { status: 400 });
       }
 
-      const { data: registrations, error } = await supabase
+      let regQuery = supabase
         .from('registrations')
         .select(`
           id, ticket_type, is_paid, registered_at, status,
@@ -68,23 +70,46 @@ export async function GET(req: NextRequest) {
         .eq('event_id', eventId)
         .order('registered_at', { ascending: false });
 
+      if (!includeCancelled) {
+        // מסננים רישומים מבוטלים ורישומים שהתשלום שלהם זוכה לחלוטין
+        regQuery = regQuery.neq('status', 'cancelled');
+      }
+
+      const { data: registrations, error } = await regQuery;
+
       if (error) {
         console.error('Export registrations error:', error);
         return NextResponse.json({ error: 'Failed to fetch registrations' }, { status: 500 });
       }
 
-      const headers = ['שם', 'אימייל', 'טלפון', 'סוג כרטיס', 'סכום', 'תאריך רישום'];
-      const rows = (registrations || []).map((r: any) => [
-        r.user?.full_name || '',
-        r.user?.email || '',
-        r.user?.phone || '',
-        r.ticket_type === 'show_only' ? 'הצגה בלבד' : 'הצגה + גימבורי',
-        r.payment?.amount ? `${r.payment.amount}` : '0',
-        r.registered_at ? new Date(r.registered_at).toLocaleDateString('he-IL') : '',
-      ]);
+      const filtered = includeCancelled
+        ? (registrations || [])
+        : (registrations || []).filter((r: any) => r.payment?.status !== 'refunded');
+
+      const headers = includeCancelled
+        ? ['שם', 'אימייל', 'טלפון', 'סוג כרטיס', 'סכום', 'תאריך רישום', 'סטטוס']
+        : ['שם', 'אימייל', 'טלפון', 'סוג כרטיס', 'סכום', 'תאריך רישום'];
+
+      const rows = filtered.map((r: any) => {
+        const base = [
+          r.user?.full_name || '',
+          r.user?.email || '',
+          r.user?.phone || '',
+          r.ticket_type === 'show_only' ? 'הצגה בלבד' : 'הצגה + גימבורי',
+          r.payment?.amount ? `${r.payment.amount}` : '0',
+          r.registered_at ? new Date(r.registered_at).toLocaleDateString('he-IL') : '',
+        ];
+        if (includeCancelled) {
+          const statusLabel = r.status === 'cancelled'
+            ? (r.payment?.status === 'refunded' ? 'מזוכה' : 'בוטל')
+            : r.payment?.status === 'refunded' ? 'מזוכה' : 'פעיל';
+          base.push(statusLabel);
+        }
+        return base;
+      });
 
       csvContent = buildCsv(headers, rows);
-      filename = `registrations_${eventId}.csv`;
+      filename = `registrations_${eventId}${includeCancelled ? '_all' : ''}.csv`;
 
     } else if (type === 'payments') {
       const { data: payments, error } = await supabase

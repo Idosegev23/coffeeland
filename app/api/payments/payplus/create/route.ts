@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     const ticketQuantity = quantity || (items?.[0]?.quantity) || 1;
 
     // 🔥 בדיקת קיבולת להצגות/אירועים
+    let eventTypeForItemType: string | null = null;
     if (event_id) {
       const { data: event, error: eventError } = await serviceClient
         .from('events')
@@ -70,6 +71,8 @@ export async function POST(req: NextRequest) {
       if (eventError || !event) {
         return NextResponse.json({ error: 'Event not found' }, { status: 404 });
       }
+
+      eventTypeForItemType = event.type;
 
       // 🚫 בדיקה אם המכירה נעצרה ידנית
       if (event.status === 'full') {
@@ -198,7 +201,13 @@ export async function POST(req: NextRequest) {
         payment_type: 'online',
         payment_method: 'credit_card',
         status: 'pending',
-        item_type: series_id ? 'series' : card_type_id ? 'pass' : 'other',
+        item_type: series_id
+          ? 'series'
+          : card_type_id
+            ? 'pass'
+            : event_id
+              ? (eventTypeForItemType === 'show' ? 'show' : 'event_registration')
+              : 'other',
         notes: description || card_type_name,
         metadata: {
           transaction_ref: transactionRef,

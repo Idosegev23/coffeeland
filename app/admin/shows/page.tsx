@@ -380,8 +380,12 @@ export default function AdminShowsPage() {
     });
   };
 
-  const exportToCSV = (show: Show) => {
-    const registrations = show.registrations || [];
+  const exportToCSV = (show: Show, includeCancelled = false) => {
+    const all = show.registrations || [];
+    // ברירת מחדל: מסנן רישומים מבוטלים/מזוכים, כדי שהאקסל יציג רק כרטיסים פעילים
+    const registrations = includeCancelled
+      ? all
+      : all.filter(r => r.status !== 'cancelled' && r.payment?.status !== 'refunded');
 
     const headers = ['שם מלא', 'טלפון', 'אימייל', 'סוג כרטיס', 'סכום', 'סטטוס', 'תאריך רישום'];
     const rows = registrations.map(r => [
@@ -758,7 +762,7 @@ export default function AdminShowsPage() {
             <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-primary">{selectedShow.title} - משתתפים</h2>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     onClick={() => exportToCSV(selectedShow)}
                     variant="outline"
@@ -773,7 +777,18 @@ export default function AdminShowsPage() {
                   >
                     <a href={`/api/admin/export?type=registrations&event_id=${selectedShow.id}`} download>
                       <Download className="w-4 h-4 ml-1" />
-                      ייצוא לאקסל
+                      ייצוא לאקסל (פעילים)
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <a href={`/api/admin/export?type=registrations&event_id=${selectedShow.id}&include_cancelled=true`} download>
+                      <Download className="w-4 h-4 ml-1" />
+                      כולל מבוטלים/מזוכים
                     </a>
                   </Button>
                 </div>

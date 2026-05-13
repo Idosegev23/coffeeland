@@ -351,7 +351,8 @@ function CheckoutContent() {
           card_type_id: itemType === 'pass' ? cartItem.id : null,
           card_type_name: cartItem.name,
           entries_count: cartItem.entries * quantity,
-          event_id: itemType === 'show' ? cartItem.id : null,
+          // event_id חייב לעבור גם ל-event וגם ל-show, אחרת לא נוצרים רישומים בקולבק
+          event_id: (itemType === 'show' || itemType === 'event') ? cartItem.id : null,
           ticket_type: (cartItem as any).metadata?.ticket_type,
           series_id: itemType === 'series' ? cartItem.id : null,
           description: `רכישת ${quantity > 1 ? quantity + ' × ' : ''}${cartItem.name}`,
