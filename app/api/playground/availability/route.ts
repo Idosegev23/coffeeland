@@ -46,13 +46,26 @@ export async function GET(req: NextRequest) {
   const showBufferBefore = capacity?.show_buffer_before_minutes || 30;
   const showBlockDuration = capacity?.show_block_duration_minutes || 120;
 
-  // Build 2-hour slots for the day
+  // Build 2-hour slots for the day, יישור לחלונות שמתחילים ב-:30 של שעה זוגית
+  // (8:30-10:30, 10:30-12:30, 12:30-14:30, 14:30-16:30, 16:30-18:30, 18:30-20:30)
+  // כך השעות החמות (16:30-18:30) נופלות בחלון אחד שלם.
   const [openH, openM] = todayHours.open.split(':').map(Number);
   const [closeH, closeM] = todayHours.close.split(':').map(Number);
   const slots: TimeSlot[] = [];
 
-  let slotStart = openH * 60 + openM;
   const dayEnd = closeH * 60 + closeM;
+  const openMinutes = openH * 60 + openM;
+
+  // נקודת התחלה: ה-:30 הבא של שעה זוגית בזמן >= פתיחה (minutes % 120 === 30)
+  const alignToHalfPastEven = (minutes: number): number => {
+    const remainder = ((minutes % 120) + 120) % 120;
+    if (remainder === 30) return minutes;
+    return remainder < 30
+      ? minutes + (30 - remainder)
+      : minutes + (120 - remainder + 30);
+  };
+
+  let slotStart = alignToHalfPastEven(openMinutes);
 
   while (slotStart < dayEnd) {
     const slotEnd = Math.min(slotStart + 120, dayEnd);
