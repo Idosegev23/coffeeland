@@ -249,6 +249,8 @@ export default function MyAccountPage() {
                 remainingEntries={pass.remaining_entries}
                 expiryDate={pass.expiry_date}
                 purchaseDate={pass.purchase_date}
+                reservedDate={pass.reserved_date}
+                reservedSlot={pass.reserved_slot}
               />
             ))}
           </div>

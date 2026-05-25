@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Hash } from 'lucide-react'
+import { Calendar, Hash, Clock } from 'lucide-react'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -14,6 +14,8 @@ interface PassCardProps {
   remainingEntries: number
   expiryDate?: string
   purchaseDate: string
+  reservedDate?: string | null
+  reservedSlot?: string | null
 }
 
 const passConfig = {
@@ -56,10 +58,13 @@ function LottieIcon({ src }: { src: string }) {
   )
 }
 
-export function PassCard({ type, totalEntries, remainingEntries, expiryDate, purchaseDate }: PassCardProps) {
+export function PassCard({ type, totalEntries, remainingEntries, expiryDate, purchaseDate, reservedDate, reservedSlot }: PassCardProps) {
   const config = passConfig[type]
   const usagePercent = (remainingEntries / totalEntries) * 100
   const isExpiring = expiryDate && new Date(expiryDate) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+  const hasReservation = !!reservedDate && !!reservedSlot && remainingEntries > 0
+  const reservationDateObj = reservedDate ? new Date(`${reservedDate}T00:00:00`) : null
+  const reservationIsPast = reservationDateObj ? reservationDateObj < new Date(new Date().toDateString()) : false
 
   return (
     <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none bg-[#4C2C21] border-[#4C2C21] p-4">
@@ -97,6 +102,16 @@ export function PassCard({ type, totalEntries, remainingEntries, expiryDate, pur
               />
             </div>
           </div>
+
+          {/* Reservation slot — מוצג בולט אם יש שריון פעיל */}
+          {hasReservation && !reservationIsPast && (
+            <div className="mb-2 inline-flex items-center gap-1 px-2.5 py-1 bg-accent/30 border border-accent/50 rounded-md text-xs font-semibold text-text-dark">
+              <Clock className="w-3 h-3" />
+              <span>
+                שריון: {reservationDateObj!.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long' })} · {reservedSlot}
+              </span>
+            </div>
+          )}
 
           {/* Dates */}
           <div className="space-y-1 text-xs text-text-dark/70">

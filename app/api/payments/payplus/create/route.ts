@@ -50,6 +50,8 @@ export async function POST(req: NextRequest) {
       quantity,
       series_id,
       child_id,
+      reserved_slot,
+      reserved_date,
     } = body;
 
     if (!amount || amount <= 0) {
@@ -220,6 +222,8 @@ export async function POST(req: NextRequest) {
           quantity: ticketQuantity,
           series_id: series_id || undefined,
           child_id: child_id || undefined,
+          reserved_slot: reserved_slot || undefined,
+          reserved_date: reserved_date || undefined,
         }
       })
       .select()

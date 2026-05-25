@@ -342,6 +342,8 @@ function CheckoutContent() {
       }
       
       // Call our PayPlus API to create payment link
+      const reservedSlot = searchParams.get('slot') || null;
+      const reservedDate = searchParams.get('date') || null;
       const response = await fetch('/api/payments/payplus/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -355,6 +357,9 @@ function CheckoutContent() {
           event_id: (itemType === 'show' || itemType === 'event') ? cartItem.id : null,
           ticket_type: (cartItem as any).metadata?.ticket_type,
           series_id: itemType === 'series' ? cartItem.id : null,
+          // שריון מקום למשחקייה — תאריך + שעת התחלת חלון
+          reserved_slot: reservedSlot,
+          reserved_date: reservedDate,
           description: `רכישת ${quantity > 1 ? quantity + ' × ' : ''}${cartItem.name}`,
           items: [{
             name: cartItem.name,
@@ -514,6 +519,14 @@ function CheckoutContent() {
                       )}
                       {cartItem.entries > 1 && cartItem.type !== 'show' && (
                         <p className="text-sm text-text-light/70">{cartItem.entries} כניסות</p>
+                      )}
+                      {/* שריון משבצת זמן ותאריך */}
+                      {searchParams.get('slot') && searchParams.get('date') && (
+                        <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-accent/10 text-accent rounded text-xs font-medium">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(`${searchParams.get('date')}T00:00:00`).toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long' })}
+                          · {searchParams.get('slot')}
+                        </div>
                       )}
                       {cartItem.description && cartItem.type !== 'show' && (
                         <p className="text-xs text-text-light/60 mt-1 line-clamp-2">{cartItem.description}</p>

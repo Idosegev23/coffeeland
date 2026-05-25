@@ -180,7 +180,9 @@ export async function POST(req: NextRequest) {
             price_paid: payment.amount,
             status: 'active',
             purchase_date: new Date().toISOString(),
-            payment_id: payment.id
+            payment_id: payment.id,
+            reserved_date: payment.metadata?.reserved_date || null,
+            reserved_slot: payment.metadata?.reserved_slot || null
           })
           .select()
           .single();

@@ -175,6 +175,23 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Count pre-reservations from passes that haven't been redeemed yet
+  // (a customer who reserved a slot but hasn't entered).
+  const { data: reservations } = await supabase
+    .from('passes')
+    .select('reserved_slot')
+    .eq('reserved_date', dateStr)
+    .gt('remaining_entries', 0)
+    .neq('status', 'depleted')
+    .neq('status', 'refunded');
+
+  if (reservations) {
+    for (const slot of slots) {
+      const count = reservations.filter(r => r.reserved_slot === slot.start).length;
+      slot.active = (slot.active || 0) + count;
+    }
+  }
+
   // Calculate "right now" info
   const now = new Date();
   const nowIsrael = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));

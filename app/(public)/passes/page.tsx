@@ -68,6 +68,14 @@ export default function PassesPage() {
   const [playgroundStatus, setPlaygroundStatus] = useState<any>(null)
   const [selectedSlotPass, setSelectedSlotPass] = useState<string | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
+  const [selectedSlotEnd, setSelectedSlotEnd] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const t = new Date()
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+  })
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmPass, setConfirmPass] = useState<PassOption | null>(null)
 
   useEffect(() => {
     loadCardTypes()
@@ -77,6 +85,44 @@ export default function PassesPage() {
       .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // When date changes (and slot picker is open), reload slots for the new date
+  useEffect(() => {
+    if (!selectedSlotPass) return
+    setSlotsLoading(true)
+    setSelectedSlot(null)
+    setSelectedSlotEnd(null)
+    fetch(`/api/playground/availability?date=${selectedDate}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => data && setPlaygroundStatus(data))
+      .catch(() => {})
+      .finally(() => setSlotsLoading(false))
+  }, [selectedDate, selectedSlotPass])
+
+  // Generate next 7 days for date picker
+  const dateOptions = React.useMemo(() => {
+    const arr: Array<{ value: string; label: string; weekday: string; isToday: boolean }> = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today)
+      d.setDate(today.getDate() + i)
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      arr.push({
+        value,
+        label: `${d.getDate()}.${d.getMonth() + 1}`,
+        weekday: i === 0 ? 'היום' : i === 1 ? 'מחר' : weekdays[d.getDay()],
+        isToday: i === 0,
+      })
+    }
+    return arr
+  }, [])
+
+  const formatSelectedDateHeb = (iso: string) => {
+    const d = new Date(`${iso}T00:00:00`)
+    return d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })
+  }
 
   const loadCardTypes = async () => {
     try {
@@ -115,44 +161,58 @@ export default function PassesPage() {
   const handlePurchase = async (pass: PassOption) => {
     setError('')
 
-    // For single-entry passes, show time slot picker if we have slots
-    if (pass.totalEntries === 1 && playgroundStatus?.slots?.length > 0 && !selectedSlot) {
+    // For single-entry passes — open slot picker (default to today)
+    if (pass.totalEntries === 1 && !selectedSlot) {
       setSelectedSlotPass(pass.id)
+      // Make sure today's slots are loaded
+      if (!playgroundStatus || playgroundStatus._date !== selectedDate) {
+        setSlotsLoading(true)
+        fetch(`/api/playground/availability?date=${selectedDate}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => data && setPlaygroundStatus({ ...data, _date: selectedDate }))
+          .catch(() => {})
+          .finally(() => setSlotsLoading(false))
+      }
       return
     }
 
+    // Open confirmation popup (only for single-entry pre-reserved)
+    if (pass.totalEntries === 1 && selectedSlot) {
+      setConfirmPass(pass)
+      setConfirmOpen(true)
+      return
+    }
+
+    proceedToCheckout(pass)
+  }
+
+  const proceedToCheckout = async (pass: PassOption) => {
     setLoading(pass.id)
-
     try {
-      // Check if user is logged in
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      console.log('Purchase - auth check:', { user: user?.id, error: authError })
-
       if (!user || authError) {
-        console.log('No user found, redirecting to register')
-        router.push(`/register?redirect=/checkout?item=${pass.id}&type=pass`)
+        const slotParam = selectedSlot ? `&slot=${encodeURIComponent(selectedSlot)}&date=${selectedDate}` : ''
+        router.push(`/register?redirect=${encodeURIComponent(`/checkout?item=${pass.id}&type=pass${slotParam}`)}`)
         return
       }
-
-      const slotParam = selectedSlot ? `&slot=${encodeURIComponent(selectedSlot)}` : ''
+      const slotParam = selectedSlot ? `&slot=${encodeURIComponent(selectedSlot)}&date=${selectedDate}` : ''
       router.push(`/checkout?item=${pass.id}&type=pass${slotParam}`)
     } catch (err: any) {
       setError(err.message || 'שגיאה')
     } finally {
       setLoading(null)
-      setSelectedSlot(null)
-      setSelectedSlotPass(null)
     }
   }
 
-  const handleSlotSelect = (slotStart: string) => {
+  const handleSlotSelect = (slotStart: string, slotEnd: string) => {
     setSelectedSlot(slotStart)
+    setSelectedSlotEnd(slotEnd)
   }
 
   const handleSlotConfirm = (pass: PassOption) => {
     if (!selectedSlot) return
-    handlePurchase(pass)
+    setConfirmPass(pass)
+    setConfirmOpen(true)
   }
 
   if (loadingData) {
@@ -296,58 +356,98 @@ export default function PassesPage() {
                     {loading === pass.id ? 'רוכש...' : pass.totalEntries === 1 ? 'רכוש כניסה' : 'רכוש כרטיסייה'}
                   </Button>
 
-                  {/* Time Slot Picker for single entries */}
-                  {selectedSlotPass === pass.id && pass.totalEntries === 1 && playgroundStatus?.slots && (
+                  {/* Date + Time Slot Picker for single entries */}
+                  {selectedSlotPass === pass.id && pass.totalEntries === 1 && (
                     <div className="mt-3 p-3 bg-background-light rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none border border-accent/20">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-3">
                         <span className="text-xs font-medium text-primary flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          בחרו משבצת זמן
+                          <Calendar className="w-3 h-3" />
+                          בחרו יום ושעת כניסה
                         </span>
                         <button
-                          onClick={() => { setSelectedSlotPass(null); setSelectedSlot(null) }}
+                          onClick={() => { setSelectedSlotPass(null); setSelectedSlot(null); setSelectedSlotEnd(null) }}
                           className="text-primary/50 hover:text-primary"
+                          aria-label="סגור"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {playgroundStatus.slots.map((slot: any) => {
-                          const available = slot.max - slot.active;
-                          const isBlocked = slot.blocked;
-                          const isSelected = selectedSlot === slot.start;
-                          return (
-                            <button
-                              key={slot.start}
-                              onClick={() => !isBlocked && handleSlotSelect(slot.start)}
-                              disabled={isBlocked}
-                              className={`w-full text-right px-3 py-2 rounded-lg text-xs transition-all flex items-center justify-between ${
-                                isBlocked
-                                  ? 'bg-red-50 text-red-400 cursor-not-allowed'
-                                  : isSelected
-                                  ? 'bg-accent text-white ring-2 ring-accent ring-offset-1'
-                                  : 'bg-background hover:bg-accent/10 text-primary border border-transparent hover:border-accent/30'
-                              }`}
-                            >
-                              <span className="font-medium">{slot.start} - {slot.end}</span>
-                              <span className={isBlocked ? 'text-red-400' : isSelected ? 'text-white/80' : 'text-primary/60'}>
-                                {isBlocked
-                                  ? (slot.showTitle ? `הצגה: ${slot.showTitle}` : 'חסום')
-                                  : `${available} פנויים`
-                                }
-                              </span>
-                            </button>
-                          );
-                        })}
+
+                      {/* Date picker — next 7 days */}
+                      <div className="mb-3">
+                        <div className="text-[10px] text-primary/70 mb-1.5 font-medium">תאריך</div>
+                        <div className="flex gap-1 overflow-x-auto pb-1">
+                          {dateOptions.map(opt => {
+                            const isSel = selectedDate === opt.value
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => setSelectedDate(opt.value)}
+                                className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium border-2 transition-all min-w-[58px] text-center ${
+                                  isSel
+                                    ? 'bg-accent text-white border-accent'
+                                    : 'bg-white border-gray-200 text-primary hover:border-accent/50'
+                                }`}
+                              >
+                                <div className="leading-tight">{opt.weekday}</div>
+                                <div className="text-[10px] opacity-80">{opt.label}</div>
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
+
+                      {/* Slots */}
+                      <div className="text-[10px] text-primary/70 mb-1.5 font-medium">משבצת זמן</div>
+                      {slotsLoading ? (
+                        <div className="py-4 text-center text-xs text-primary/60">טוען שעות...</div>
+                      ) : playgroundStatus?.closed ? (
+                        <div className="py-3 text-center text-xs text-red-600 bg-red-50 rounded">
+                          {playgroundStatus.message || 'סגור בתאריך זה'}
+                        </div>
+                      ) : !playgroundStatus?.slots?.length ? (
+                        <div className="py-3 text-center text-xs text-primary/60">אין משבצות זמינות</div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                          {playgroundStatus.slots.map((slot: any) => {
+                            const available = slot.max - slot.active;
+                            const isBlocked = slot.blocked;
+                            const isSelected = selectedSlot === slot.start;
+                            return (
+                              <button
+                                key={slot.start}
+                                onClick={() => !isBlocked && handleSlotSelect(slot.start, slot.end)}
+                                disabled={isBlocked}
+                                className={`w-full text-right px-3 py-2 rounded-lg text-xs transition-all flex items-center justify-between ${
+                                  isBlocked
+                                    ? 'bg-red-50 text-red-400 cursor-not-allowed'
+                                    : isSelected
+                                    ? 'bg-accent text-white ring-2 ring-accent ring-offset-1'
+                                    : 'bg-background hover:bg-accent/10 text-primary border border-transparent hover:border-accent/30'
+                                }`}
+                              >
+                                <span className="font-medium">{slot.start} - {slot.end}</span>
+                                <span className={isBlocked ? 'text-red-400' : isSelected ? 'text-white/80' : 'text-primary/60'}>
+                                  {isBlocked
+                                    ? (slot.showTitle ? `${slot.showTitle}` : 'חסום')
+                                    : `${available} פנויים`
+                                  }
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
                       {selectedSlot && (
                         <Button
                           onClick={() => handleSlotConfirm(pass)}
                           disabled={loading === pass.id}
-                          className="w-full mt-2"
+                          className="w-full mt-3"
                           size="sm"
                         >
-                          {loading === pass.id ? 'רוכש...' : 'המשך לרכישה'}
+                          <Clock className="w-3 h-3 ml-1" />
+                          המשך לרכישה
                         </Button>
                       )}
                     </div>
@@ -396,6 +496,74 @@ export default function PassesPage() {
           </div>
         </div>
       </section>
+
+      {/* Reservation Confirmation Popup */}
+      {confirmOpen && confirmPass && selectedSlot && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => { if (loading !== confirmPass.id) { setConfirmOpen(false); setConfirmPass(null) } }}
+          dir="rtl"
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-accent" />
+              </div>
+              <h3 className="text-xl font-bold text-primary">אישור שריון מקום</h3>
+            </div>
+
+            <p className="text-sm text-text-light/80 mb-4">
+              אנא ודאו את פרטי השריון לפני המעבר לתשלום:
+            </p>
+
+            <div className="bg-background-light rounded-xl p-4 mb-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-text-light/70 text-sm">כרטיסייה</span>
+                <span className="font-semibold text-primary">{confirmPass.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-light/70 text-sm">תאריך</span>
+                <span className="font-semibold text-primary">{formatSelectedDateHeb(selectedDate)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-light/70 text-sm">משבצת זמן</span>
+                <span className="font-semibold text-primary">
+                  {selectedSlot}{selectedSlotEnd ? ` - ${selectedSlotEnd}` : ''}
+                </span>
+              </div>
+              <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
+                <span className="text-text-light/70 text-sm">סה״כ</span>
+                <span className="font-bold text-accent text-lg">₪{confirmPass.price}</span>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-800">
+              💡 הכניסה תקפה למשבצת זמן זו בלבד. ניתן להגיע בכל מהלך החלון.
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => { confirmPass && proceedToCheckout(confirmPass) }}
+                disabled={loading === confirmPass.id}
+                className="flex-1"
+              >
+                {loading === confirmPass.id ? 'מעבר לתשלום...' : 'אישור והמשך לתשלום'}
+              </Button>
+              <Button
+                onClick={() => { setConfirmOpen(false); setConfirmPass(null) }}
+                disabled={loading === confirmPass.id}
+                variant="outline"
+                className="flex-1"
+              >
+                ביטול
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
