@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { QRCodeDisplay } from '@/components/account/QRCodeDisplay'
 import { PassCard } from '@/components/account/PassCard'
+import { ReserveSlotDialog } from '@/components/account/ReserveSlotDialog'
 import { LoyaltyCard } from '@/components/account/LoyaltyCard'
 import { UsageHistory } from '@/components/account/UsageHistory'
 import { Plus, Ticket, Calendar, Clock, BookOpen, Share2, CalendarPlus, AlertTriangle } from 'lucide-react'
@@ -40,6 +41,8 @@ export default function MyAccountPage() {
   const [reservations, setReservations] = useState<any[]>([])
   const [seriesRegistrations, setSeriesRegistrations] = useState<any[]>([])
   const [refunds, setRefunds] = useState<any[]>([])
+  const [reservePassId, setReservePassId] = useState<string | null>(null)
+  const [reserveLoading, setReserveLoading] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -182,6 +185,43 @@ export default function MyAccountPage() {
     window.location.href = '/'
   }
 
+  async function handleReserveConfirm(date: string, slot: string) {
+    if (!reservePassId) return
+    setReserveLoading(true)
+    try {
+      const res = await fetch(`/api/passes/${reservePassId}/reservation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, slot }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      toast('השריון נקבע בהצלחה', 'success')
+      setReservePassId(null)
+      await loadData()
+    } catch (err: any) {
+      toast(err?.message || 'שגיאה בשריון', 'error')
+    } finally {
+      setReserveLoading(false)
+    }
+  }
+
+  async function handleCancelReservation(passId: string) {
+    if (!confirm('לבטל את השריון?')) return
+    setReserveLoading(true)
+    try {
+      const res = await fetch(`/api/passes/${passId}/reservation`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      toast('השריון בוטל', 'success')
+      await loadData()
+    } catch (err: any) {
+      toast(err?.message || 'שגיאה בביטול שריון', 'error')
+    } finally {
+      setReserveLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -251,6 +291,9 @@ export default function MyAccountPage() {
                 purchaseDate={pass.purchase_date}
                 reservedDate={pass.reserved_date}
                 reservedSlot={pass.reserved_slot}
+                reservationActionLoading={reserveLoading}
+                onReserve={() => setReservePassId(pass.id)}
+                onCancelReservation={() => handleCancelReservation(pass.id)}
               />
             ))}
           </div>
@@ -768,6 +811,19 @@ export default function MyAccountPage() {
           </Card>
         )}
       </div>
+
+      {/* Reserve a playground slot using an existing pass entry */}
+      <ReserveSlotDialog
+        open={!!reservePassId}
+        onClose={() => { if (!reserveLoading) setReservePassId(null) }}
+        onConfirm={(date, slot) => handleReserveConfirm(date, slot)}
+        loading={reserveLoading}
+        title="שריינו כניסה למשחקייה"
+        contextLabel={(() => {
+          const p = activePasses.find(x => x.id === reservePassId)
+          return p ? `כרטיסייה: ${p.total_entries} כניסות · נותרו ${p.remaining_entries}` : undefined
+        })()}
+      />
     </div>
   )
 }

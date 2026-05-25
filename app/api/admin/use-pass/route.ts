@@ -189,11 +189,18 @@ export async function POST(request: Request) {
     // Use service role client for update (bypasses RLS)
     const serviceClient = getServiceClient()
     
+    // אם הסריקה מתאימה לשריון הקיים — מנקים את השריון (הכניסה נצרכה).
+    const todayLocal = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jerusalem' })
+    const reservationConsumed = pass.reserved_date === todayLocal
+
     const { data: updatedPass, error: updateError } = await serviceClient
       .from('passes')
       .update({
         remaining_entries: newRemaining,
         status: newStatus,
+        ...(reservationConsumed
+          ? { reserved_date: null, reserved_slot: null }
+          : {}),
       })
       .eq('id', passId)
       .select()

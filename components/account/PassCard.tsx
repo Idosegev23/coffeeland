@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Hash, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar, Hash, Clock, X } from 'lucide-react'
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
@@ -16,6 +17,9 @@ interface PassCardProps {
   purchaseDate: string
   reservedDate?: string | null
   reservedSlot?: string | null
+  onReserve?: () => void
+  onCancelReservation?: () => void
+  reservationActionLoading?: boolean
 }
 
 const passConfig = {
@@ -58,7 +62,10 @@ function LottieIcon({ src }: { src: string }) {
   )
 }
 
-export function PassCard({ type, totalEntries, remainingEntries, expiryDate, purchaseDate, reservedDate, reservedSlot }: PassCardProps) {
+export function PassCard({
+  type, totalEntries, remainingEntries, expiryDate, purchaseDate,
+  reservedDate, reservedSlot, onReserve, onCancelReservation, reservationActionLoading,
+}: PassCardProps) {
   const config = passConfig[type]
   const usagePercent = (remainingEntries / totalEntries) * 100
   const isExpiring = expiryDate && new Date(expiryDate) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
@@ -103,13 +110,43 @@ export function PassCard({ type, totalEntries, remainingEntries, expiryDate, pur
             </div>
           </div>
 
-          {/* Reservation slot — מוצג בולט אם יש שריון פעיל */}
+          {/* Reservation slot — מוצג בולט אם יש שריון פעיל, עם כפתור ביטול */}
           {hasReservation && !reservationIsPast && (
-            <div className="mb-2 inline-flex items-center gap-1 px-2.5 py-1 bg-accent/30 border border-accent/50 rounded-md text-xs font-semibold text-text-dark">
-              <Clock className="w-3 h-3" />
-              <span>
-                שריון: {reservationDateObj!.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long' })} · {reservedSlot}
-              </span>
+            <div className="mb-2 flex items-center gap-2 flex-wrap">
+              <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent/30 border border-accent/50 rounded-md text-xs font-semibold text-text-dark">
+                <Clock className="w-3 h-3" />
+                <span>
+                  שריון: {reservationDateObj!.toLocaleDateString('he-IL', { weekday: 'short', day: 'numeric', month: 'long' })} · {reservedSlot}
+                </span>
+              </div>
+              {onCancelReservation && (
+                <button
+                  type="button"
+                  onClick={onCancelReservation}
+                  disabled={reservationActionLoading}
+                  className="text-xs text-text-dark/80 hover:text-red-300 inline-flex items-center gap-0.5 disabled:opacity-50"
+                  title="בטל שריון"
+                >
+                  <X className="w-3 h-3" />
+                  בטל
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* No active reservation + still has entries: offer to reserve */}
+          {type === 'playground' && !hasReservation && remainingEntries > 0 && onReserve && (
+            <div className="mb-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={onReserve}
+                disabled={reservationActionLoading}
+                className="text-xs h-7 gap-1"
+              >
+                <Calendar className="w-3 h-3" />
+                שריינו כניסה
+              </Button>
             </div>
           )}
 
