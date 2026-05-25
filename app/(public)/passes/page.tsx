@@ -76,6 +76,9 @@ export default function PassesPage() {
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmPass, setConfirmPass] = useState<PassOption | null>(null)
+  const [existingPasses, setExistingPasses] = useState<Array<{ id: string; total_entries: number; remaining_entries: number; reserved_date: string | null }>>([])
+  const [usePassPromptOpen, setUsePassPromptOpen] = useState(false)
+  const [reserveLoading, setReserveLoading] = useState(false)
 
   useEffect(() => {
     loadCardTypes()
@@ -83,6 +86,19 @@ export default function PassesPage() {
       .then(r => r.ok ? r.json() : null)
       .then(data => data && setPlaygroundStatus(data))
       .catch(() => {})
+    // Check if the logged-in user already has an active playground pass with entries
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('passes')
+        .select('id, total_entries, remaining_entries, reserved_date')
+        .eq('user_id', user.id)
+        .eq('type', 'playground')
+        .eq('status', 'active')
+        .gt('remaining_entries', 0)
+      if (data) setExistingPasses(data as any)
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -178,12 +194,46 @@ export default function PassesPage() {
 
     // Open confirmation popup (only for single-entry pre-reserved)
     if (pass.totalEntries === 1 && selectedSlot) {
+      // אם יש כבר כרטיסייה פעילה עם כניסות פנויות וללא שריון פעיל — נציע לנצל אותה במקום לקנות
+      const reusablePass = existingPasses.find(p => p.remaining_entries > 0 && !p.reserved_date)
+      if (reusablePass) {
+        setConfirmPass(pass)
+        setUsePassPromptOpen(true)
+        return
+      }
       setConfirmPass(pass)
       setConfirmOpen(true)
       return
     }
 
     proceedToCheckout(pass)
+  }
+
+  // משתמש בכניסה הקיימת במקום לקנות חדשה
+  const handleUseExistingPass = async () => {
+    if (!selectedSlot) return
+    const reusable = existingPasses.find(p => p.remaining_entries > 0 && !p.reserved_date)
+    if (!reusable) {
+      setUsePassPromptOpen(false)
+      setConfirmOpen(true)
+      return
+    }
+    setReserveLoading(true)
+    try {
+      const res = await fetch(`/api/passes/${reusable.id}/reservation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: selectedDate, slot: selectedSlot }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה')
+      router.push('/my-account?reservation=success')
+    } catch (err: any) {
+      setError(err?.message || 'שגיאה בשריון')
+      setUsePassPromptOpen(false)
+    } finally {
+      setReserveLoading(false)
+    }
   }
 
   const proceedToCheckout = async (pass: PassOption) => {
@@ -496,6 +546,77 @@ export default function PassesPage() {
           </div>
         </div>
       </section>
+
+      {/* Use existing pass prompt — appears before purchase if user already owns a playground pass */}
+      {usePassPromptOpen && confirmPass && selectedSlot && (() => {
+        const reusable = existingPasses.find(p => p.remaining_entries > 0 && !p.reserved_date)
+        if (!reusable) return null
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            onClick={() => { if (!reserveLoading) setUsePassPromptOpen(false) }}
+            dir="rtl"
+          >
+            <div
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center">
+                  <Ticket className="w-5 h-5 text-accent" />
+                </div>
+                <h3 className="text-xl font-bold text-primary">יש לך כבר כרטיסייה פעילה</h3>
+              </div>
+
+              <div className="bg-background-light rounded-xl p-4 mb-3 space-y-1.5 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-text-light/70">כרטיסייה</span>
+                  <span className="font-semibold text-primary">{reusable.total_entries} כניסות</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-text-light/70">נותרו</span>
+                  <span className="font-semibold text-accent">{reusable.remaining_entries} כניסות</span>
+                </div>
+                <div className="flex items-center justify-between border-t border-gray-200 pt-1.5 mt-1.5">
+                  <span className="text-text-light/70">השריון יהיה ל</span>
+                  <span className="font-semibold text-primary">
+                    {formatSelectedDateHeb(selectedDate)} · {selectedSlot}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-sm text-text-light/80 mb-4">
+                האם לנצל כניסה אחת מהכרטיסייה הקיימת, או לרכוש כניסה חדשה?
+              </p>
+
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={handleUseExistingPass}
+                  disabled={reserveLoading}
+                  className="w-full"
+                >
+                  {reserveLoading ? 'משריין...' : `לנצל כניסה מהכרטיסייה (₪0)`}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setUsePassPromptOpen(false); setConfirmOpen(true) }}
+                  disabled={reserveLoading}
+                  className="w-full"
+                >
+                  רכוש כניסה חדשה (₪{confirmPass.price})
+                </Button>
+                <button
+                  onClick={() => { if (!reserveLoading) setUsePassPromptOpen(false) }}
+                  className="text-xs text-text-light/60 hover:text-text-light mt-1"
+                  disabled={reserveLoading}
+                >
+                  ביטול
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Reservation Confirmation Popup */}
       {confirmOpen && confirmPass && selectedSlot && (
