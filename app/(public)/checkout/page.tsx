@@ -32,6 +32,23 @@ interface CartItem {
   metadata?: { ticket_type?: string };
 }
 
+// תמחור מדורג לכניסה חד-פעמית למשחקייה כשרוכשים מספר ילדים יחד:
+// ילד ראשון = מחיר הכרטיסייה. כל ילד נוסף = ₪10 פחות.
+const PLAYGROUND_SIBLING_DISCOUNT = 10;
+
+function isSinglePlaygroundPass(item: CartItem | null): boolean {
+  return !!item && (item.type === 'playground' || item.type === 'playroom') && item.entries === 1;
+}
+
+function calcCartTotal(item: CartItem | null, qty: number): number {
+  if (!item) return 0;
+  if (isSinglePlaygroundPass(item) && qty > 1) {
+    const additional = Math.max(0, item.price - PLAYGROUND_SIBLING_DISCOUNT);
+    return item.price + additional * (qty - 1);
+  }
+  return item.price * qty;
+}
+
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -240,7 +257,7 @@ function CheckoutContent() {
 
     try {
       const itemType = searchParams.get('type') || 'pass';
-      const totalAmount = cartItem!.price * quantity;
+      const totalAmount = calcCartTotal(cartItem, quantity);
 
       const response = await fetch('/api/coupons/validate', {
         method: 'POST',
@@ -307,8 +324,8 @@ function CheckoutContent() {
 
       const itemType = searchParams.get('type') || 'pass';
 
-      // Calculate total amount
-      let totalAmount = cartItem.price * quantity;
+      // Calculate total amount (תמחור מדורג למשחקייה: ילד ראשון מלא, נוספים בהנחה)
+      let totalAmount = calcCartTotal(cartItem, quantity);
       let finalAmount = totalAmount;
 
       // Apply coupon discount if available
@@ -517,8 +534,8 @@ function CheckoutContent() {
                           )}
                         </p>
                       )}
-                      {cartItem.entries > 1 && cartItem.type !== 'show' && (
-                        <p className="text-sm text-text-light/70">{cartItem.entries} כניסות</p>
+                      {cartItem.type !== 'show' && (cartItem.entries * quantity) > 1 && (
+                        <p className="text-sm text-text-light/70">{cartItem.entries * quantity} כניסות</p>
                       )}
                       {/* שריון משבצת זמן ותאריך */}
                       {searchParams.get('slot') && searchParams.get('date') && (
@@ -537,7 +554,9 @@ function CheckoutContent() {
                   {/* Quantity Selector */}
                   <div className="mt-4 bg-background-light rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-text-light">כמות:</span>
+                      <span className="text-sm font-medium text-text-light">
+                        {isSinglePlaygroundPass(cartItem) ? 'מספר ילדים:' : 'כמות:'}
+                      </span>
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -598,14 +617,37 @@ function CheckoutContent() {
               )}
 
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-text-light/70">מחיר ליחידה</span>
-                  <span>₪{cartItem?.price}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-text-light/70">כמות</span>
-                  <span>×{quantity}</span>
-                </div>
+                {/* תמחור מדורג: ילד ראשון מלא, נוספים בהנחה */}
+                {isSinglePlaygroundPass(cartItem) && quantity > 1 ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">ילד ראשון</span>
+                      <span>₪{cartItem?.price}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">
+                        {quantity - 1} {quantity - 1 === 1 ? 'ילד נוסף' : 'ילדים נוספים'}
+                      </span>
+                      <span>
+                        × ₪{Math.max(0, (cartItem?.price || 0) - PLAYGROUND_SIBLING_DISCOUNT)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs text-text-light/60 italic">
+                      <span>הנחת אחים: ₪{PLAYGROUND_SIBLING_DISCOUNT} לכל ילד נוסף</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">מחיר ליחידה</span>
+                      <span>₪{cartItem?.price}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-light/70">כמות</span>
+                      <span>×{quantity}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between text-green-600">
                   <span>כולל מע&quot;מ</span>
                   <span>✓</span>
@@ -678,7 +720,7 @@ function CheckoutContent() {
                   <div className="space-y-2 text-sm mb-3">
                     <div className="flex justify-between">
                       <span className="text-text-light/70">סכום מקורי</span>
-                      <span className="line-through text-text-light/50">₪{cartItem ? (cartItem.price * quantity).toFixed(2) : 0}</span>
+                      <span className="line-through text-text-light/50">₪{calcCartTotal(cartItem, quantity).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-green-600 font-medium">
                       <span>הנחה ({couponData.coupon.code})</span>
@@ -699,7 +741,7 @@ function CheckoutContent() {
                         `₪${couponData.final_amount.toFixed(2)}`
                       )
                     ) : (
-                      `₪${cartItem ? (cartItem.price * quantity).toFixed(2) : 0}`
+                      `₪${calcCartTotal(cartItem, quantity).toFixed(2)}`
                     )}
                   </span>
                 </div>
@@ -783,7 +825,7 @@ function CheckoutContent() {
                           )}
                         </p>
                       </div>
-                      <div className="text-xl font-bold text-accent">₪{(cartItem.price * quantity).toFixed(2)}</div>
+                      <div className="text-xl font-bold text-accent">₪{calcCartTotal(cartItem, quantity).toFixed(2)}</div>
                     </div>
                   </div>
                 )}

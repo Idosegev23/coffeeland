@@ -166,6 +166,11 @@ export async function POST(req: NextRequest) {
         const expiryDate = new Date();
         expiryDate.setMonth(expiryDate.getMonth() + 3);
 
+        // הכמות שנרכשה (לכרטיסיות חד-פעמיות זה מספר הכרטיסים שנרכשו באותה רכישה)
+        const purchasedQuantity = Math.max(1, Number(payment.metadata?.quantity) || 1);
+        const entriesPerCard = cardType.entries_count || 1;
+        const totalEntries = entriesPerCard * purchasedQuantity;
+
         const { data: pass, error: passError } = await supabase
           .from('passes')
           .insert({
@@ -174,8 +179,8 @@ export async function POST(req: NextRequest) {
             type: cardType.name?.toLowerCase().includes('workshop') ? 'workshop' :
                   cardType.name?.toLowerCase().includes('playground') ? 'playground' :
                   'playground',
-            total_entries: cardType.entries_count || 10,
-            remaining_entries: cardType.entries_count || 10,
+            total_entries: totalEntries,
+            remaining_entries: totalEntries,
             expiry_date: expiryDate.toISOString(),
             price_paid: payment.amount,
             status: 'active',
