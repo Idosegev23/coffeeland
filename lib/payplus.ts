@@ -28,6 +28,43 @@ const getHeaders = () => ({
   'secret-key': SECRET_KEY
 });
 
+/**
+ * שגיאה מזוהה של זמינות PayPlus — מאפשרת ל-API routes להחזיר
+ * הודעה ידידותית ללקוח במקום להדליף SyntaxError גולמי.
+ */
+export class PayPlusServiceError extends Error {
+  readonly isPayPlusServiceError = true;
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'PayPlusServiceError';
+    this.status = status;
+  }
+}
+
+/**
+ * PayPlus יושב מאחורי Cloudflare/proxy שלעיתים מחזיר תשובת טקסט
+ * (rate-limit, challenge, maintenance) במקום JSON. פרסור עיוור עם
+ * response.json() מפיל את כל הבקשה עם SyntaxError לא מובן.
+ */
+async function parsePayPlusResponse(response: Response, context: string): Promise<any> {
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    console.error(`🔴 PayPlus non-JSON response [${context}]:`, {
+      status: response.status,
+      contentType: response.headers.get('content-type'),
+      bodySnippet: raw.slice(0, 200)
+    });
+    throw new PayPlusServiceError(
+      `PayPlus returned non-JSON response (HTTP ${response.status}) for ${context}`,
+      response.status
+    );
+  }
+}
+
 // סוגי עסקאות
 export const CHARGE_METHODS = {
   REGULAR: 1,       // תשלום רגיל
@@ -131,21 +168,32 @@ export async function generatePaymentLink(request: PaymentPageRequest): Promise<
     console.log('🔵 PayPlus URL:', url);
     console.log('🔵 PayPlus Environment:', isStaging ? 'STAGING' : 'PRODUCTION');
 
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(body)
-      });
+    // תקלות זמניות בצד PayPlus (תשובת טקסט מה-proxy, 5xx) — שווה ניסיון נוסף אחד
+    const MAX_ATTEMPTS = 2;
+    let lastError: unknown;
 
-      const data: PayPlusResponse = await response.json();
-      console.log('🟢 PayPlus Response:', { status: data.results?.status, code: data.results?.code, page_uid: data.data?.page_request_uid });
-      
-      return data;
-    } catch (error) {
-      console.error('🔴 PayPlus Error:', error);
-      throw error;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(body)
+        });
+
+        const data: PayPlusResponse = await parsePayPlusResponse(response, 'generateLink');
+        console.log('🟢 PayPlus Response:', { status: data.results?.status, code: data.results?.code, page_uid: data.data?.page_request_uid });
+
+        return data;
+      } catch (error) {
+        lastError = error;
+        console.error(`🔴 PayPlus Error (attempt ${attempt}/${MAX_ATTEMPTS}):`, error);
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
     }
+
+    throw lastError;
   }, 'generateLink');
 }
 
@@ -257,7 +305,7 @@ export async function processRefund(request: RefundRequest): Promise<PayPlusResp
         body: JSON.stringify(body)
       });
 
-      const data: PayPlusResponse = await response.json();
+      const data: PayPlusResponse = await parsePayPlusResponse(response, 'refund');
       console.log('🟢 PayPlus Refund Response:', JSON.stringify(data, null, 2));
       
       return data;
@@ -289,7 +337,7 @@ export async function checkTransactionStatus(transactionUid: string): Promise<Pa
         body: JSON.stringify(body)
       });
 
-      const data: PayPlusResponse = await response.json();
+      const data: PayPlusResponse = await parsePayPlusResponse(response, 'check-transaction');
       console.log('✅ Transaction status:', data);
       
       return data;
@@ -321,7 +369,7 @@ export async function approveTransaction(transactionUid: string): Promise<PayPlu
         body: JSON.stringify(body)
       });
 
-      const data: PayPlusResponse = await response.json();
+      const data: PayPlusResponse = await parsePayPlusResponse(response, 'approve-transaction');
       console.log('✅ Transaction approved:', data);
       
       return data;
@@ -353,7 +401,7 @@ export async function cancelTransaction(transactionUid: string): Promise<PayPlus
         body: JSON.stringify(body)
       });
 
-      const data: PayPlusResponse = await response.json();
+      const data: PayPlusResponse = await parsePayPlusResponse(response, 'cancel-transaction');
       console.log('✅ Transaction cancelled:', data);
       
       return data;
@@ -397,7 +445,7 @@ export async function directCharge(request: DirectChargeRequest): Promise<PayPlu
         body: JSON.stringify(request)
       });
 
-      const data: PayPlusResponse = await response.json();
+      const data: PayPlusResponse = await parsePayPlusResponse(response, 'direct-charge');
       console.log('✅ Direct charge response:', data);
       
       return data;
@@ -471,7 +519,7 @@ export async function getApprovedTransactions(
         body: JSON.stringify(body)
       });
 
-      const data = await response.json();
+      const data = await parsePayPlusResponse(response, 'approved-transactions');
       
       if (data.results?.status === 'success' && data.data?.items) {
         return { success: true, transactions: data.data.items };
@@ -510,7 +558,7 @@ export async function getRejectedTransactions(
         body: JSON.stringify(body)
       });
 
-      const data = await response.json();
+      const data = await parsePayPlusResponse(response, 'rejected-transactions');
       
       if (data.results?.status === 'success' && data.data?.items) {
         return { success: true, transactions: data.data.items };
@@ -549,7 +597,7 @@ export async function getCancelledTransactions(
         body: JSON.stringify(body)
       });
 
-      const data = await response.json();
+      const data = await parsePayPlusResponse(response, 'cancelled-transactions');
       
       if (data.results?.status === 'success' && data.data?.items) {
         return { success: true, transactions: data.data.items };
@@ -594,7 +642,7 @@ export async function getTransactionsHistory(
         body: JSON.stringify(body)
       });
 
-      const data = await response.json();
+      const data = await parsePayPlusResponse(response, 'transactions-history');
       
       if (data.results?.status === 'success' && data.data?.items) {
         console.log(`✅ Fetched ${data.data.items.length} transactions from PayPlus`);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { generatePaymentLink, isPayPlusConfigured, getPayPlusConfig } from '@/lib/payplus';
+import { generatePaymentLink, isPayPlusConfigured, getPayPlusConfig, PayPlusServiceError } from '@/lib/payplus';
 import { getServiceClient } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 
@@ -10,6 +10,8 @@ import { logger } from '@/lib/logger';
  * POST /api/payments/payplus/create
  */
 export async function POST(req: NextRequest) {
+  // מזהה תשלום pending שנוצר לפני הקריאה ל-PayPlus — כדי לסמן failed אם היא נכשלת
+  let pendingPaymentId: string | null = null;
   try {
     // בדיקה שPayPlus מוגדר
     if (!isPayPlusConfigured()) {
@@ -234,6 +236,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create payment record' }, { status: 500 });
     }
 
+    pendingPaymentId = pendingPayment.id;
+
     // יצירת קישור PayPlus
     const paymentResponse = await generatePaymentLink({
       amount,
@@ -295,9 +299,34 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     logger.error('❌ Error in PayPlus create:', error);
-    return NextResponse.json({ 
+
+    // סימון התשלום כ-failed מיד, בלי לחכות ל-cron של 15 דקות
+    if (pendingPaymentId) {
+      try {
+        await getServiceClient()
+          .from('payments')
+          .update({
+            status: 'failed',
+            notes: `PayPlus link creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          })
+          .eq('id', pendingPaymentId)
+          .eq('status', 'pending');
+      } catch (updateError) {
+        logger.error('❌ Failed to mark payment as failed:', updateError);
+      }
+    }
+
+    // לא מדליפים error.message גולמי ללקוח — רק הודעה ידידותית בעברית
+    if (error instanceof PayPlusServiceError) {
+      return NextResponse.json({
+        error: 'payplus_unavailable',
+        message: 'שירות הסליקה אינו זמין כרגע. נסו שוב בעוד כמה רגעים.'
+      }, { status: 502 });
+    }
+
+    return NextResponse.json({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: 'אירעה שגיאה בעיבוד התשלום. נסו שוב, ואם הבעיה חוזרת — צרו קשר.'
     }, { status: 500 });
   }
 }

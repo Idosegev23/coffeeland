@@ -49,6 +49,16 @@ function calcCartTotal(item: CartItem | null, qty: number): number {
   return item.price * qty;
 }
 
+// תשובת שגיאה מהתשתית (Vercel/proxy) עלולה להיות טקסט ולא JSON —
+// פרסור עיוור מציג ללקוח SyntaxError גולמי במקום הודעה מובנת.
+async function safeJson(response: Response): Promise<any | null> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -347,10 +357,10 @@ function CheckoutContent() {
           })
         });
 
-        const data = await response.json();
+        const data = await safeJson(response);
 
-        if (!response.ok) {
-          throw new Error(data.error || 'שגיאה ביצירת רכישה חינמית');
+        if (!response.ok || !data) {
+          throw new Error(data?.error || 'שגיאה ביצירת רכישה חינמית');
         }
 
         // Success! Redirect to my account
@@ -386,14 +396,14 @@ function CheckoutContent() {
         })
       });
 
-      const data = await response.json();
+      const data = await safeJson(response);
 
-      if (!response.ok || !data.payment_url) {
+      if (!response.ok || !data?.payment_url) {
         console.error('PayPlus error:', data);
-        if (data.error === 'sold_out') {
+        if (data?.error === 'sold_out') {
           throw new Error(data.message || 'אזל המלאי! אין מספיק מקומות פנויים.');
         }
-        throw new Error(data.message || data.details || 'שגיאה ביצירת קישור תשלום');
+        throw new Error(data?.message || data?.details || 'שגיאה ביצירת קישור תשלום. נסו שוב בעוד רגע.');
       }
 
       console.log('✅ Redirecting to PayPlus:', data.payment_url);
