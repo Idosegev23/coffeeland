@@ -388,11 +388,22 @@ function CheckoutContent() {
           reserved_slot: reservedSlot,
           reserved_date: reservedDate,
           description: `רכישת ${quantity > 1 ? quantity + ' × ' : ''}${cartItem.name}`,
-          items: [{
-            name: cartItem.name,
-            quantity: quantity,
-            price: cartItem.price
-          }]
+          // PayPlus דוחה (422) בקשה שבה amount שונה מסכום הפריטים — בתמחור
+          // מדורג לאחים חייבים לפרק לשתי שורות כדי שהסכומים יתאימו
+          items: isSinglePlaygroundPass(cartItem) && quantity > 1
+            ? [
+                { name: cartItem.name, quantity: 1, price: cartItem.price },
+                {
+                  name: `${cartItem.name} - אח/ות נוסף/ת`,
+                  quantity: quantity - 1,
+                  price: Math.max(0, cartItem.price - PLAYGROUND_SIBLING_DISCOUNT)
+                }
+              ]
+            : [{
+                name: cartItem.name,
+                quantity: quantity,
+                price: cartItem.price
+              }]
         })
       });
 

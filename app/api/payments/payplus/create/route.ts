@@ -238,6 +238,22 @@ export async function POST(req: NextRequest) {
 
     pendingPaymentId = pendingPayment.id;
 
+    // PayPlus דוחה (422 "global-price-is-not-equal-to-total-items-sum") בקשה
+    // שבה amount שונה מסכום הפריטים. אם הפירוט לא מסתדר — עדיף שורה מסכמת
+    // אחת מאשר להפיל את הרכישה של הלקוח.
+    let products = items?.map((item: { name: string; quantity: number; price: number }) => ({
+      name: item.name,
+      quantity: item.quantity || 1,
+      price: item.price
+    }));
+    const itemsSum = products?.reduce(
+      (sum: number, p: { quantity: number; price: number }) => sum + p.price * p.quantity, 0
+    );
+    if (products && Math.abs((itemsSum ?? 0) - amount) > 0.01) {
+      logger.error('⚠️ Items sum mismatch, collapsing to single line:', { amount, itemsSum, items });
+      products = [{ name: description || card_type_name || 'רכישה', quantity: 1, price: amount }];
+    }
+
     // יצירת קישור PayPlus
     const paymentResponse = await generatePaymentLink({
       amount,
@@ -246,11 +262,7 @@ export async function POST(req: NextRequest) {
         email: user.email || '',
         phone: userData?.phone
       },
-      products: items?.map((item: { name: string; quantity: number; price: number }) => ({
-        name: item.name,
-        quantity: item.quantity || 1,
-        price: item.price
-      })),
+      products,
       more_info: transactionRef, // מזהה לקישור לDB
       more_info_1: pendingPayment.id, // ID של התשלום בDB
       refURL_success: `${baseUrl}/payment-success?payment_id=${pendingPayment.id}&ref=${transactionRef}`,

@@ -187,6 +187,10 @@ export async function generatePaymentLink(request: PaymentPageRequest): Promise<
       } catch (error) {
         lastError = error;
         console.error(`🔴 PayPlus Error (attempt ${attempt}/${MAX_ATTEMPTS}):`, error);
+        // דחייה דטרמיניסטית (4xx, חוץ מ-429) — ניסיון חוזר לא יעזור
+        if (error instanceof PayPlusServiceError && error.status >= 400 && error.status < 500 && error.status !== 429) {
+          throw error;
+        }
         if (attempt < MAX_ATTEMPTS) {
           await new Promise(resolve => setTimeout(resolve, 1500));
         }
