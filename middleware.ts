@@ -20,10 +20,8 @@ export async function middleware(req: NextRequest) {
   // Protect /admin routes
   if (req.nextUrl.pathname.startsWith('/admin')) {
     if (!session) {
-      console.log('❌ No session, redirecting to /login')
-      const redirectUrl = new URL('/login', req.url)
-      redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname)
-      return NextResponse.redirect(redirectUrl)
+      console.log('❌ No session, redirecting to /admin-login')
+      return NextResponse.redirect(new URL('/admin-login', req.url))
     }
 
     // Check if user is admin

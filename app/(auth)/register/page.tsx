@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { isValidIsraeliMobile } from '@/lib/phone'
 import { Suspense } from 'react'
 
 function RegisterContent() {
@@ -31,6 +32,10 @@ function RegisterContent() {
 
     try {
       if (!formData.fullName.trim()) throw new Error('יש להזין שם מלא')
+      // הכניסה לאתר היא לפי מספר טלפון — בלעדיו אי אפשר להתחבר אחר כך
+      if (!isValidIsraeliMobile(formData.phone)) {
+        throw new Error('יש להזין מספר נייד ישראלי תקין, למשל 050-1234567')
+      }
 
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
       const redirectTo = redirect
@@ -138,6 +143,7 @@ function RegisterContent() {
                 <input
                   id="phone"
                   type="tel"
+                  required
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none"

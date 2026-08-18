@@ -1,92 +1,138 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Loader2, Phone, Ticket } from 'lucide-react'
+import { isValidIsraeliMobile, normalizePhone } from '@/lib/phone'
 
-export default function LoginPage() {
+interface AccountOption {
+  id: string
+  name: string
+  masked_email: string
+  remaining_entries: number
+  last_purchase: string | null
+}
+
+const inputClass =
+  'w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none'
+
+function LoginContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
+
+  // תמיכה בשני שמות הפרמטרים שקיימים באתר (checkout שולח redirect, middleware שולח redirectTo)
+  const redirectTarget = searchParams.get('redirect') || searchParams.get('redirectTo') || '/my-account'
+
+  const [step, setStep] = useState<'phone' | 'choose' | 'notfound' | 'email'>('phone')
+  const [phone, setPhone] = useState('')
+  const [accounts, setAccounts] = useState<AccountOption[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [magicLinkSent, setMagicLinkSent] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [emailForm, setEmailForm] = useState({ email: '', password: '' })
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  })
+  const completeLogin = async (tokenHash: string) => {
+    const { error: otpError } = await supabase.auth.verifyOtp({
+      type: 'email',
+      token_hash: tokenHash,
+    })
+    if (otpError) throw otpError
+    // window.location כדי שה-middleware יראה את הקוקיז החדשים
+    window.location.href = redirectTarget
+  }
 
-  // Magic Link - primary login method
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.email) {
-      setError('יש להזין כתובת אימייל')
+  const submitPhone = async (selectedUserId?: string) => {
+    setError('')
+    if (!isValidIsraeliMobile(phone)) {
+      setError('יש להזין מספר נייד ישראלי תקין, למשל 050-1234567')
       return
     }
-    setError('')
     setLoading(true)
     try {
-      // Pre-check: store_manager users can only log in with password
-      const restrictRes = await fetch('/api/auth/check-restrictions', {
+      const res = await fetch('/api/auth/phone-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email }),
+        body: JSON.stringify({ phone: normalizePhone(phone), user_id: selectedUserId }),
       })
-      if (restrictRes.ok) {
-        const restrictData = await restrictRes.json()
-        if (restrictData?.magic_link_allowed === false) {
-          setError('המשתמש הזה רשאי להתחבר עם סיסמה בלבד. הזינו את הסיסמה למטה.')
-          setShowPassword(true)
-          setLoading(false)
-          return
-        }
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok || !data) {
+        setError(data?.message || 'שגיאה זמנית, נסו שוב')
+        return
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-      const { error: magicError } = await supabase.auth.signInWithOtp({
-        email: formData.email,
-        options: {
-          emailRedirectTo: `${baseUrl}/auth/callback?next=/my-account`,
-        },
-      })
-      if (magicError) throw magicError
-      setMagicLinkSent(true)
-    } catch (err: any) {
-      setError(err.message || 'שגיאה בשליחת הלינק')
+      if (data.found === false) {
+        setStep('notfound')
+        return
+      }
+
+      if (data.accounts) {
+        setAccounts(data.accounts)
+        setStep('choose')
+        return
+      }
+
+      if (data.token_hash) {
+        await completeLogin(data.token_hash)
+        return
+      }
+
+      setError('שגיאה זמנית, נסו שוב')
+    } catch (err) {
+      console.error('Phone login error:', err)
+      setError('שגיאה בהתחברות, נסו שוב')
     } finally {
       setLoading(false)
     }
   }
 
-  // Password login - fallback
-  const handlePasswordLogin = async (e: React.FormEvent) => {
+  // כניסה חד-פעמית עם אימייל+סיסמה ללקוחות ותיקים בלי טלפון — ומשם להשלמת טלפון
+  const submitEmailFallback = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
+        email: emailForm.email,
+        password: emailForm.password,
       })
-      if (authError) throw authError
-      if (!data.user) throw new Error('התחברות נכשלה')
+      if (authError || !data.user) {
+        setError('אימייל או סיסמה שגויים')
+        return
+      }
+      window.location.href = `/complete-phone?redirect=${encodeURIComponent(redirectTarget)}`
+    } catch {
+      setError('שגיאה בהתחברות, נסו שוב')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      const { data: adminData } = await supabase
-        .from('admins')
-        .select('is_active')
-        .eq('user_id', data.user.id)
-        .maybeSingle()
-
-      const targetPath = adminData?.is_active ? '/admin' : '/my-account'
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      window.location.href = targetPath
-    } catch (err: any) {
-      setError(err.message || 'שגיאה בהתחברות. נסו שוב.')
+  // לינק חד-פעמי למייל למי שלא זוכר סיסמה — מחזיר להשלמת טלפון
+  const sendEmailLink = async () => {
+    setError('')
+    if (!emailForm.email) {
+      setError('יש להזין כתובת אימייל')
+      return
+    }
+    setLoading(true)
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+      const next = `/complete-phone?redirect=${encodeURIComponent(redirectTarget)}`
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: emailForm.email,
+        options: { emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(next)}` },
+      })
+      if (otpError) throw otpError
+      setError('')
+      alert('שלחנו לינק כניסה למייל — לחצו עליו כדי להמשיך')
+    } catch {
+      setError('שגיאה בשליחת הלינק, נסו שוב')
     } finally {
       setLoading(false)
     }
@@ -109,117 +155,194 @@ export default function LoginPage() {
         </div>
 
         <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6 sm:p-8">
-          {magicLinkSent ? (
-            <div className="text-center space-y-4 py-4">
-              <div className="w-16 h-16 mx-auto bg-accent/20 rounded-full flex items-center justify-center text-3xl">
-                ✉️
-              </div>
-              <h2 className="text-xl font-bold text-primary">בדקו את המייל!</h2>
-              <p className="text-text-light/70 text-sm">
-                שלחנו לינק התחברות ל-<br />
-                <span className="font-medium text-primary" dir="ltr">{formData.email}</span>
-              </p>
-              <p className="text-text-light/50 text-xs">
-                לא קיבלתם? בדקו את תיקיית הספאם
-              </p>
-              <button
-                onClick={() => { setMagicLinkSent(false); setError('') }}
-                className="text-accent hover:underline text-sm font-medium"
-              >
-                שלח שוב או נסה אימייל אחר
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Magic Link Form - Primary */}
-              <form onSubmit={handleMagicLink} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-primary mb-1">
-                    אימייל
-                  </label>
+          {step === 'phone' && (
+            <form onSubmit={(e) => { e.preventDefault(); submitPhone() }} className="space-y-4">
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-primary mb-1">
+                  מספר טלפון
+                </label>
+                <div className="relative">
+                  <Phone className="absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 text-text-light/40 pointer-events-none" />
                   <input
-                    id="email"
-                    type="email"
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
                     required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none"
-                    placeholder="your@email.com"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className={`${inputClass} pr-9`}
+                    placeholder="050-1234567"
                     dir="ltr"
                   />
                 </div>
-
-                {error && !showPassword && (
-                  <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
-                    {error}
-                  </div>
-                )}
-
-                <Button type="submit" disabled={loading} className="w-full" size="lg">
-                  {loading && !showPassword ? 'שולח...' : 'שלח לי לינק התחברות'}
-                </Button>
-              </form>
-
-              {/* Divider */}
-              <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-text-light/50">או</span>
-                <div className="flex-1 h-px bg-border" />
               </div>
 
-              {/* Password Login - Secondary */}
-              {!showPassword ? (
-                <button
-                  onClick={() => setShowPassword(true)}
-                  className="w-full text-center text-sm text-text-light/60 hover:text-accent transition-colors"
-                >
-                  התחברות עם סיסמה
-                </button>
-              ) : (
-                <form onSubmit={handlePasswordLogin} className="space-y-4">
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-primary mb-1">
-                      סיסמה
-                    </label>
-                    <input
-                      id="password"
-                      type="password"
-                      required
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none"
-                      placeholder="הזינו סיסמה"
-                    />
-                  </div>
-
-                  {error && showPassword && (
-                    <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
-                      {error}
-                    </div>
-                  )}
-
-                  <Button type="submit" disabled={loading} className="w-full" variant="secondary">
-                    {loading ? 'מתחבר...' : 'התחבר עם סיסמה'}
-                  </Button>
-                </form>
+              {error && (
+                <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
+                  {error}
+                </div>
               )}
-            </>
+
+              <Button type="submit" disabled={loading} className="w-full" size="lg">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'כניסה'}
+              </Button>
+            </form>
           )}
 
-          <p className="mt-6 text-center text-sm text-text-light/70">
-            עדיין אין לך חשבון?{' '}
-            <Link href="/register" className="text-accent hover:underline font-medium">
-              הירשם כאן
-            </Link>
-          </p>
+          {step === 'choose' && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-bold text-primary text-center mb-1">נמצאו כמה חשבונות</h2>
+              <p className="text-sm text-text-light/70 text-center mb-3">בחרו את החשבון שלכם:</p>
+              {accounts.map((account) => (
+                <button
+                  key={account.id}
+                  disabled={loading}
+                  onClick={() => submitPhone(account.id)}
+                  className="w-full text-right p-4 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light hover:border-accent transition-colors disabled:opacity-50"
+                >
+                  <div className="font-bold text-primary">{account.name}</div>
+                  <div className="text-xs text-text-light/60" dir="ltr">{account.masked_email}</div>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-text-light/70">
+                    <Ticket className="w-3.5 h-3.5" />
+                    {account.remaining_entries > 0
+                      ? `${account.remaining_entries} כניסות בכרטיסייה`
+                      : 'אין כרטיסייה פעילה'}
+                    {account.last_purchase && (
+                      <span>· רכישה אחרונה {new Date(account.last_purchase).toLocaleDateString('he-IL')}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+              {error && (
+                <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+              <button
+                onClick={() => { setStep('phone'); setError('') }}
+                className="w-full text-center text-sm text-text-light/60 hover:text-accent"
+              >
+                ← מספר אחר
+              </button>
+            </div>
+          )}
+
+          {step === 'notfound' && (
+            <div className="text-center space-y-4 py-2">
+              <div className="w-16 h-16 mx-auto bg-accent/20 rounded-full flex items-center justify-center text-3xl">
+                🔍
+              </div>
+              <h2 className="text-xl font-bold text-primary">לא מצאנו חשבון עם המספר הזה</h2>
+              <p className="text-text-light/70 text-sm" dir="ltr">{phone}</p>
+              <div className="space-y-3 pt-2">
+                <Button asChild className="w-full" size="lg">
+                  <Link href={`/register?redirect=${encodeURIComponent(redirectTarget)}`}>הרשמה חדשה</Link>
+                </Button>
+                <button
+                  onClick={() => { setStep('email'); setError('') }}
+                  className="w-full text-center text-sm text-accent hover:underline font-medium"
+                >
+                  נרשמתי בעבר עם אימייל — השלמת מספר טלפון
+                </button>
+                <button
+                  onClick={() => { setStep('phone'); setError('') }}
+                  className="w-full text-center text-sm text-text-light/60 hover:text-accent"
+                >
+                  ← ניסיתי מספר אחר
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'email' && (
+            <form onSubmit={submitEmailFallback} className="space-y-4">
+              <p className="text-sm text-text-light/70 text-center">
+                כניסה חד-פעמית עם אימייל כדי להשלים מספר טלפון — מהפעם הבאה נכנסים עם הטלפון בלבד
+              </p>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-primary mb-1">אימייל</label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={emailForm.email}
+                  onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                  className={inputClass}
+                  placeholder="your@email.com"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-primary mb-1">סיסמה</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={emailForm.password}
+                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                  className={inputClass}
+                  placeholder="הזינו סיסמה"
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <Button type="submit" disabled={loading} className="w-full" size="lg">
+                {loading ? 'מתחבר...' : 'כניסה'}
+              </Button>
+              <button
+                type="button"
+                onClick={sendEmailLink}
+                disabled={loading}
+                className="w-full text-center text-sm text-accent hover:underline"
+              >
+                לא זוכר/ת סיסמה? שלחו לי לינק למייל
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStep('phone'); setError('') }}
+                className="w-full text-center text-sm text-text-light/60 hover:text-accent"
+              >
+                ← חזרה לכניסה עם טלפון
+              </button>
+            </form>
+          )}
+
+          {step === 'phone' && (
+            <p className="mt-6 text-center text-sm text-text-light/70">
+              עדיין אין לך חשבון?{' '}
+              <Link href={`/register?redirect=${encodeURIComponent(redirectTarget)}`} className="text-accent hover:underline font-medium">
+                הירשם כאן
+              </Link>
+            </p>
+          )}
         </Card>
 
-        <div className="text-center mt-6">
-          <Link href="/" className="text-sm text-text-light/60 hover:text-accent">
+        <div className="flex items-center justify-between mt-6 text-sm">
+          <Link href="/" className="text-text-light/60 hover:text-accent">
             ← חזרה לדף הבית
+          </Link>
+          <Link href="/admin-login" className="text-text-light/40 hover:text-accent text-xs">
+            כניסת צוות
           </Link>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
