@@ -33,7 +33,11 @@ function LoginContent() {
   const [phone, setPhone] = useState('')
   const [accounts, setAccounts] = useState<AccountOption[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(
+    searchParams.get('error') === 'link_expired'
+      ? 'הלינק מהמייל כבר לא בתוקף — אבל אין צורך בו: פשוט הזינו את מספר הטלפון'
+      : ''
+  )
   const [emailForm, setEmailForm] = useState({ email: '', password: '' })
 
   const completeLogin = async (tokenHash: string) => {

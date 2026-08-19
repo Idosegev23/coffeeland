@@ -1,23 +1,25 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Loader2 } from 'lucide-react'
 import { isValidIsraeliMobile } from '@/lib/phone'
-import { Suspense } from 'react'
+
+const inputClass =
+  'w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none'
 
 function RegisterContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect')
+  const redirect = searchParams.get('redirect') || '/my-account'
   const supabase = createClientComponentClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [magicLinkSent, setMagicLinkSent] = useState(false)
+  const [emailExists, setEmailExists] = useState(false)
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -25,39 +27,56 @@ function RegisterContent() {
     phone: '',
   })
 
+  // הרשמה מיידית: החשבון נוצר בשרת ומתחברים באותו רגע — בלי מייל אימות.
+  // (לינקים חד-פעמיים במייל נשרפו ע"י סורקי אבטחה ותקעו לקוחות בלופ)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
+    setEmailExists(false)
 
+    if (!formData.fullName.trim()) {
+      setError('יש להזין שם מלא')
+      return
+    }
+    if (!isValidIsraeliMobile(formData.phone)) {
+      setError('יש להזין מספר נייד ישראלי תקין, למשל 050-1234567')
+      return
+    }
+
+    setLoading(true)
     try {
-      if (!formData.fullName.trim()) throw new Error('יש להזין שם מלא')
-      // הכניסה לאתר היא לפי מספר טלפון — בלעדיו אי אפשר להתחבר אחר כך
-      if (!isValidIsraeliMobile(formData.phone)) {
-        throw new Error('יש להזין מספר נייד ישראלי תקין, למשל 050-1234567')
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+        }),
+      })
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok || !data) {
+        if (data?.error === 'email_exists') setEmailExists(true)
+        setError(data?.message || 'שגיאה בהרשמה, נסו שוב')
+        return
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-      const redirectTo = redirect
-        ? `${baseUrl}/auth/callback?next=${encodeURIComponent(redirect)}`
-        : `${baseUrl}/auth/callback?next=/my-account`
+      if (data.token_hash) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          type: 'email',
+          token_hash: data.token_hash,
+        })
+        if (!otpError) {
+          window.location.href = redirect
+          return
+        }
+      }
 
-      // Sign up with magic link (no password needed)
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email: formData.email,
-        options: {
-          emailRedirectTo: redirectTo,
-          data: {
-            full_name: formData.fullName,
-            phone: formData.phone,
-          },
-        },
-      })
-
-      if (authError) throw authError
-      setMagicLinkSent(true)
-    } catch (err: any) {
-      setError(err.message || 'שגיאה בהרשמה. נסו שוב.')
+      // fallback נדיר: החשבון נוצר אבל החיבור האוטומטי נכשל — כניסה עם הטלפון
+      window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`
+    } catch {
+      setError('שגיאה בהרשמה, נסו שוב')
     } finally {
       setLoading(false)
     }
@@ -76,102 +95,87 @@ function RegisterContent() {
             <Image src="/logo.svg" alt="CoffeeLand" width={96} height={96} />
           </div>
           <h1 className="text-3xl font-bold text-primary mb-2">הרשמה ל-CoffeeLand</h1>
-          <p className="text-text-light/70">צרו חשבון ותתחילו ליהנות מהמשחקייה</p>
+          <p className="text-text-light/70">רישום מהיר — ונכנסים מיד</p>
         </div>
 
         <Card className="rounded-tl-3xl rounded-tr-3xl rounded-bl-3xl rounded-br-none p-6 sm:p-8">
-          {magicLinkSent ? (
-            <div className="text-center space-y-4 py-4">
-              <div className="w-16 h-16 mx-auto bg-accent/20 rounded-full flex items-center justify-center text-3xl">
-                ✉️
-              </div>
-              <h2 className="text-xl font-bold text-primary">כמעט סיימנו!</h2>
-              <p className="text-text-light/70 text-sm">
-                שלחנו לינק אימות ל-<br />
-                <span className="font-medium text-primary" dir="ltr">{formData.email}</span>
-              </p>
-              <p className="text-text-light/70 text-sm">
-                לחצו על הלינק במייל כדי להשלים את ההרשמה
-              </p>
-              <p className="text-text-light/50 text-xs">
-                לא קיבלתם? בדקו את תיקיית הספאם
-              </p>
-              <button
-                onClick={() => { setMagicLinkSent(false); setError('') }}
-                className="text-accent hover:underline text-sm font-medium"
-              >
-                שלח שוב
-              </button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-primary mb-1">
+                שם מלא
+              </label>
+              <input
+                id="fullName"
+                type="text"
+                required
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                className={inputClass}
+                placeholder="שם פרטי ומשפחה"
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="fullName" className="block text-sm font-medium text-primary mb-1">
-                  שם מלא
-                </label>
-                <input
-                  id="fullName"
-                  type="text"
-                  required
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none"
-                  placeholder="שם פרטי ומשפחה"
-                />
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-primary mb-1">
+                טלפון נייד
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                required
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className={inputClass}
+                placeholder="050-1234567"
+                dir="ltr"
+              />
+              <p className="text-xs text-text-light/50 mt-1">איתו נכנסים לאיזור האישי</p>
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-primary mb-1">
+                אימייל
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className={inputClass}
+                placeholder="your@email.com"
+                dir="ltr"
+              />
+              <p className="text-xs text-text-light/50 mt-1">לקבלות ואישורי רכישה</p>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
+                {error}
+                {emailExists && (
+                  <div className="mt-2">
+                    <Link
+                      href={`/login?redirect=${encodeURIComponent(redirect)}`}
+                      className="font-medium underline"
+                    >
+                      לעמוד הכניסה ←
+                    </Link>
+                  </div>
+                )}
               </div>
+            )}
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-primary mb-1">
-                  אימייל
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none"
-                  placeholder="your@email.com"
-                  dir="ltr"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-primary mb-1">
-                  טלפון
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-border rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none bg-background-light text-primary focus:border-accent focus:outline-none"
-                  placeholder="050-1234567"
-                  dir="ltr"
-                />
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <Button type="submit" disabled={loading} className="w-full" size="lg">
-                {loading ? 'שולח...' : 'הרשמה - קבלו לינק במייל'}
-              </Button>
-
-              <p className="text-xs text-text-light/50 text-center">
-                ללא סיסמה - ההתחברות תמיד דרך לינק שנשלח למייל
-              </p>
-            </form>
-          )}
+            <Button type="submit" disabled={loading} className="w-full" size="lg">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'הרשמה וכניסה'}
+            </Button>
+          </form>
 
           <p className="mt-6 text-center text-sm text-text-light/70">
             כבר יש לך חשבון?{' '}
-            <Link href="/login" className="text-accent hover:underline font-medium">
-              התחבר כאן
+            <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className="text-accent hover:underline font-medium">
+              כניסה עם טלפון
             </Link>
           </p>
         </Card>
@@ -190,7 +194,7 @@ export default function RegisterPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
       </div>
     }>
       <RegisterContent />

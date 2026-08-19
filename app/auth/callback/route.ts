@@ -59,5 +59,15 @@ export async function GET(request: NextRequest) {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || requestUrl.origin
+
+  // לינק מת (נשרף ע"י סורק מייל / פג תוקף) — עד עכשיו המשכנו בשקט ל-next
+  // בלי סשן והלקוח נתקע בלופ. עכשיו: חזרה לכניסה עם הסבר.
+  if (!user && (code || token_hash)) {
+    const loginUrl = new URL('/login', baseUrl)
+    loginUrl.searchParams.set('error', 'link_expired')
+    if (next && next !== '/') loginUrl.searchParams.set('redirect', next)
+    return NextResponse.redirect(loginUrl)
+  }
+
   return NextResponse.redirect(new URL(next, baseUrl))
 }
