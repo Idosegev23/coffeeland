@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { AvailabilityView } from './AvailabilityView'
+import { PlaygroundWeekView } from './PlaygroundWeekView'
 import { ClassesView } from './ClassesView'
 import { analytics } from '@/lib/analytics'
 
@@ -23,14 +23,14 @@ export function CalendarTabs() {
             לוח זמנים
           </h2>
           <p className="text-lg text-text-light/70 max-w-2xl mx-auto">
-            בדקו זמינות לאירועים או צפו בחוגים והסדנאות השבועיים
+            בדקו את הזמינות במשחקייה שבוע קדימה או צפו בחוגים והסדנאות
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
             <TabsTrigger value="availability" className="text-base">
-              זמינות לאירועים
+              זמינות המשחקייה
             </TabsTrigger>
             <TabsTrigger value="classes" className="text-base">
               חוגים וסדנאות
@@ -38,7 +38,7 @@ export function CalendarTabs() {
           </TabsList>
 
           <TabsContent value="availability" className="mt-6">
-            <AvailabilityView />
+            <PlaygroundWeekView />
           </TabsContent>
 
           <TabsContent value="classes" className="mt-6">
