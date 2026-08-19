@@ -38,7 +38,7 @@ function LoginContent() {
       ? 'הלינק מהמייל כבר לא בתוקף — אבל אין צורך בו: פשוט הזינו את מספר הטלפון'
       : ''
   )
-  const [emailForm, setEmailForm] = useState({ email: '', password: '' })
+  const [emailForm, setEmailForm] = useState({ email: '' })
 
   const completeLogin = async (tokenHash: string) => {
     const { error: otpError } = await supabase.auth.verifyOtp({
@@ -95,48 +95,38 @@ function LoginContent() {
     }
   }
 
-  // כניסה חד-פעמית עם אימייל+סיסמה ללקוחות ותיקים בלי טלפון — ומשם להשלמת טלפון
-  const submitEmailFallback = async (e: React.FormEvent) => {
+  // לקוחות ותיקים שנרשמו עם אימייל בלבד: חיבור חד-פעמי של המספר לפי האימייל,
+  // בלי סיסמה ובלי לינק במייל (ללקוחות האלה לרוב אין סיסמה, ולינקים נשרפים ע"י סורקים)
+  const submitEmailClaim = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
-    try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: emailForm.email,
-        password: emailForm.password,
-      })
-      if (authError || !data.user) {
-        setError('אימייל או סיסמה שגויים')
-        return
-      }
-      window.location.href = `/complete-phone?redirect=${encodeURIComponent(redirectTarget)}`
-    } catch {
-      setError('שגיאה בהתחברות, נסו שוב')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // לינק חד-פעמי למייל למי שלא זוכר סיסמה — מחזיר להשלמת טלפון
-  const sendEmailLink = async () => {
-    setError('')
-    if (!emailForm.email) {
-      setError('יש להזין כתובת אימייל')
+    if (!isValidIsraeliMobile(phone)) {
+      setError('חסר מספר נייד תקין — חזרו למסך הקודם והזינו אותו')
       return
     }
     setLoading(true)
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-      const next = `/complete-phone?redirect=${encodeURIComponent(redirectTarget)}`
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: emailForm.email,
-        options: { emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(next)}` },
+      const res = await fetch('/api/auth/claim-by-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailForm.email, phone: normalizePhone(phone) }),
       })
-      if (otpError) throw otpError
-      setError('')
-      alert('שלחנו לינק כניסה למייל — לחצו עליו כדי להמשיך')
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok || !data) {
+        setError(data?.message || 'שגיאה זמנית, נסו שוב')
+        return
+      }
+
+      if (data.token_hash) {
+        await completeLogin(data.token_hash)
+        return
+      }
+
+      // הטלפון חובר אבל בלי חיבור אוטומטי — כניסה רגילה עם הטלפון
+      await submitPhone()
     } catch {
-      setError('שגיאה בשליחת הלינק, נסו שוב')
+      setError('שגיאה בהתחברות, נסו שוב')
     } finally {
       setLoading(false)
     }
@@ -260,12 +250,16 @@ function LoginContent() {
           )}
 
           {step === 'email' && (
-            <form onSubmit={submitEmailFallback} className="space-y-4">
+            <form onSubmit={submitEmailClaim} className="space-y-4">
               <p className="text-sm text-text-light/70 text-center">
-                כניסה חד-פעמית עם אימייל כדי להשלים מספר טלפון — מהפעם הבאה נכנסים עם הטלפון בלבד
+                נרשמת בעבר עם אימייל? נחבר את המספר{' '}
+                <span className="font-medium text-primary" dir="ltr">{phone}</span>{' '}
+                לחשבון — ומהפעם הבאה נכנסים עם הטלפון בלבד
               </p>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-primary mb-1">אימייל</label>
+                <label htmlFor="email" className="block text-sm font-medium text-primary mb-1">
+                  האימייל שנרשמת איתו
+                </label>
                 <input
                   id="email"
                   type="email"
@@ -277,17 +271,6 @@ function LoginContent() {
                   dir="ltr"
                 />
               </div>
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-primary mb-1">סיסמה</label>
-                <input
-                  id="password"
-                  type="password"
-                  value={emailForm.password}
-                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
-                  className={inputClass}
-                  placeholder="הזינו סיסמה"
-                />
-              </div>
 
               {error && (
                 <div className="p-3 bg-red-50 border-2 border-red-300 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none text-red-700 text-sm">
@@ -296,16 +279,8 @@ function LoginContent() {
               )}
 
               <Button type="submit" disabled={loading} className="w-full" size="lg">
-                {loading ? 'מתחבר...' : 'כניסה'}
+                {loading ? 'מחבר...' : 'חיבור המספר וכניסה'}
               </Button>
-              <button
-                type="button"
-                onClick={sendEmailLink}
-                disabled={loading}
-                className="w-full text-center text-sm text-accent hover:underline"
-              >
-                לא זוכר/ת סיסמה? שלחו לי לינק למייל
-              </button>
               <button
                 type="button"
                 onClick={() => { setStep('phone'); setError('') }}

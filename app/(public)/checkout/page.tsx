@@ -275,6 +275,10 @@ function CheckoutContent() {
         body: JSON.stringify({
           code: couponCode,
           itemType: itemType,
+          // הבחנה בין כניסה בודדת לכרטיסייה מרובת כניסות עבור קופונים ממוקדים
+          itemSubtype: itemType === 'pass' && cartItem
+            ? (cartItem.entries === 1 ? 'single_entry' : 'multi_pass')
+            : undefined,
           amount: totalAmount
         })
       });
@@ -375,7 +379,9 @@ function CheckoutContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: totalAmount,
+          // הסכום לחיוב אחרי קופון — לא המחיר המלא (הפריטים מנורמלים בשרת)
+          amount: finalAmount,
+          coupon_code: couponApplied && couponData ? couponData.coupon.code : null,
           quantity: quantity,
           card_type_id: itemType === 'pass' ? cartItem.id : null,
           card_type_name: cartItem.name,

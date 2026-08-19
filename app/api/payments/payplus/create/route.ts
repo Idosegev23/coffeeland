@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
       child_id,
       reserved_slot,
       reserved_date,
+      coupon_code,
     } = body;
 
     if (!amount || amount <= 0) {
@@ -62,6 +63,78 @@ export async function POST(req: NextRequest) {
 
     // חישוב כמות הכרטיסים (ברירת מחדל: 1)
     const ticketQuantity = quantity || (items?.[0]?.quantity) || 1;
+
+    // 🔒 אימות מחיר בצד השרת לרכישת כרטיסיות: הסכום מהלקוח חייב להתאים
+    // למחיר האמיתי (כולל תמחור אחים למשחקייה) פחות הקופון — אחרת דוחים.
+    if (card_type_id) {
+      const { data: cardType, error: cardTypeError } = await serviceClient
+        .from('card_types')
+        .select('id, price, sale_price, entries_count, type')
+        .eq('id', card_type_id)
+        .single();
+
+      if (cardTypeError || !cardType) {
+        return NextResponse.json({ error: 'Card type not found' }, { status: 404 });
+      }
+
+      const unitPrice = Number(cardType.sale_price || cardType.price) || 0;
+      const isSinglePlayground =
+        (cardType.type === 'playground' || cardType.type === 'playroom') && cardType.entries_count === 1;
+
+      // תואם את calcCartTotal בצ'קאאוט: ילד ראשון מלא, כל ילד נוסף ב-₪10 פחות
+      let expectedAmount = isSinglePlayground && ticketQuantity > 1
+        ? unitPrice + Math.max(0, unitPrice - 10) * (ticketQuantity - 1)
+        : unitPrice * ticketQuantity;
+
+      if (coupon_code) {
+        const { data: coupon } = await serviceClient
+          .from('coupons')
+          .select('*')
+          .ilike('code', coupon_code.trim())
+          .single();
+
+        const now = new Date();
+        const couponValid = coupon && coupon.is_active
+          && (!coupon.valid_from || new Date(coupon.valid_from) <= now)
+          && (!coupon.valid_until || new Date(coupon.valid_until) >= now)
+          && (!coupon.max_uses || (coupon.used_count || 0) < coupon.max_uses);
+
+        if (!couponValid) {
+          return NextResponse.json(
+            { error: 'invalid_coupon', message: 'קוד הקופון אינו תקף' },
+            { status: 400 }
+          );
+        }
+
+        // אכיפת תחולת הקופון גם כאן (כניסה בודדת / כרטיסייה)
+        if (coupon.applicable_to && !coupon.applicable_to.includes('all')) {
+          const itemKeys = ['pass', cardType.entries_count === 1 ? 'single_entry' : 'multi_pass'];
+          if (!coupon.applicable_to.some((a: string) => itemKeys.includes(a))) {
+            return NextResponse.json(
+              { error: 'invalid_coupon', message: 'קוד הקופון לא תקף למוצר הזה' },
+              { status: 400 }
+            );
+          }
+        }
+
+        if (coupon.discount_type === 'percentage') {
+          expectedAmount = Math.max(0, expectedAmount - (expectedAmount * (coupon.discount_value || 0)) / 100);
+        } else if (coupon.discount_type === 'fixed') {
+          expectedAmount = Math.max(0, expectedAmount - (coupon.discount_value || 0));
+        } else if (coupon.discount_type === 'free') {
+          expectedAmount = 0;
+        }
+      }
+
+      expectedAmount = Math.round(expectedAmount * 100) / 100;
+      if (Math.abs(expectedAmount - amount) > 0.01) {
+        logger.error('❌ Amount mismatch on pass purchase:', { amount, expectedAmount, card_type_id, ticketQuantity, coupon_code });
+        return NextResponse.json(
+          { error: 'amount_mismatch', message: 'אי-התאמה במחיר — רעננו את העמוד ונסו שוב' },
+          { status: 400 }
+        );
+      }
+    }
 
     // 🔥 בדיקת קיבולת להצגות/אירועים
     let eventTypeForItemType: string | null = null;
@@ -226,6 +299,7 @@ export async function POST(req: NextRequest) {
           child_id: child_id || undefined,
           reserved_slot: reserved_slot || undefined,
           reserved_date: reserved_date || undefined,
+          coupon_code: coupon_code || undefined,
         }
       })
       .select()

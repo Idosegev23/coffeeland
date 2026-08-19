@@ -146,6 +146,21 @@ export async function POST(req: NextRequest) {
       logger.error('❌ Error updating payment:', updateError);
     }
 
+    // ספירת שימוש בקופון (המסלול החינמי סופר בנפרד ב-payments/free)
+    if (isSuccess && payment.metadata?.coupon_code) {
+      const { data: usedCoupon } = await supabase
+        .from('coupons')
+        .select('id, used_count')
+        .ilike('code', payment.metadata.coupon_code)
+        .single();
+      if (usedCoupon) {
+        await supabase
+          .from('coupons')
+          .update({ used_count: (usedCoupon.used_count || 0) + 1 })
+          .eq('id', usedCoupon.id);
+      }
+    }
+
     // אם התשלום הצליח ויש card_type_id - יוצרים את הכרטיסייה
     if (isSuccess && payment.metadata?.card_type_id) {
       const { card_type_id } = payment.metadata;

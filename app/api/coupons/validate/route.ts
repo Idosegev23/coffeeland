@@ -9,7 +9,7 @@ import { cookies } from 'next/headers';
 export async function POST(req: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
-    const { code, itemType, amount } = await req.json();
+    const { code, itemType, itemSubtype, amount } = await req.json();
 
     if (!code) {
       return NextResponse.json(
@@ -77,9 +77,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // בדיקת סוג פריט
+    // בדיקת סוג פריט — קופון יכול להיות מוגבל לסוג ('pass') או לתת-סוג
+    // ('single_entry' לכניסה בודדת / 'multi_pass' לכרטיסייה מרובת כניסות)
     if (itemType && coupon.applicable_to && !coupon.applicable_to.includes('all')) {
-      if (!coupon.applicable_to.includes(itemType)) {
+      const itemKeys = [itemType, itemSubtype].filter(Boolean);
+      if (!coupon.applicable_to.some((a: string) => itemKeys.includes(a))) {
         return NextResponse.json(
           { 
             valid: false, 
